@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import Client from "@/models/Client";
+import { logActivity } from "@/lib/activity";
 
 // ── GET /api/clients  — list with optional search/filter ──────
 export async function GET(req: NextRequest) {
@@ -53,6 +54,15 @@ export async function POST(req: NextRequest) {
       ...body,
       userId: session.user.id,
     });
+    
+    // Log activity
+    await logActivity(
+      session.user.id,
+      "client_added",
+      "Client added",
+      `${client.name} has been added as a client.`
+    );
+
     return NextResponse.json({ client }, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to create client";

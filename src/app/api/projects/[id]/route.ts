@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import Project from "@/models/Project";
+import { logActivity } from "@/lib/activity";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -35,6 +36,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     delete body.userId;
     delete body._id;
 
+    const existingProject = await Project.findOne({ _id: id, userId: session.user.id });
+    if (!existingProject)
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+    const originalPaid = existingProject.paid;
+    const originalStatus = existingProject.status;
+
     const project = await Project.findOneAndUpdate(
       { _id: id, userId: session.user.id },
       { $set: body },
@@ -43,6 +51,29 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (!project)
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+    // Activity Logger integrations:
+    // 1. If paid amount increased, log invoice paid
+    if (body.paid !== undefined && body.paid > originalPaid) {
+      const difference = body.paid - originalPaid;
+      await logActivity(
+        session.user.id,
+        "invoice_paid",
+        "Invoice paid",
+        `Received payment of $${difference.toLocaleString()} for "${project.title}" (Total paid: $${project.paid.toLocaleString()}).`
+      );
+    }
+
+    // 2. If status changed to completed, log invoice paid (if there was remaining balance) or complete status
+    if (body.status === "completed" && originalStatus !== "completed") {
+      const remaining = project.budget - project.paid;
+      await logActivity(
+        session.user.id,
+        "invoice_paid",
+        "Project completed",
+        `"${project.title}" has been completed! Final budget of $${project.budget.toLocaleString()} cleared (Outstanding balance: $${remaining.toLocaleString()}).`
+      );
+    }
 
     return NextResponse.json({ project });
   } catch (err: unknown) {

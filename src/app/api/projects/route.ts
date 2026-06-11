@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import Project from "@/models/Project";
+import { logActivity } from "@/lib/activity";
 
 // ── GET /api/projects — list with search/filter/sort ──────────
 export async function GET(req: NextRequest) {
@@ -51,6 +52,25 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const project = await Project.create({ ...body, userId: session.user.id });
+    
+    // Log Proposal Generated activity
+    await logActivity(
+      session.user.id,
+      "proposal_generated",
+      "Proposal generated",
+      `AI-powered proposal generated for "${project.title}" (Budget: $${project.budget.toLocaleString()}).`
+    );
+
+    // If initial payment was logged, log Invoice Paid activity
+    if (project.paid > 0) {
+      await logActivity(
+        session.user.id,
+        "invoice_paid",
+        "Invoice paid",
+        `Received payment of $${project.paid.toLocaleString()} for "${project.title}".`
+      );
+    }
+
     return NextResponse.json({ project }, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to create project";

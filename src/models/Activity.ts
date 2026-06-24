@@ -3,7 +3,12 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 export type ActivityType =
   | "client_added"
   | "proposal_generated"
+  | "invoice_created"
+  | "invoice_sent"
+  | "invoice_partially_paid"
   | "invoice_paid"
+  | "invoice_overdue"
+  | "invoice_cancelled"
   | "antigravity_prompt";
 
 export interface IActivity extends Document {
@@ -11,6 +16,7 @@ export interface IActivity extends Document {
   type: ActivityType;
   title: string;
   description: string;
+  invoiceId?: mongoose.Types.ObjectId | string;
   createdAt: Date;
 }
 
@@ -23,7 +29,17 @@ const ActivitySchema = new Schema<IActivity>(
     },
     type: {
       type: String,
-      enum: ["client_added", "proposal_generated", "invoice_paid", "antigravity_prompt"],
+      enum: [
+        "client_added",
+        "proposal_generated",
+        "invoice_created",
+        "invoice_sent",
+        "invoice_partially_paid",
+        "invoice_paid",
+        "invoice_overdue",
+        "invoice_cancelled",
+        "antigravity_prompt",
+      ],
       required: [true, "Activity type is required"],
     },
     title: {
@@ -35,6 +51,11 @@ const ActivitySchema = new Schema<IActivity>(
       type: String,
       default: "",
       trim: true,
+    },
+    invoiceId: {
+      type: Schema.Types.ObjectId,
+      ref: "Invoice",
+      default: null,
     },
   },
   {

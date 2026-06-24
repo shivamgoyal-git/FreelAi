@@ -13,7 +13,8 @@ export async function logActivity(
   userId: string,
   type: ActivityType,
   title: string,
-  description: string = ""
+  description: string = "",
+  invoiceId?: string
 ) {
   try {
     await connectDB();
@@ -22,6 +23,7 @@ export async function logActivity(
       type,
       title,
       description,
+      invoiceId,
     });
   } catch (error) {
     console.error("Failed to log activity:", error);

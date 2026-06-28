@@ -12,6 +12,8 @@ export interface IInvoice extends Document {
   items: InvoiceItem[];
   subtotal: number;
   discount: number;
+  discountAmount: number;
+  taxableAmount: number;
   taxRate: number;
   taxAmount: number;
   total: number;
@@ -70,6 +72,8 @@ const InvoiceSchema = new Schema<IInvoice>(
     items: { type: [InvoiceItemSchema], default: [] },
     subtotal: { type: Number, default: 0 },
     discount: { type: Number, default: 0, min: 0 },
+    discountAmount: { type: Number, default: 0 },
+    taxableAmount: { type: Number, default: 0 },
     taxRate: { type: Number, default: 0, min: 0 },
     taxAmount: { type: Number, default: 0 },
     total: { type: Number, default: 0 },
@@ -91,8 +95,8 @@ InvoiceSchema.index({ userId: 1, total: 1 });
 InvoiceSchema.index({ userId: 1, invoiceNumber: 1 });
 
 // Pre-save hook for server-side calculations and status resolution
-InvoiceSchema.pre("save", function (next?: any) {
-  console.log("DEBUG: Invoice pre-save hook executing! typeof next =", typeof next);
+InvoiceSchema.pre("save", function (this: IInvoice) {
+  console.log("DEBUG: Invoice pre-save hook executing!");
   // 1. Calculate each item's amount and sum subtotal
   let subtotal = 0;
   if (this.items && this.items.length > 0) {
@@ -103,19 +107,22 @@ InvoiceSchema.pre("save", function (next?: any) {
   }
   this.subtotal = Number(subtotal.toFixed(2));
 
-  // 2. Taxable amount = subtotal - discount
-  const taxableAmount = Math.max(0, this.subtotal - this.discount);
+  // 2. Discount amount
+  this.discountAmount = this.discount || 0;
 
-  // 3. Tax amount = taxableAmount * (taxRate / 100)
-  this.taxAmount = Number((taxableAmount * (this.taxRate / 100)).toFixed(2));
+  // 3. Taxable amount = subtotal - discountAmount
+  this.taxableAmount = Math.max(0, this.subtotal - this.discountAmount);
 
-  // 4. Total = taxableAmount + taxAmount
-  this.total = Number((taxableAmount + this.taxAmount).toFixed(2));
+  // 4. Tax amount = taxableAmount * (taxRate / 100)
+  this.taxAmount = Number((this.taxableAmount * (this.taxRate / 100)).toFixed(2));
 
-  // 5. Remaining Amount = total - amountPaid
+  // 5. Total = taxableAmount + taxAmount
+  this.total = Number((this.taxableAmount + this.taxAmount).toFixed(2));
+
+  // 6. Remaining Amount = total - amountPaid
   this.remainingAmount = Number((this.total - this.amountPaid).toFixed(2));
 
-  // 6. Status resolution logic
+  // 7. Status resolution logic
   if (this.status !== "cancelled") {
     if (this.amountPaid >= this.total) {
       this.status = "paid";
@@ -134,10 +141,6 @@ InvoiceSchema.pre("save", function (next?: any) {
         }
       }
     }
-  }
-
-  if (typeof next === "function") {
-    next();
   }
 });
 

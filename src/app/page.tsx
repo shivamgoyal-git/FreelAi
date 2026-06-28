@@ -2,6 +2,7 @@
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { Button } from "@/components/ui/Button";
 
 import Link from "next/link";
 import {
@@ -53,7 +54,7 @@ function Hero() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "55fr 45fr",
             gap: "72px",
             alignItems: "center",
           }}
@@ -69,13 +70,18 @@ function Hero() {
 
             <h1
               className="font-display animate-fade-in-up delay-100"
-              style={{ fontSize: "clamp(40px, 5vw, 62px)", marginBottom: "22px", color: "var(--text-primary)" }}
+              style={{
+                fontSize: "clamp(32px, 5vw, 52px)",
+                fontWeight: 800,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.1,
+                marginBottom: "22px",
+                color: "var(--text-primary)",
+              }}
             >
-              Where Creative
+              Creative <span style={{ color: "var(--color-brand)" }}>Talent</span>
               <br />
-              <span className="text-gradient">Talent Meets</span>
-              <br />
-              Opportunity
+              Meets Opportunity
             </h1>
 
             <p
@@ -97,12 +103,15 @@ function Hero() {
               className="animate-fade-in-up delay-300"
               style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "48px" }}
             >
-              <Link href="/signup" className="btn btn-primary btn-lg">
-                Start for Free
-                <ArrowRight size={16} />
+              <Link href="/signup" passHref legacyBehavior>
+                <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} />}>
+                  Start for Free
+                </Button>
               </Link>
-              <Link href="#features" className="btn btn-secondary btn-lg">
-                See Features
+              <Link href="#features" passHref legacyBehavior>
+                <Button variant="secondary" size="lg">
+                  See Features
+                </Button>
               </Link>
             </div>
 
@@ -117,8 +126,8 @@ function Hero() {
                     key={i}
                     className="avatar"
                     style={{
-                      width: "32px",
-                      height: "32px",
+                      width: "28px",
+                      height: "28px",
                       fontSize: "12px",
                       marginLeft: i === 0 ? 0 : "-8px",
                       border: "2px solid var(--bg-base)",
@@ -145,149 +154,29 @@ function Hero() {
           </div>
 
           {/* Right: Dashboard Preview */}
-          <div className="animate-float" style={{ position: "relative" }}>
+          <div style={{ position: "relative" }}>
             {/* Main card */}
             <div
-              className="glass-card-strong"
-              style={{ padding: "28px", position: "relative" }}
+              style={{
+                background: "var(--surface-1)",
+                border: "0.5px solid var(--border)",
+                borderRadius: "var(--radius-xl)",
+                padding: "28px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "24px",
+              }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "24px",
-                }}
-              >
-                <div>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                    Monthly Earnings
-                  </p>
-                  <p className="font-display" style={{ fontSize: "30px", color: "var(--text-primary)" }}>
-                    $12,840
-                  </p>
+              {[
+                { label: "Monthly Earnings", value: "$12,840" },
+                { label: "Active Jobs", value: "8" },
+                { label: "Avg. Rating", value: "4.9 / 5.0" },
+              ].map((row) => (
+                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>{row.label}</span>
+                  <span style={{ fontSize: "20px", color: "var(--text-primary)", fontWeight: 700 }}>{row.value}</span>
                 </div>
-                <span className="badge badge-success">↑ 23%</span>
-              </div>
-
-              {/* Chart bars */}
-              <div
-                style={{
-                  height: "72px",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  gap: "5px",
-                  marginBottom: "20px",
-                }}
-              >
-                {[40, 65, 45, 80, 60, 90, 75, 100, 85, 95, 70, 88].map((h, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      flex: 1,
-                      height: `${h}%`,
-                      background: i === 11 ? "var(--primary)" : "var(--bg-elevated)",
-                      borderRadius: "3px 3px 0 0",
-                      transition: "background 0.2s",
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Stats */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
-                {[
-                  { label: "Active Jobs", value: "8" },
-                  { label: "Proposals", value: "14" },
-                  { label: "Avg. Rating", value: "4.9" },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    style={{
-                      background: "var(--bg-elevated)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "12px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <p className="font-heading" style={{ fontSize: "18px", color: "var(--text-primary)" }}>
-                      {stat.value}
-                    </p>
-                    <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Floating notification — payment */}
-            <div
-              className="glass-card"
-              style={{
-                position: "absolute",
-                top: "-22px",
-                right: "-22px",
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                minWidth: "190px",
-              }}
-            >
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: "var(--success-bg)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <DollarSign size={14} color="var(--success)" />
-              </div>
-              <div>
-                <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Payment Received</p>
-                <p className="font-heading" style={{ fontSize: "14px", color: "var(--success)" }}>
-                  +$2,400.00
-                </p>
-              </div>
-            </div>
-
-            {/* Floating notification — AI match */}
-            <div
-              className="glass-card"
-              style={{
-                position: "absolute",
-                bottom: "-18px",
-                left: "-18px",
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-              }}
-            >
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: "var(--primary-dim)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <Sparkles size={14} color="var(--primary)" />
-              </div>
-              <div>
-                <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>AI Match Found</p>
-                <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
-                  Brand Identity Project
-                </p>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -737,13 +626,15 @@ function Pricing() {
                 ))}
               </ul>
 
-              <Link
-                href={plan.href}
-                className={plan.highlighted ? "btn btn-primary" : "btn btn-secondary"}
-                style={{ width: "100%", padding: "13px 24px", justifyContent: "center", borderRadius: "var(--radius-md)" }}
-              >
-                {plan.cta}
-                <ArrowRight size={15} />
+              <Link href={plan.href} passHref legacyBehavior>
+                <Button
+                  variant={plan.highlighted ? "primary" : "secondary"}
+                  size="md"
+                  style={{ width: "100%", justifyContent: "center" }}
+                  rightIcon={<ArrowRight size={15} />}
+                >
+                  {plan.cta}
+                </Button>
               </Link>
             </div>
           ))}
@@ -916,12 +807,15 @@ function CTABanner() {
           </p>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/signup" className="btn btn-primary btn-lg">
-              Get Started Free
-              <ArrowRight size={16} />
+            <Link href="/signup" passHref legacyBehavior>
+              <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} />}>
+                Get Started Free
+              </Button>
             </Link>
-            <Link href="/login" className="btn btn-secondary btn-lg">
-              I Have an Account
+            <Link href="/login" passHref legacyBehavior>
+              <Button variant="secondary" size="lg">
+                I Have an Account
+              </Button>
             </Link>
           </div>
 

@@ -33,6 +33,22 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { Client, ClientStatus, ClientFormData } from "@/types/client";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+
+const getBadgeVariant = (status: string) => {
+  switch (status) {
+    case "active":
+      return "active";
+    case "prospect":
+    case "inactive":
+      return "pending";
+    case "archived":
+    default:
+      return "inactive";
+  }
+};
 
 // ── HELPERS ───────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -175,7 +191,6 @@ function ClientFormModal({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(6px)",
         zIndex: 200,
         display: "flex",
         alignItems: "center",
@@ -269,22 +284,22 @@ function ClientFormModal({
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Name & Email */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-name">Name *</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-name">Name *</label>
               <input
                 id="client-name"
-                className="input-field"
+                className="input-redesign"
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
                 placeholder="Jane Doe"
                 required
               />
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-email">Email *</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-email">Email *</label>
               <input
                 id="client-email"
-                className="input-field"
+                className="input-redesign"
                 type="email"
                 value={form.email}
                 onChange={(e) => set("email", e.target.value)}
@@ -296,21 +311,21 @@ function ClientFormModal({
 
           {/* Phone & Company */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-phone">Phone</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-phone">Phone</label>
               <input
                 id="client-phone"
-                className="input-field"
+                className="input-redesign"
                 value={form.phone}
                 onChange={(e) => set("phone", e.target.value)}
                 placeholder="+1 555 000 0000"
               />
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-company">Company</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-company">Company</label>
               <input
                 id="client-company"
-                className="input-field"
+                className="input-redesign"
                 value={form.company}
                 onChange={(e) => set("company", e.target.value)}
                 placeholder="Acme Corp"
@@ -320,21 +335,21 @@ function ClientFormModal({
 
           {/* Website & Location */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-website">Website</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-website">Website</label>
               <input
                 id="client-website"
-                className="input-field"
+                className="input-redesign"
                 value={form.website}
                 onChange={(e) => set("website", e.target.value)}
                 placeholder="https://example.com"
               />
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-location">Location</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-location">Location</label>
               <input
                 id="client-location"
-                className="input-field"
+                className="input-redesign"
                 value={form.location}
                 onChange={(e) => set("location", e.target.value)}
                 placeholder="New York, USA"
@@ -344,11 +359,11 @@ function ClientFormModal({
 
           {/* Status & Rating */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-status">Status</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-status">Status</label>
               <select
                 id="client-status"
-                className="input-field"
+                className="input-redesign"
                 value={form.status}
                 onChange={(e) => set("status", e.target.value as ClientStatus)}
                 style={{ cursor: "pointer" }}
@@ -359,11 +374,11 @@ function ClientFormModal({
                 <option value="archived">Archived</option>
               </select>
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="client-rating">Rating (1–5)</label>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="client-rating">Rating (1–5)</label>
               <input
                 id="client-rating"
-                className="input-field"
+                className="input-redesign"
                 type="number"
                 min={1}
                 max={5}
@@ -377,17 +392,17 @@ function ClientFormModal({
           </div>
 
           {/* Tags */}
-          <div className="input-group">
-            <label className="input-label">Tags</label>
+          <div className="form-group-redesign">
+            <label className="label-redesign">Tags</label>
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
                 gap: "6px",
                 padding: "8px",
-                background: "var(--bg-elevated)",
-                border: "1.5px solid var(--border-default)",
-                borderRadius: "var(--radius-md)",
+                background: "var(--surface-2)",
+                border: "0.5px solid var(--border)",
+                borderRadius: "var(--radius)",
                 minHeight: "44px",
                 alignItems: "center",
               }}
@@ -400,9 +415,9 @@ function ClientFormModal({
                     alignItems: "center",
                     gap: "4px",
                     padding: "3px 8px",
-                    background: "var(--primary-light)",
-                    color: "var(--primary)",
-                    borderRadius: "var(--radius-full)",
+                    background: "var(--color-brand-subtle)",
+                    color: "var(--color-brand-hover)",
+                    borderRadius: "var(--radius-pill)",
                     fontSize: "12px",
                     fontWeight: 600,
                   }}
@@ -415,7 +430,7 @@ function ClientFormModal({
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      color: "var(--primary)",
+                      color: "var(--color-brand-hover)",
                       display: "flex",
                       padding: "0",
                     }}
@@ -450,11 +465,11 @@ function ClientFormModal({
           </div>
 
           {/* Notes */}
-          <div className="input-group">
-            <label className="input-label" htmlFor="client-notes">Notes</label>
+          <div className="form-group-redesign">
+            <label className="label-redesign" htmlFor="client-notes">Notes</label>
             <textarea
               id="client-notes"
-              className="input-field"
+              className="textarea-redesign"
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
               placeholder="Internal notes about this client..."
@@ -472,33 +487,26 @@ function ClientFormModal({
               paddingTop: "4px",
             }}
           >
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="btn btn-secondary btn-sm"
-              style={{ borderRadius: "var(--radius-md)" }}
+              variant="secondary"
+              size="sm"
               disabled={saving}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               id="client-form-submit"
-              className="btn btn-primary btn-sm"
-              style={{ borderRadius: "var(--radius-md)", gap: "6px", minWidth: "110px" }}
+              variant="primary"
+              size="sm"
+              style={{ minWidth: "110px" }}
               disabled={saving}
+              leftIcon={saving ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : undefined}
             >
-              {saving ? (
-                <>
-                  <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
-                  Saving...
-                </>
-              ) : isEdit ? (
-                "Save Changes"
-              ) : (
-                "Add Client"
-              )}
-            </button>
+              {saving ? "Saving..." : isEdit ? "Save Changes" : "Add Client"}
+            </Button>
           </div>
         </form>
       </div>
@@ -542,7 +550,6 @@ function DeleteModal({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(6px)",
         zIndex: 300,
         display: "flex",
         alignItems: "center",
@@ -588,35 +595,26 @@ function DeleteModal({
           from your client list. This action cannot be undone.
         </p>
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-          <button
+          <Button
             id="delete-cancel-btn"
             onClick={onClose}
-            className="btn btn-secondary btn-sm"
-            style={{ borderRadius: "var(--radius-md)" }}
+            variant="secondary"
+            size="sm"
             disabled={deleting}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             id="delete-confirm-btn"
             onClick={handleDelete}
-            className="btn btn-sm"
-            style={{
-              borderRadius: "var(--radius-md)",
-              background: "var(--error)",
-              color: "white",
-              gap: "6px",
-              minWidth: "100px",
-            }}
+            variant="danger"
+            size="sm"
+            style={{ minWidth: "100px" }}
             disabled={deleting}
+            leftIcon={deleting ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={13} />}
           >
-            {deleting ? (
-              <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
-            ) : (
-              <Trash2 size={13} />
-            )}
             {deleting ? "Deleting..." : "Delete"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -655,16 +653,14 @@ function ClientCard({
         display: "flex",
         flexDirection: "column",
         gap: "16px",
-        transition: "border-color 0.2s, box-shadow 0.2s",
+        transition: "border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease",
         cursor: "default",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--primary)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-md)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-default)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-sm)";
       }}
     >
       {/* Top Row */}
@@ -707,10 +703,12 @@ function ClientCard({
 
         {/* Status badge + menu */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-          <span className={`badge ${cfg.badge}`} style={{ fontSize: "11px" }}>
-            {cfg.icon}
-            {cfg.label}
-          </span>
+          <Badge variant={getBadgeVariant(client.status)}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              {cfg.icon}
+              <span>{cfg.label}</span>
+            </span>
+          </Badge>
           <div style={{ position: "relative" }} ref={menuRef}>
             <button
               id={`client-menu-${client._id}`}
@@ -902,7 +900,7 @@ function ClientCard({
           <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
             {client.totalProjects}
           </p>
-          <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <p style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Projects
           </p>
         </div>
@@ -910,7 +908,7 @@ function ClientCard({
           <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--primary)" }}>
             ${client.totalEarned.toLocaleString()}
           </p>
-          <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <p style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Earned
           </p>
         </div>
@@ -918,24 +916,21 @@ function ClientCard({
 
       {/* Footer */}
       <div style={{ display: "flex", gap: "6px" }}>
-        <Link
-          href={`/dashboard/clients/${client._id}`}
-          id={`view-detail-${client._id}`}
-          className="btn btn-secondary btn-sm"
-          style={{ flex: 1, borderRadius: "var(--radius-md)", justifyContent: "center", fontSize: "12px", gap: "5px" }}
-        >
-          <Eye size={12} />
-          View
+        <Link href={`/dashboard/clients/${client._id}`} passHref legacyBehavior>
+          <Button variant="secondary" size="sm" leftIcon={<Eye size={12} />} style={{ flex: 1 }}>
+            View
+          </Button>
         </Link>
-        <button
+        <Button
           id={`edit-card-${client._id}`}
           onClick={() => onEdit(client)}
-          className="btn btn-ghost btn-sm"
-          style={{ flex: 1, borderRadius: "var(--radius-md)", fontSize: "12px", gap: "5px" }}
+          variant="ghost"
+          size="sm"
+          leftIcon={<Edit3 size={12} />}
+          style={{ flex: 1 }}
         >
-          <Edit3 size={12} />
           Edit
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -1084,15 +1079,15 @@ export default function ClientsPage() {
 
         <div style={{ flex: 1 }} />
 
-        <button
+        <Button
           id="add-client-btn"
           onClick={openAdd}
-          className="btn btn-primary btn-sm"
-          style={{ borderRadius: "var(--radius-md)", gap: "6px" }}
+          variant="primary"
+          size="sm"
+          leftIcon={<Plus size={14} />}
         >
-          <Plus size={14} />
           Add Client
-        </button>
+        </Button>
       </header>
 
       <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", width: "100%", margin: "0 auto" }}>
@@ -1285,57 +1280,13 @@ export default function ClientsPage() {
             <p style={{ fontSize: "14px" }}>Loading clients...</p>
           </div>
         ) : clients.length === 0 ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "360px",
-              gap: "16px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "72px",
-                height: "72px",
-                borderRadius: "20px",
-                background: "var(--bg-elevated)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <UserX size={28} color="var(--text-muted)" />
-            </div>
-            <div>
-              <p
-                className="font-heading"
-                style={{ fontSize: "18px", marginBottom: "8px" }}
-              >
-                {search || statusFilter !== "all"
-                  ? "No clients match your search"
-                  : "No clients yet"}
-              </p>
-              <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
-                {search || statusFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "Add your first client to get started"}
-              </p>
-            </div>
-            {!search && statusFilter === "all" && (
-              <button
-                id="empty-add-client-btn"
-                onClick={openAdd}
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: "var(--radius-md)", gap: "6px" }}
-              >
-                <Plus size={14} />
-                Add Client
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={<UserX />}
+            heading={search || statusFilter !== "all" ? "No clients match your search" : "No clients yet"}
+            description={search || statusFilter !== "all" ? "Try adjusting your filters" : "Add your first client to get started"}
+            actionLabel={!search && statusFilter === "all" ? "Add Client" : undefined}
+            onActionClick={openAdd}
+          />
         ) : viewMode === "grid" ? (
           <div
             style={{
@@ -1432,10 +1383,12 @@ export default function ClientsPage() {
                         </td>
                         {/* Status */}
                         <td style={{ padding: "14px 16px" }}>
-                          <span className={`badge ${cfg.badge}`} style={{ fontSize: "11px" }}>
-                            {cfg.icon}
-                            {cfg.label}
-                          </span>
+                          <Badge variant={getBadgeVariant(c.status)}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              {cfg.icon}
+                              <span>{cfg.label}</span>
+                            </span>
+                          </Badge>
                         </td>
                         {/* Tags */}
                         <td style={{ padding: "14px 16px" }}>
@@ -1486,30 +1439,28 @@ export default function ClientsPage() {
                         {/* Actions */}
                         <td style={{ padding: "14px 16px" }}>
                           <div style={{ display: "flex", gap: "4px" }}>
-                            <Link
-                              href={`/dashboard/clients/${c._id}`}
-                              id={`list-view-${c._id}`}
-                              className="btn btn-ghost btn-sm"
-                              style={{ padding: "6px 8px", borderRadius: "var(--radius-sm)" }}
-                            >
-                              <Eye size={13} />
+                            <Link href={`/dashboard/clients/${c._id}`} passHref legacyBehavior>
+                              <Button variant="ghost" size="sm">
+                                <Eye size={13} />
+                              </Button>
                             </Link>
-                            <button
+                            <Button
                               id={`list-edit-${c._id}`}
                               onClick={() => openEdit(c)}
-                              className="btn btn-ghost btn-sm"
-                              style={{ padding: "6px 8px", borderRadius: "var(--radius-sm)" }}
+                              variant="ghost"
+                              size="sm"
                             >
                               <Edit3 size={13} />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               id={`list-delete-${c._id}`}
                               onClick={() => setDeleteTarget(c)}
-                              className="btn btn-ghost btn-sm"
-                              style={{ padding: "6px 8px", borderRadius: "var(--radius-sm)", color: "var(--error)" }}
+                              variant="ghost"
+                              size="sm"
+                              style={{ color: "var(--color-danger)" }}
                             >
                               <Trash2 size={13} />
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>

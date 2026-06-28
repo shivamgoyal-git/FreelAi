@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { Button } from "@/components/ui/Button";
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -14,6 +16,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, toggle } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -95,11 +98,43 @@ export default function Navbar() {
 
         {/* CTA Buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Link href="/login" className="btn btn-ghost btn-sm">
-            Log In
+          <Link href="/login" passHref legacyBehavior>
+            <Button variant="ghost" size="sm">
+              Log In
+            </Button>
           </Link>
-          <Link href="/signup" className="btn btn-primary btn-sm">
-            Get Started
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggle}
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "var(--radius)",
+              border: "0.5px solid var(--border)",
+              background: "transparent",
+              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--surface-2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          <Link href="/signup" passHref legacyBehavior>
+            <Button variant="primary" size="sm">
+              Get Started
+            </Button>
           </Link>
           {/* Mobile menu toggle */}
           <button
@@ -148,11 +183,15 @@ export default function Navbar() {
             </a>
           ))}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "18px" }}>
-            <Link href="/login" className="btn btn-secondary" onClick={() => setMobileOpen(false)}>
-              Log In
+            <Link href="/login" passHref legacyBehavior>
+              <Button variant="secondary" onClick={() => setMobileOpen(false)} style={{ width: "100%", justifyContent: "center" }}>
+                Log In
+              </Button>
             </Link>
-            <Link href="/signup" className="btn btn-primary" onClick={() => setMobileOpen(false)}>
-              Get Started Free
+            <Link href="/signup" passHref legacyBehavior>
+              <Button variant="primary" onClick={() => setMobileOpen(false)} style={{ width: "100%", justifyContent: "center" }}>
+                Get Started Free
+              </Button>
             </Link>
           </div>
         </div>

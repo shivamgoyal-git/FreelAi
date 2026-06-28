@@ -29,6 +29,21 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { Client, ClientStatus, ClientFormData } from "@/types/client";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+
+const getBadgeVariant = (status: string) => {
+  switch (status) {
+    case "active":
+      return "active";
+    case "prospect":
+    case "inactive":
+      return "pending";
+    case "archived":
+    default:
+      return "inactive";
+  }
+};
 
 // ── HELPERS ───────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -165,7 +180,6 @@ function EditModal({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(6px)",
         zIndex: 200,
         display: "flex",
         alignItems: "center",
@@ -204,69 +218,69 @@ function EditModal({
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-name">Name *</label>
-              <input id="edit-name" className="input-field" value={form.name} onChange={(e) => set("name", e.target.value)} required />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-name">Name *</label>
+              <input id="edit-name" className="input-redesign" value={form.name} onChange={(e) => set("name", e.target.value)} required />
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-email">Email *</label>
-              <input id="edit-email" className="input-field" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} required />
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-phone">Phone</label>
-              <input id="edit-phone" className="input-field" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
-            </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-company">Company</label>
-              <input id="edit-company" className="input-field" value={form.company} onChange={(e) => set("company", e.target.value)} />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-email">Email *</label>
+              <input id="edit-email" className="input-redesign" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} required />
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-website">Website</label>
-              <input id="edit-website" className="input-field" value={form.website} onChange={(e) => set("website", e.target.value)} />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-phone">Phone</label>
+              <input id="edit-phone" className="input-redesign" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-location">Location</label>
-              <input id="edit-location" className="input-field" value={form.location} onChange={(e) => set("location", e.target.value)} />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-company">Company</label>
+              <input id="edit-company" className="input-redesign" value={form.company} onChange={(e) => set("company", e.target.value)} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-website">Website</label>
+              <input id="edit-website" className="input-redesign" value={form.website} onChange={(e) => set("website", e.target.value)} />
+            </div>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-location">Location</label>
+              <input id="edit-location" className="input-redesign" value={form.location} onChange={(e) => set("location", e.target.value)} />
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-status">Status</label>
-              <select id="edit-status" className="input-field" value={form.status} onChange={(e) => set("status", e.target.value as ClientStatus)} style={{ cursor: "pointer" }}>
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-status">Status</label>
+              <select id="edit-status" className="input-redesign" value={form.status} onChange={(e) => set("status", e.target.value as ClientStatus)} style={{ cursor: "pointer" }}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="prospect">Prospect</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-projects">Projects</label>
-              <input id="edit-projects" className="input-field" type="number" min={0} value={form.totalProjects} onChange={(e) => set("totalProjects", Number(e.target.value))} />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-projects">Projects</label>
+              <input id="edit-projects" className="input-redesign" type="number" min={0} value={form.totalProjects} onChange={(e) => set("totalProjects", Number(e.target.value))} />
             </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-earned">Total Earned ($)</label>
-              <input id="edit-earned" className="input-field" type="number" min={0} value={form.totalEarned} onChange={(e) => set("totalEarned", Number(e.target.value))} />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-earned">Total Earned ($)</label>
+              <input id="edit-earned" className="input-redesign" type="number" min={0} value={form.totalEarned} onChange={(e) => set("totalEarned", Number(e.target.value))} />
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="edit-rating">Rating (1–5)</label>
-              <input id="edit-rating" className="input-field" type="number" min={1} max={5} value={form.rating ?? ""} onChange={(e) => set("rating", e.target.value ? Number(e.target.value) : null)} placeholder="—" />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="edit-rating">Rating (1–5)</label>
+              <input id="edit-rating" className="input-redesign" type="number" min={1} max={5} value={form.rating ?? ""} onChange={(e) => set("rating", e.target.value ? Number(e.target.value) : null)} placeholder="—" />
             </div>
           </div>
 
           {/* Tags */}
-          <div className="input-group">
-            <label className="input-label">Tags</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", padding: "8px", background: "var(--bg-elevated)", border: "1.5px solid var(--border-default)", borderRadius: "var(--radius-md)", minHeight: "44px", alignItems: "center" }}>
+          <div className="form-group-redesign">
+            <label className="label-redesign">Tags</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", padding: "8px", background: "var(--surface-2)", border: "0.5px solid var(--border)", borderRadius: "var(--radius)", minHeight: "44px", alignItems: "center" }}>
               {form.tags.map((t) => (
-                <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 8px", background: "var(--primary-light)", color: "var(--primary)", borderRadius: "var(--radius-full)", fontSize: "12px", fontWeight: 600 }}>
+                <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 8px", background: "var(--color-brand-subtle)", color: "var(--color-brand-hover)", borderRadius: "var(--radius-pill)", fontSize: "12px", fontWeight: 600 }}>
                   {t}
-                  <button type="button" onClick={() => removeTag(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", display: "flex", padding: 0 }}>
+                  <button type="button" onClick={() => removeTag(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-brand-hover)", display: "flex", padding: 0 }}>
                     <X size={10} />
                   </button>
                 </span>
@@ -281,16 +295,16 @@ function EditModal({
             </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label" htmlFor="edit-notes">Notes</label>
-            <textarea id="edit-notes" className="input-field" value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} style={{ resize: "vertical" }} />
+          <div className="form-group-redesign">
+            <label className="label-redesign" htmlFor="edit-notes">Notes</label>
+            <textarea id="edit-notes" className="textarea-redesign" value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} style={{ resize: "vertical" }} />
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "4px" }}>
-            <button type="button" onClick={onClose} className="btn btn-secondary btn-sm" style={{ borderRadius: "var(--radius-md)" }} disabled={saving}>Cancel</button>
-            <button type="submit" id="edit-save-btn" className="btn btn-primary btn-sm" style={{ borderRadius: "var(--radius-md)", gap: "6px", minWidth: "110px" }} disabled={saving}>
-              {saving ? (<><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />Saving...</>) : "Save Changes"}
-            </button>
+            <Button type="button" onClick={onClose} variant="secondary" size="sm" disabled={saving}>Cancel</Button>
+            <Button type="submit" id="edit-save-btn" variant="primary" size="sm" style={{ minWidth: "110px" }} disabled={saving} leftIcon={saving ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : undefined}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </form>
       </div>
@@ -325,7 +339,7 @@ function DeleteModal({
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.18s ease" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.18s ease" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="glass-card" style={{ width: "100%", maxWidth: "400px", padding: "28px", animation: "scaleIn 0.2s ease", textAlign: "center" }}>
@@ -337,11 +351,10 @@ function DeleteModal({
           This will permanently remove <strong style={{ color: "var(--text-primary)" }}>{client.name}</strong>. This action cannot be undone.
         </p>
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-          <button id="detail-delete-cancel" onClick={onClose} className="btn btn-secondary btn-sm" style={{ borderRadius: "var(--radius-md)" }} disabled={deleting}>Cancel</button>
-          <button id="detail-delete-confirm" onClick={handleDelete} className="btn btn-sm" style={{ borderRadius: "var(--radius-md)", background: "var(--error)", color: "white", gap: "6px", minWidth: "100px" }} disabled={deleting}>
-            {deleting ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={13} />}
+          <Button id="detail-delete-cancel" onClick={onClose} variant="secondary" size="sm" disabled={deleting}>Cancel</Button>
+          <Button id="detail-delete-confirm" onClick={handleDelete} variant="danger" size="sm" style={{ minWidth: "100px" }} disabled={deleting} leftIcon={deleting ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={13} />}>
             {deleting ? "Deleting..." : "Delete"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -355,7 +368,7 @@ function DetailRow({ icon, label, value, href }: { icon: React.ReactNode; label:
     <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "12px 0", borderBottom: "1px solid var(--border-subtle)" }}>
       <div style={{ width: "20px", flexShrink: 0, marginTop: "2px", color: "var(--text-muted)" }}>{icon}</div>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "2px" }}>{label}</p>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.06em", marginBottom: "2px" }}>{label}</p>
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: "14px", color: "var(--primary)", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
             {value}
@@ -415,9 +428,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <p className="font-heading" style={{ fontSize: "20px", marginBottom: "8px" }}>Client not found</p>
           <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>This client may have been deleted or you don&apos;t have access.</p>
         </div>
-        <Link href="/dashboard/clients" className="btn btn-primary btn-sm" style={{ borderRadius: "var(--radius-md)", gap: "6px" }}>
-          <ChevronLeft size={14} />
-          Back to Clients
+        <Link href="/dashboard/clients" passHref legacyBehavior>
+          <Button variant="primary" size="sm" leftIcon={<ChevronLeft size={14} />}>
+            Back to Clients
+          </Button>
         </Link>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -442,22 +456,24 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         <span style={{ color: "var(--border-strong)" }}>•</span>
         <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{client.name}</p>
         <div style={{ flex: 1 }} />
-        <button
+        <Button
           id="client-detail-edit-btn"
           onClick={() => setEditOpen(true)}
-          className="btn btn-secondary btn-sm"
-          style={{ borderRadius: "var(--radius-md)", gap: "6px" }}
+          variant="secondary"
+          size="sm"
+          leftIcon={<Edit3 size={13} />}
         >
-          <Edit3 size={13} /> Edit
-        </button>
-        <button
+          Edit
+        </Button>
+        <Button
           id="client-detail-delete-btn"
           onClick={() => setDeleteOpen(true)}
-          className="btn btn-sm"
-          style={{ borderRadius: "var(--radius-md)", gap: "6px", background: "var(--error-bg)", color: "var(--error)", border: "1px solid var(--error)", cursor: "pointer" }}
+          variant="danger"
+          size="sm"
+          leftIcon={<Trash2 size={13} />}
         >
-          <Trash2 size={13} /> Delete
-        </button>
+          Delete
+        </Button>
       </header>
 
       <main style={{ flex: 1, padding: "28px", maxWidth: "1100px", width: "100%", margin: "0 auto" }}>
@@ -488,10 +504,12 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 {client.company && (
                   <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "8px" }}>{client.company}</p>
                 )}
-                <span className={`badge ${cfg.badge}`} style={{ fontSize: "12px" }}>
-                  {cfg.icon}
-                  {cfg.label}
-                </span>
+                <Badge variant={getBadgeVariant(client.status)}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    {cfg.icon}
+                    <span>{cfg.label}</span>
+                  </span>
+                </Badge>
               </div>
 
               {/* Rating */}
@@ -511,27 +529,21 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
               {/* Quick Actions */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%" }}>
-                <a
-                  href={`mailto:${client.email}`}
-                  id="client-email-action"
-                  className="btn btn-secondary btn-sm"
-                  style={{ borderRadius: "var(--radius-md)", gap: "5px", fontSize: "12px", textDecoration: "none" }}
-                >
-                  <Mail size={12} /> Email
+                <a href={`mailto:${client.email}`} id="client-email-action" style={{ textDecoration: "none" }}>
+                  <Button variant="secondary" size="sm" leftIcon={<Mail size={12} />} style={{ width: "100%" }}>
+                    Email
+                  </Button>
                 </a>
                 {client.phone ? (
-                  <a
-                    href={`tel:${client.phone}`}
-                    id="client-phone-action"
-                    className="btn btn-secondary btn-sm"
-                    style={{ borderRadius: "var(--radius-md)", gap: "5px", fontSize: "12px", textDecoration: "none" }}
-                  >
-                    <Phone size={12} /> Call
+                  <a href={`tel:${client.phone}`} id="client-phone-action" style={{ textDecoration: "none" }}>
+                    <Button variant="secondary" size="sm" leftIcon={<Phone size={12} />} style={{ width: "100%" }}>
+                      Call
+                    </Button>
                   </a>
                 ) : (
-                  <button className="btn btn-ghost btn-sm" style={{ borderRadius: "var(--radius-md)", fontSize: "12px", opacity: 0.4 }} disabled>
-                    <Phone size={12} /> Call
-                  </button>
+                  <Button variant="secondary" size="sm" leftIcon={<Phone size={12} />} style={{ width: "100%", opacity: 0.4 }} disabled>
+                    Call
+                  </Button>
                 )}
               </div>
             </div>

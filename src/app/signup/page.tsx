@@ -20,8 +20,7 @@ import {
   Pen,
   AlertCircle,
 } from "lucide-react";
-
-
+import { Button } from "@/components/ui/Button";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -87,22 +86,28 @@ export default function SignupPage() {
     }
 
     // Auto sign-in after registration
-    const result = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: form.email,
+        password: form.password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (result?.error) {
+      if (result?.error) {
+        setError("Account created! Please sign in.");
+        router.push("/login");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setLoading(false);
       setError("Account created! Please sign in.");
       router.push("/login");
-      return;
     }
-
-    router.push("/dashboard");
-    router.refresh();
   };
 
   const handleGoogle = async () => {
@@ -117,14 +122,16 @@ export default function SignupPage() {
         display: "flex",
         position: "relative",
         overflow: "hidden",
-        background: "var(--gradient-hero)",
+        background: "var(--bg-base)",
       }}
     >
       {/* Left Panel — Visual */}
       <div
         style={{
-          flex: "0 0 42%",
-          background: "var(--gradient-primary)",
+          flex: "0 0 40%",
+          width: "40%",
+          background: "var(--surface-1)",
+          borderLeft: "3px solid var(--color-brand)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -134,30 +141,6 @@ export default function SignupPage() {
         }}
         className="signup-left-panel"
       >
-        {/* Decorative circles */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-80px",
-            right: "-80px",
-            width: "300px",
-            height: "300px",
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.15)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-60px",
-            left: "-60px",
-            width: "250px",
-            height: "250px",
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        />
-
         {/* Logo */}
         <Link
           href="/"
@@ -174,19 +157,18 @@ export default function SignupPage() {
               width: "40px",
               height: "40px",
               borderRadius: "12px",
-              background: "rgba(255,255,255,0.2)",
-              backdropFilter: "blur(10px)",
+              background: "var(--surface-2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "1px solid rgba(255,255,255,0.3)",
+              border: "0.5px solid var(--border)",
             }}
           >
-            <Zap size={20} color="white" fill="white" />
+            <Zap size={20} color="var(--primary)" fill="var(--primary)" />
           </div>
           <span
             className="font-heading"
-            style={{ fontSize: "22px", color: "white" }}
+            style={{ fontSize: "22px", color: "var(--text-primary)" }}
           >
             FreelAi
           </span>
@@ -195,13 +177,13 @@ export default function SignupPage() {
         <div style={{ marginBottom: "40px" }}>
           <h2
             className="font-display"
-            style={{ fontSize: "36px", color: "white", marginBottom: "16px", lineHeight: "1.2" }}
+            style={{ fontSize: "36px", color: "var(--text-primary)", marginBottom: "16px", lineHeight: "1.2" }}
           >
             Join 24,000+
             <br />
             creative freelancers
           </h2>
-          <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.75)", lineHeight: "1.7" }}>
+          <p style={{ fontSize: "16px", color: "var(--text-secondary)", lineHeight: "1.7" }}>
             Designers, video editors, and illustrators use FreelAi to find
             better clients, earn more, and manage everything in one place.
           </p>
@@ -223,8 +205,8 @@ export default function SignupPage() {
               marginBottom: "14px",
             }}
           >
-            <CheckCircle size={18} color="rgba(255,255,255,0.9)" />
-            <span style={{ fontSize: "15px", color: "rgba(255,255,255,0.85)" }}>{benefit}</span>
+            <CheckCircle size={18} color="var(--color-brand)" />
+            <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>{benefit}</span>
           </div>
         ))}
 
@@ -233,13 +215,12 @@ export default function SignupPage() {
           style={{
             marginTop: "40px",
             padding: "20px",
-            background: "rgba(255,255,255,0.12)",
+            background: "var(--surface-2)",
             borderRadius: "var(--radius-lg)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255,255,255,0.2)",
+            border: "0.5px solid var(--border)",
           }}
         >
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "12px", lineHeight: "1.6", fontStyle: "italic" }}>
+          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "12px", lineHeight: "1.6", fontStyle: "italic" }}>
             &ldquo;I went from $2k/month to $8k/month in just 3 months with FreelAi.&rdquo;
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -248,16 +229,16 @@ export default function SignupPage() {
               style={{
                 width: "36px",
                 height: "36px",
-                background: "rgba(255,255,255,0.25)",
+                background: "var(--surface-3)",
                 fontSize: "14px",
-                color: "white",
+                color: "var(--text-primary)",
               }}
             >
               S
             </div>
             <div>
-              <p style={{ fontSize: "13px", fontWeight: 700, color: "white" }}>Sofia Martínez</p>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.65)" }}>Brand Identity Designer</p>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Sofia Martínez</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Brand Identity Designer</p>
             </div>
           </div>
         </div>
@@ -272,12 +253,14 @@ export default function SignupPage() {
       {/* Right Panel — Form */}
       <div
         style={{
-          flex: 1,
+          flex: "0 0 60%",
+          width: "60%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           padding: "40px 24px",
           overflowY: "auto",
+          background: "var(--surface-0)",
         }}
       >
         <div style={{ width: "100%", maxWidth: "440px" }}>
@@ -315,32 +298,32 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit}>
             {/* Social Sign Up */}
             <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
-              <button
+              <Button
                 type="button"
                 id="signup-google"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={handleGoogle}
                 disabled={googleLoading}
-                style={{ flex: 1, borderRadius: "var(--radius-md)", opacity: googleLoading ? 0.7 : 1 }}
-              >
-                {googleLoading ? (
+                style={{ flex: 1, justifyContent: "center" }}
+                leftIcon={googleLoading ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin-slow 1s linear infinite" }}>
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                   </svg>
                 ) : (
                   <Globe size={16} />
                 )}
+              >
                 Google
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 id="signup-github"
-                className="btn btn-secondary"
-                style={{ flex: 1, borderRadius: "var(--radius-md)" }}
+                variant="secondary"
+                style={{ flex: 1, justifyContent: "center" }}
+                leftIcon={<Code2 size={16} />}
               >
-                <Code2 size={16} />
                 GitHub
-              </button>
+              </Button>
             </div>
 
             <div className="divider" style={{ marginBottom: "24px" }}>
@@ -348,14 +331,14 @@ export default function SignupPage() {
             </div>
 
             {/* Name */}
-            <div className="input-group" style={{ marginBottom: "16px" }}>
-              <label className="input-label" htmlFor="signup-name">Full Name</label>
+            <div className="form-group-redesign" style={{ marginBottom: "16px" }}>
+              <label className="label-redesign" htmlFor="signup-name">Full Name</label>
               <div style={{ position: "relative" }}>
-                <User size={16} style={{ position: "absolute", bottom: "14px", left: "14px", color: "var(--text-muted)" }} />
+                <User size={16} style={{ position: "absolute", bottom: "12px", left: "14px", color: "var(--text-muted)" }} />
                 <input
                   id="signup-name"
                   type="text"
-                  className="input-field has-icon"
+                  className="input-redesign has-icon"
                   placeholder="Sofia Martínez"
                   value={form.name}
                   onChange={(e) => updateForm("name", e.target.value)}
@@ -366,14 +349,14 @@ export default function SignupPage() {
             </div>
 
             {/* Email */}
-            <div className="input-group" style={{ marginBottom: "16px" }}>
-              <label className="input-label" htmlFor="signup-email">Email Address</label>
+            <div className="form-group-redesign" style={{ marginBottom: "16px" }}>
+              <label className="label-redesign" htmlFor="signup-email">Email Address</label>
               <div style={{ position: "relative" }}>
-                <Mail size={16} style={{ position: "absolute", bottom: "14px", left: "14px", color: "var(--text-muted)" }} />
+                <Mail size={16} style={{ position: "absolute", bottom: "12px", left: "14px", color: "var(--text-muted)" }} />
                 <input
                   id="signup-email"
                   type="email"
-                  className="input-field has-icon"
+                  className="input-redesign has-icon"
                   placeholder="you@example.com"
                   value={form.email}
                   onChange={(e) => updateForm("email", e.target.value)}
@@ -384,14 +367,14 @@ export default function SignupPage() {
             </div>
 
             {/* Password */}
-            <div className="input-group" style={{ marginBottom: "8px" }}>
-              <label className="input-label" htmlFor="signup-password">Password</label>
+            <div className="form-group-redesign" style={{ marginBottom: "8px" }}>
+              <label className="label-redesign" htmlFor="signup-password">Password</label>
               <div style={{ position: "relative" }}>
-                <Lock size={16} style={{ position: "absolute", bottom: "14px", left: "14px", color: "var(--text-muted)" }} />
+                <Lock size={16} style={{ position: "absolute", bottom: "12px", left: "14px", color: "var(--text-muted)" }} />
                 <input
                   id="signup-password"
                   type={showPassword ? "text" : "password"}
-                  className="input-field has-icon"
+                  className="input-redesign has-icon"
                   placeholder="Min. 8 characters"
                   value={form.password}
                   onChange={(e) => updateForm("password", e.target.value)}
@@ -399,7 +382,7 @@ export default function SignupPage() {
                   autoComplete="new-password"
                   style={{ paddingRight: "44px" }}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "14px", bottom: "12px", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px", display: "flex" }}>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "14px", bottom: "10px", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px", display: "flex" }}>
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -429,14 +412,14 @@ export default function SignupPage() {
             )}
 
             {/* Confirm Password */}
-            <div className="input-group" style={{ marginBottom: "20px" }}>
-              <label className="input-label" htmlFor="signup-confirm">Confirm Password</label>
+            <div className="form-group-redesign" style={{ marginBottom: "20px" }}>
+              <label className="label-redesign" htmlFor="signup-confirm">Confirm Password</label>
               <div style={{ position: "relative" }}>
-                <Lock size={16} style={{ position: "absolute", bottom: "14px", left: "14px", color: "var(--text-muted)" }} />
+                <Lock size={16} style={{ position: "absolute", bottom: "12px", left: "14px", color: "var(--text-muted)" }} />
                 <input
                   id="signup-confirm"
                   type={showConfirm ? "text" : "password"}
-                  className="input-field has-icon"
+                  className="input-redesign has-icon"
                   placeholder="Repeat your password"
                   value={form.confirm}
                   onChange={(e) => updateForm("confirm", e.target.value)}
@@ -450,7 +433,7 @@ export default function SignupPage() {
                         : undefined,
                   }}
                 />
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: "absolute", right: "14px", bottom: "12px", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px", display: "flex" }}>
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: "absolute", right: "14px", bottom: "10px", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px", display: "flex" }}>
                   {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -492,33 +475,24 @@ export default function SignupPage() {
               </a>
             </label>
 
-            <button
+            <Button
               id="signup-submit"
               type="submit"
-              className="btn btn-primary"
+              variant="primary"
               disabled={loading}
               style={{
                 width: "100%",
-                padding: "14px",
-                fontSize: "16px",
-                borderRadius: "var(--radius-md)",
-                opacity: loading ? 0.75 : 1,
+                justifyContent: "center",
               }}
+              rightIcon={!loading ? <ArrowRight size={16} /> : undefined}
+              leftIcon={loading ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin-slow 1s linear infinite" }}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              ) : undefined}
             >
-              {loading ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin-slow 1s linear infinite" }}>
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
-                  Creating your account...
-                </span>
-              ) : (
-                <span style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
-                  Create Account
-                  <ArrowRight size={16} />
-                </span>
-              )}
-            </button>
+              {loading ? "Creating your account..." : "Create Account"}
+            </Button>
           </form>
 
           {/* Login Link */}

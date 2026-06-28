@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
 
+import { Button } from "@/components/ui/Button";
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,25 +25,35 @@ function LoginContent() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (result?.error) {
-      setError(
-        result.error === "CredentialsSignin"
-          ? "Invalid email or password"
-          : result.error
-      );
-      return;
+      if (result?.error) {
+        setError(
+          result.error === "CredentialsSignin"
+            ? "Invalid email or password"
+            : result.error
+        );
+        return;
+      }
+
+      router.push(callbackUrl);
+      router.refresh();
+    } catch (err: unknown) {
+      setLoading(false);
+      const msg = err instanceof Error ? err.message : "Failed to sign in";
+      if (msg.includes("CallbackRouteError") || msg.includes("CredentialsSignin")) {
+        setError("Invalid email or password");
+      } else {
+        setError(msg);
+      }
     }
-
-    router.push(callbackUrl);
-    router.refresh();
   };
 
   const handleGoogle = async () => {
@@ -60,12 +72,13 @@ function LoginContent() {
       {/* Left panel — branding */}
       <div
         style={{
-          flex: 1,
+          flex: "0 0 40%",
+          width: "40%",
           display: "none",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "60px",
-          background: "var(--bg-surface)",
+          padding: "48px",
+          background: "var(--surface-1)",
           borderRight: "1px solid var(--border-default)",
         }}
         className="login-left-panel"
@@ -134,11 +147,13 @@ function LoginContent() {
       {/* Right panel — form */}
       <div
         style={{
-          flex: 1,
+          flex: "0 0 60%",
+          width: "60%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           padding: "40px 24px",
+          background: "var(--surface-0)",
         }}
       >
         <div
@@ -203,33 +218,14 @@ function LoginContent() {
           )}
 
           {/* Google Sign In */}
-          <button
+          <Button
             id="login-google"
             type="button"
             onClick={handleGoogle}
             disabled={googleLoading}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px",
-              padding: "12px",
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--border-default)",
-              borderRadius: "var(--radius-md)",
-              color: "var(--text-primary)",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: googleLoading ? "not-allowed" : "pointer",
-              opacity: googleLoading ? 0.7 : 1,
-              transition: "border-color 0.2s, background 0.2s",
-              marginBottom: "20px",
-            }}
-            onMouseEnter={(e) => { if (!googleLoading) e.currentTarget.style.borderColor = "var(--primary)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
-          >
-            {googleLoading ? (
+            variant="secondary"
+            style={{ width: "100%", marginBottom: "20px", justifyContent: "center" }}
+            leftIcon={googleLoading ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin-slow 1s linear infinite" }}>
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
@@ -241,8 +237,9 @@ function LoginContent() {
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
             )}
+          >
             Continue with Google
-          </button>
+          </Button>
 
           <div className="divider" style={{ marginBottom: "20px" }}>
             or
@@ -251,8 +248,8 @@ function LoginContent() {
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {/* Email */}
-            <div className="input-group">
-              <label className="input-label" htmlFor="login-email">
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="login-email">
                 Email address
               </label>
               <div style={{ position: "relative" }}>
@@ -263,7 +260,7 @@ function LoginContent() {
                 <input
                   id="login-email"
                   type="email"
-                  className="input-field has-icon"
+                  className="input-redesign has-icon"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -274,9 +271,9 @@ function LoginContent() {
             </div>
 
             {/* Password */}
-            <div className="input-group">
+            <div className="form-group-redesign">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label className="input-label" htmlFor="login-password">
+                <label className="label-redesign" htmlFor="login-password">
                   Password
                 </label>
                 <a
@@ -291,7 +288,7 @@ function LoginContent() {
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
-                  className="input-field has-icon"
+                  className="input-redesign has-icon"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -341,34 +338,25 @@ function LoginContent() {
             </label>
 
             {/* Submit */}
-            <button
+            <Button
               id="login-submit"
               type="submit"
-              className="btn btn-primary"
+              variant="primary"
               disabled={loading}
               style={{
                 width: "100%",
-                padding: "13px",
-                fontSize: "15px",
-                borderRadius: "var(--radius-md)",
                 marginTop: "4px",
-                opacity: loading ? 0.8 : 1,
+                justifyContent: "center",
               }}
+              rightIcon={!loading ? <ArrowRight size={15} /> : undefined}
+              leftIcon={loading ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin-slow 1s linear infinite" }}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              ) : undefined}
             >
-              {loading ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin-slow 1s linear infinite" }}>
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
-                  Signing in…
-                </span>
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight size={15} />
-                </>
-              )}
-            </button>
+              {loading ? "Signing in…" : "Sign In"}
+            </Button>
           </form>
 
           <p style={{ textAlign: "center", marginTop: "24px", fontSize: "13px", color: "var(--text-muted)" }}>

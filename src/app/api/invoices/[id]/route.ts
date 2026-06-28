@@ -5,6 +5,7 @@ import Invoice from "@/models/Invoice";
 import Client from "@/models/Client";
 import Project from "@/models/Project";
 import { logActivity } from "@/lib/activity";
+import { ActivityType } from "@/models/Activity";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -104,9 +105,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     Object.keys(body).forEach((key) => {
       // Handle date conversion
       if (key === "issueDate" || key === "dueDate") {
-        (invoice as any)[key] = new Date(body[key]);
+        invoice.set(key, new Date(body[key]));
       } else {
-        (invoice as any)[key] = body[key];
+        invoice.set(key, body[key]);
       }
     });
 
@@ -115,9 +116,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     // Log status transitions if status changed
     if (invoice.status !== previousStatus) {
-      let activityType: any = "invoice_created";
+      let activityType: ActivityType = "invoice_created";
       let activityTitle = "Invoice Updated";
-      let activityDesc = `Invoice ${invoice.invoiceNumber} status changed from ${previousStatus} to ${invoice.status}.`;
+      const activityDesc = `Invoice ${invoice.invoiceNumber} status changed from ${previousStatus} to ${invoice.status}.`;
 
       if (invoice.status === "sent") {
         activityType = "invoice_sent";

@@ -25,6 +25,8 @@ export interface Invoice {
   items: InvoiceItem[];
   subtotal: number;
   discount: number; // flat discount amount
+  discountAmount: number; // server-calculated discount amount
+  taxableAmount: number; // server-calculated taxable amount
   taxRate: number; // percentage, e.g. 18 for 18%
   taxAmount: number;
   total: number;
@@ -39,7 +41,7 @@ export interface Invoice {
 
 export type InvoiceFormData = Omit<
   Invoice,
-  "_id" | "userId" | "createdAt" | "updatedAt" | "total" | "subtotal" | "taxAmount" | "remainingAmount"
+  "_id" | "userId" | "createdAt" | "updatedAt" | "total" | "subtotal" | "taxAmount" | "remainingAmount" | "discountAmount" | "taxableAmount"
 > & {
   // Frontend can submit partial updates
   status?: InvoiceStatus;

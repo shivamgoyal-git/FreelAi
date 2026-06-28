@@ -30,10 +30,12 @@ import {
   Sparkles,
   Target,
   Loader2,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -43,8 +45,36 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import Sidebar from "@/components/Sidebar";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { StatCard } from "@/components/ui/StatCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useTheme } from "@/components/ThemeProvider";
 
-// ── CONFIGS ──────────────────────────────────────────────────
+const getBadgeVariant = (status: string) => {
+  switch (status) {
+    case "completed":
+    case "active":
+    case "paid":
+      return "active";
+    case "in_review":
+    case "on_hold":
+    case "sent":
+    case "partially_paid":
+      return "pending";
+    case "draft":
+      return "draft";
+    case "overdue":
+      return "overdue";
+    case "cancelled":
+    case "inactive":
+    case "archived":
+    default:
+      return "inactive";
+  }
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   design: "Design",
   development: "Development",
@@ -68,200 +98,41 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
-  design: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-  development: "linear-gradient(135deg, #06b6d4, #6366f1)",
-  illustration: "linear-gradient(135deg, #8b5cf6, #ec4899)",
-  video: "linear-gradient(135deg, #ec4899, #f43f5e)",
-  writing: "linear-gradient(135deg, #f59e0b, #e8a838)",
-  marketing: "linear-gradient(135deg, #10b981, #06b6d4)",
-  consulting: "linear-gradient(135deg, #e8a838, #f59e0b)",
-  other: "linear-gradient(135deg, var(--border-default), var(--border-strong))",
+  design: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+  development: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+  illustration: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+  video: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+  writing: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+  marketing: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+  consulting: "linear-gradient(135deg, #e8a838 0%, #d4880a 100%)",
+  other: "linear-gradient(135deg, var(--text-muted) 0%, var(--border-strong) 100%)",
 };
 
 const STATUS_CFG: Record<string, { label: string; badge: string; color: string }> = {
-  draft: { label: "Draft", badge: "badge-info", color: "var(--info)" },
-  active: { label: "Active", badge: "badge-success", color: "var(--success)" },
+  draft:     { label: "Draft",     badge: "badge-info",    color: "var(--info)" },
+  active:    { label: "Active",    badge: "badge-success", color: "var(--success)" },
   in_review: { label: "In Review", badge: "badge-warning", color: "var(--warning)" },
   completed: { label: "Completed", badge: "badge-success", color: "var(--success)" },
-  on_hold: { label: "On Hold", badge: "badge-warning", color: "var(--warning)" },
-  cancelled: { label: "Cancelled", badge: "badge-error", color: "var(--error)" },
+  on_hold:   { label: "On Hold",   badge: "badge-warning", color: "var(--warning)" },
+  cancelled: { label: "Cancelled", badge: "badge-error",   color: "var(--error)" },
 };
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Overview", id: "overview", badge: null, href: null },
-  { icon: Briefcase, label: "Projects", id: "projects", badge: null, href: "/dashboard/projects" },
-  { icon: MessageSquare, label: "Messages", id: "messages", badge: "3", href: null },
-  { icon: DollarSign, label: "Payments", id: "payments", badge: null, href: null },
-  { icon: Palette, label: "Portfolio", id: "portfolio", badge: null, href: null },
-  { icon: Users, label: "Clients", id: "clients", badge: null, href: "/dashboard/clients" },
-  { icon: Settings, label: "Settings", id: "settings", badge: null, href: null },
-];
-
-// ── TIME AGO UTILITY ──────────────────────────────────────────
-function timeAgo(dateString: string | Date) {
+function timeAgo(dateString?: string) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
   const now = new Date();
-  const past = new Date(dateString);
-  const diffMs = now.getTime() - past.getTime();
-  const diffMins = Math.floor(diffMs / (60 * 1000));
-  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ── CUSTOM TOOLTIP ────────────────────────────────────────────
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="glass-card" style={{ padding: "10px 14px", fontSize: "13px" }}>
-        <p style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>{label}</p>
-        <p style={{ color: "var(--primary)", fontWeight: 800 }}>
-          ${payload[0].value.toLocaleString()}
-        </p>
-      </div>
-    );
-  }
-  return null;
-}
 
-// ── SIDEBAR ──────────────────────────────────────────────────
-function Sidebar({ active, setActive, userName, userInitial, userImage }: { active: string; setActive: (id: string) => void; userName: string; userInitial: string; userImage?: string | null }) {
-  return (
-    <aside className="sidebar">
-      {/* Logo */}
-      <div style={{ padding: "20px 16px", borderBottom: "1px solid var(--border-default)" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <div
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "10px",
-              background: "var(--gradient-primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "var(--shadow-primary)",
-              flexShrink: 0,
-            }}
-          >
-            <Zap size={18} color="white" fill="white" />
-          </div>
-          <span className="font-heading" style={{ fontSize: "18px", color: "var(--text-primary)" }}>
-            Freel<span className="text-gradient">Ai</span>
-          </span>
-        </Link>
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "12px 0" }}>
-        {navItems.map((item) =>
-          item.href ? (
-            <Link
-              key={item.id}
-              id={`sidebar-${item.id}`}
-              href={item.href}
-              className={`sidebar-item${active === item.id ? " active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}
-              onClick={() => setActive(item.id)}
-            >
-              <item.icon size={18} />
-              <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
-            </Link>
-          ) : (
-            <button
-              key={item.id}
-              id={`sidebar-${item.id}`}
-              onClick={() => setActive(item.id)}
-              className={`sidebar-item${active === item.id ? " active" : ""}`}
-              style={{ width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-            >
-              <item.icon size={18} />
-              <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
-              {item.badge && (
-                <span
-                  style={{
-                    background: active === item.id ? "var(--primary)" : "var(--bg-elevated)",
-                    color: active === item.id ? "white" : "var(--text-muted)",
-                    padding: "2px 7px",
-                    borderRadius: "var(--radius-full)",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          )
-        )}
-      </nav>
-
-      {/* AI Boost Card */}
-      <div style={{ padding: "12px 16px" }}>
-        <div style={{ padding: "16px", background: "var(--gradient-primary)", borderRadius: "var(--radius-lg)", marginBottom: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <Sparkles size={16} color="white" />
-            <p style={{ fontSize: "13px", fontWeight: 700, color: "white" }}>AI Boost Active</p>
-          </div>
-          <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.75)", marginBottom: "12px", lineHeight: "1.5" }}>
-            Ready to find matching contracts & optimize proposals.
-          </p>
-          <Link
-            href="/dashboard/projects"
-            style={{
-              display: "block",
-              textAlign: "center",
-              width: "100%",
-              padding: "8px",
-              background: "rgba(255,255,255,0.2)",
-              border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: "var(--radius-md)",
-              color: "white",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              textDecoration: "none",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            Launch Projects
-          </Link>
-        </div>
-
-        {/* User profile strip */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", borderRadius: "var(--radius-md)" }}>
-          <div
-            className="avatar"
-            style={{
-              width: "36px",
-              height: "36px",
-              background: "var(--gradient-primary)",
-              fontSize: "14px",
-              flexShrink: 0,
-              overflow: "hidden",
-              padding: 0,
-            }}
-          >
-            {userImage ? (
-              <img src={userImage} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              userInitial
-            )}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {userName}
-            </p>
-            <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Pro Plan</p>
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
-}
 
 // ── TOP BAR ──────────────────────────────────────────────────
 function TopBar({ userName, userInitial, userImage }: { userName: string; userInitial: string; userImage?: string | null }) {
@@ -390,6 +261,8 @@ const getActivityConfig = (type: string) => {
   }
 };
 
+
+
 // ── TYPES ────────────────────────────────────────────────────
 interface DashboardChartItem {
   month: string;
@@ -419,6 +292,7 @@ interface DashboardProjectItem {
 // ── MAIN DASHBOARD PAGE ───────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const { theme, toggle } = useTheme();
   const [activeNav, setActiveNav] = useState("overview");
   const [projectFilter, setProjectFilter] = useState("All");
 
@@ -540,6 +414,20 @@ export default function DashboardPage() {
           { name: "Illustration", value: 20, color: "#8b5cf6" },
         ];
 
+  const COLOR_MAP: Record<string, string> = {
+    design: "#378ADD",
+    development: "#1D9E75",
+    illustration: "#7F77DD",
+    Design: "#378ADD",
+    Development: "#1D9E75",
+    Illustration: "#7F77DD",
+  };
+
+  const slicedBreakdownData = finalBreakdownData.slice(0, 3).map((item) => {
+    const color = COLOR_MAP[item.name] || item.color;
+    return { ...item, color };
+  });
+
   // Dynamic Statistics Cards
   const statCards = [
     {
@@ -599,50 +487,57 @@ export default function DashboardPage() {
         <TopBar userName={userName} userInitial={userInitial} userImage={userImage} />
 
         <main style={{ flex: 1, padding: "28px", overflowY: "auto" }}>
-          {/* Page Header */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "28px",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                <h1 className="font-heading" style={{ fontSize: "26px" }}>
-                  Welcome back, {userName.split(" ")[0]} ✨
-                </h1>
-              </div>
-              <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
-                Here&apos;s an overview of your freelance metrics and recent developments.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <Link href="/dashboard/projects" className="btn btn-secondary btn-sm" style={{ gap: "6px", borderRadius: "var(--radius-md)" }}>
-                <Briefcase size={14} />
-                Manage Projects
-              </Link>
-              <button
-                className="btn btn-secondary btn-sm"
-                style={{ gap: "6px", borderRadius: "var(--radius-md)" }}
-                onClick={() => signOut({ callbackUrl: "/login" })}
-              >
-                <LogOut size={14} />
-                Logout
-              </button>
-            </div>
-          </div>
-
-          {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh", gap: "12px" }}>
-              <Loader2 size={32} style={{ animation: "spin 1s linear infinite" }} color="var(--primary)" />
-              <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>Loading dashboard statistics...</p>
-            </div>
+          {activeNav === "settings" ? (
+            <SettingsView theme={theme} toggle={toggle} />
+          ) : activeNav !== "overview" ? (
+            <MockView tabName={activeNav} setActiveNav={setActiveNav} />
           ) : (
             <>
+              {/* Page Header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: "28px",
+                  flexWrap: "wrap",
+                  gap: "16px",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                    <h1 className="font-heading" style={{ fontSize: "26px" }}>
+                      Welcome back, {userName.split(" ")[0]} ✨
+                    </h1>
+                  </div>
+                  <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+                    Here&apos;s an overview of your freelance metrics and recent developments.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <Link href="/dashboard/projects" passHref legacyBehavior>
+                    <Button variant="secondary" size="sm" leftIcon={<Briefcase size={14} />}>
+                      Manage Projects
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<LogOut size={14} />}
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                  >
+                    Logout
+                  </Button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh", gap: "12px" }}>
+                  <Loader2 size={32} style={{ animation: "spin 1s linear infinite" }} color="var(--primary)" />
+                  <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>Loading dashboard statistics...</p>
+                </div>
+              ) : (
+                <>
               {/* ── STAT CARDS ── */}
               <div
                 style={{
@@ -653,55 +548,13 @@ export default function DashboardPage() {
                 }}
               >
                 {statCards.map((stat) => (
-                  <div
+                  <StatCard
                     key={stat.id}
-                    id={stat.id}
-                    className="stat-card"
-                    style={{ padding: "20px 22px" }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: "14px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "42px",
-                          height: "42px",
-                          borderRadius: "10px",
-                          background: stat.iconBg,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <stat.icon size={18} color={stat.iconColor} />
-                      </div>
-                      {stat.up ? (
-                        <ArrowUpRight size={16} color="var(--success)" />
-                      ) : (
-                        <ArrowDownRight size={16} color="var(--warning)" />
-                      )}
-                    </div>
-                    <p
-                      className="font-heading"
-                      style={{ fontSize: "26px", color: "var(--text-primary)", marginBottom: "4px" }}
-                    >
-                      {stat.value}
-                    </p>
-                    <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "6px" }}>
-                      {stat.label}
-                    </p>
-                    <span
-                      className={`badge ${stat.up ? "badge-success" : "badge-warning"}`}
-                      style={{ fontSize: "11px" }}
-                    >
-                      {stat.change}
-                    </span>
-                  </div>
+                    label={stat.label}
+                    value={stat.value}
+                    icon={<stat.icon />}
+                    accentColor={stat.iconColor}
+                  />
                 ))}
               </div>
 
@@ -718,7 +571,7 @@ export default function DashboardPage() {
                 <div
                   id="earnings-chart"
                   className="glass-card"
-                  style={{ padding: "24px" }}
+                  style={{ padding: "24px", display: "flex", flexDirection: "column" }}
                 >
                   <div
                     style={{
@@ -734,46 +587,50 @@ export default function DashboardPage() {
                       </h3>
                       <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Monthly revenue visualization</p>
                     </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <span className="badge badge-primary">
-                        <TrendingUp size={11} />
-                        Live Metrics
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                        Monthly revenue
                       </span>
                     </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
-                      <XAxis
-                        dataKey="month"
-                        tick={{ fontSize: 11, fill: "var(--text-muted)" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: "var(--text-muted)" }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area
-                        type="monotone"
-                        dataKey="earnings"
-                        stroke="#6366f1"
-                        strokeWidth={2.5}
-                        fill="url(#earningsGradient)"
-                        dot={false}
-                        activeDot={{ r: 5, fill: "#6366f1", stroke: "var(--bg-surface)", strokeWidth: 2 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <div style={{ flex: 1, minHeight: "220px" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" />
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(v) => v === 0 ? "$0" : `$${v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}`}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: "var(--surface-2)",
+                            border: "0.5px solid var(--border)",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                          }}
+                          itemStyle={{ color: "var(--text-primary)" }}
+                          labelStyle={{ color: "var(--text-muted)", fontWeight: 600 }}
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          formatter={(value: any) => ["$" + Number(value || 0).toLocaleString(), "Revenue"]}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="earnings"
+                          stroke="#378ADD"
+                          strokeWidth={1.5}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
                 {/* Right Column (Pie Chart & AI Widget) */}
@@ -783,38 +640,37 @@ export default function DashboardPage() {
                     <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "16px" }}>
                       Project Mix
                     </h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                      <PieChart width={100} height={100}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+                      <PieChart width={120} height={120}>
                         <Pie
-                          data={finalBreakdownData}
-                          cx={50}
-                          cy={50}
-                          innerRadius={28}
-                          outerRadius={48}
+                          data={slicedBreakdownData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius="65%"
+                          outerRadius="90%"
                           paddingAngle={3}
                           dataKey="value"
                         >
-                          {finalBreakdownData.map((entry, index) => (
+                          {slicedBreakdownData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
                       </PieChart>
-                      <div style={{ flex: 1 }}>
-                        {finalBreakdownData.map((entry) => (
+                      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {slicedBreakdownData.map((entry) => (
                           <div
                             key={entry.name}
                             style={{
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
-                              marginBottom: "8px",
                             }}
                           >
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: entry.color }} />
-                              <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{entry.name}</span>
+                              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
+                              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{entry.name}</span>
                             </div>
-                            <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{entry.value}%</span>
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>{entry.value}%</span>
                           </div>
                         ))}
                       </div>
@@ -822,27 +678,45 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Interactive AI Assistant Widget */}
-                  <div id="ai-assistant-widget" className="glass-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div
+                    id="ai-assistant-widget"
+                    style={{
+                      padding: "20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "14px",
+                      background: "var(--surface-1)",
+                      border: "0.5px solid var(--border)",
+                      borderLeft: "2.5px solid var(--color-brand)",
+                      borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",
+                    }}
+                  >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <Sparkles size={16} color="var(--primary)" />
                       <h3 className="font-heading" style={{ fontSize: "15px" }}>Antigravity AI Assistant</h3>
                     </div>
 
-                    <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "3px", borderRadius: "var(--radius-md)" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "16px",
+                        borderBottom: "1px solid var(--border)",
+                        marginBottom: "4px",
+                      }}
+                    >
                       <button
                         type="button"
                         onClick={() => { setAiAction("prompt"); setAnimatedResponse(""); }}
                         style={{
-                          flex: 1,
-                          padding: "6px",
-                          borderRadius: "var(--radius-sm)",
+                          padding: "6px 0",
+                          background: "transparent",
                           border: "none",
-                          background: aiAction === "prompt" ? "var(--bg-card)" : "transparent",
-                          color: aiAction === "prompt" ? "var(--primary)" : "var(--text-muted)",
-                          fontSize: "12px",
-                          fontWeight: aiAction === "prompt" ? 700 : 500,
+                          borderBottom: aiAction === "prompt" ? "2px solid var(--color-brand)" : "2px solid transparent",
+                          color: aiAction === "prompt" ? "var(--text-primary)" : "var(--text-muted)",
+                          fontSize: "13px",
+                          fontWeight: 500,
                           cursor: "pointer",
-                          transition: "all 0.2s",
+                          transition: "all 0.15s",
                         }}
                       >
                         Run Prompt
@@ -851,16 +725,15 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => { setAiAction("proposal"); setAnimatedResponse(""); }}
                         style={{
-                          flex: 1,
-                          padding: "6px",
-                          borderRadius: "var(--radius-sm)",
+                          padding: "6px 0",
+                          background: "transparent",
                           border: "none",
-                          background: aiAction === "proposal" ? "var(--bg-card)" : "transparent",
-                          color: aiAction === "proposal" ? "var(--primary)" : "var(--text-muted)",
-                          fontSize: "12px",
-                          fontWeight: aiAction === "proposal" ? 700 : 500,
+                          borderBottom: aiAction === "proposal" ? "2px solid var(--color-brand)" : "2px solid transparent",
+                          color: aiAction === "proposal" ? "var(--text-primary)" : "var(--text-muted)",
+                          fontSize: "13px",
+                          fontWeight: 500,
                           cursor: "pointer",
-                          transition: "all 0.2s",
+                          transition: "all 0.15s",
                         }}
                       >
                         Generate Proposal
@@ -878,7 +751,7 @@ export default function DashboardPage() {
                           width: "100%",
                           padding: "10px",
                           background: "var(--bg-elevated)",
-                          border: "1.5px solid var(--border-default)",
+                          border: "0.5px solid var(--border)",
                           borderRadius: "var(--radius-md)",
                           fontSize: "13px",
                           color: "var(--text-primary)",
@@ -887,27 +760,19 @@ export default function DashboardPage() {
                           resize: "none",
                           transition: "border-color 0.2s",
                         }}
-                        onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
-                        onBlur={(e) => (e.target.style.borderColor = "var(--border-default)")}
+                        onFocus={(e) => (e.target.style.borderColor = "var(--color-brand)")}
+                        onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
                       />
-                      <button
+                      <Button
                         type="submit"
                         disabled={aiLoading}
-                        className="btn btn-primary btn-sm"
-                        style={{ width: "100%", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "center", gap: "6px" }}
+                        variant="primary"
+                        size="sm"
+                        style={{ width: "100%", justifyContent: "center" }}
+                        leftIcon={aiLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Zap size={13} />}
                       >
-                        {aiLoading ? (
-                          <>
-                            <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
-                            Consulting AI...
-                          </>
-                        ) : (
-                          <>
-                            <Zap size={13} />
-                            {aiAction === "prompt" ? "Ask Antigravity" : "Generate Proposal"}
-                          </>
-                        )}
-                      </button>
+                        {aiLoading ? "Consulting AI..." : (aiAction === "prompt" ? "Ask Antigravity" : "Generate Proposal")}
+                      </Button>
                     </form>
 
                     {animatedResponse && (
@@ -1105,23 +970,22 @@ export default function DashboardPage() {
 
                               {/* Status */}
                               <td style={{ padding: "14px" }}>
-                                <span className={`badge ${sCfg.badge}`}>
-                                  {project.status === "active" && <Clock size={11} />}
-                                  {project.status === "completed" && <CheckCircle size={11} />}
-                                  {sCfg.label}
-                                </span>
+                                <Badge variant={getBadgeVariant(project.status)}>
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    {project.status === "active" && <Clock size={11} />}
+                                    {project.status === "completed" && <CheckCircle size={11} />}
+                                    <span>{sCfg.label}</span>
+                                  </span>
+                                </Badge>
                               </td>
 
                               {/* Actions */}
                               <td style={{ padding: "14px" }}>
                                 <div style={{ display: "flex", gap: "4px" }}>
-                                  <Link
-                                    href={`/dashboard/projects/${project._id}`}
-                                    className="btn btn-ghost btn-sm"
-                                    style={{ padding: "6px 8px", borderRadius: "var(--radius-sm)" }}
-                                    aria-label="View project"
-                                  >
-                                    <Eye size={14} />
+                                  <Link href={`/dashboard/projects/${project._id}`} passHref legacyBehavior>
+                                    <Button variant="ghost" size="sm">
+                                      <Eye size={14} />
+                                    </Button>
                                   </Link>
                                 </div>
                               </td>
@@ -1147,9 +1011,10 @@ export default function DashboardPage() {
                   <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
                     Showing {filteredProjects.length} of {dbProjects.length} recent projects
                   </p>
-                  <Link href="/dashboard/projects" className="btn btn-ghost btn-sm" style={{ gap: "6px" }}>
-                    View All Projects
-                    <ChevronRight size={14} />
+                  <Link href="/dashboard/projects" passHref legacyBehavior>
+                    <Button variant="ghost" size="sm" rightIcon={<ChevronRight size={14} />}>
+                      View All Projects
+                    </Button>
                   </Link>
                 </div>
               </div>
@@ -1161,53 +1026,63 @@ export default function DashboardPage() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                  {activities.map((item, i) => {
-                    const cfg = getActivityConfig(item.type);
-                    return (
-                      <div
-                        key={item._id}
-                        style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "14px",
-                          paddingBottom: i < activities.length - 1 ? "16px" : 0,
-                          marginBottom: i < activities.length - 1 ? "16px" : 0,
-                          borderBottom: i < activities.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                        }}
-                      >
-                        {/* Icon */}
+                  {activities.length === 0 ? (
+                    <EmptyState
+                      icon={<Bell />}
+                      heading="No activity yet"
+                      description="Recent updates and actions will show up here as you work."
+                    />
+                  ) : (
+                    activities.map((item, i) => {
+                      const cfg = getActivityConfig(item.type);
+                      return (
                         <div
+                          key={item._id}
                           style={{
-                            width: "36px",
-                            height: "36px",
-                            borderRadius: "50%",
-                            background: cfg.iconBg,
                             display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
+                            alignItems: "flex-start",
+                            gap: "14px",
+                            paddingBottom: i < activities.length - 1 ? "16px" : 0,
+                            marginBottom: i < activities.length - 1 ? "16px" : 0,
+                            borderBottom: i < activities.length - 1 ? "1px solid var(--border-subtle)" : "none",
                           }}
                         >
-                          <cfg.icon size={15} color={cfg.iconColor} />
-                        </div>
+                          {/* Icon */}
+                          <div
+                            style={{
+                              width: "36px",
+                              height: "36px",
+                              borderRadius: "50%",
+                              background: cfg.iconBg,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <cfg.icon size={15} color={cfg.iconColor} />
+                          </div>
 
-                        {/* Content */}
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
-                            {item.title}
-                          </p>
-                          <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{item.description}</p>
-                        </div>
+                          {/* Content */}
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+                              {item.title}
+                            </p>
+                            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{item.description}</p>
+                          </div>
 
-                        {/* Time */}
-                        <span style={{ fontSize: "12px", color: "var(--text-subtle)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {timeAgo(item.createdAt)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                          {/* Time */}
+                          <span style={{ fontSize: "12px", color: "var(--text-subtle)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                            {timeAgo(item.createdAt)}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
+            </>
+          )}
             </>
           )}
         </main>
@@ -1222,6 +1097,167 @@ export default function DashboardPage() {
           to { opacity: 1; }
         }
       `}</style>
+    </div>
+  );
+}
+
+function SettingsView({ theme, toggle }: { theme: "light" | "dark"; toggle: () => void }) {
+  const setTheme = (mode: "light" | "dark") => {
+    if (theme !== mode) {
+      toggle();
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "28px", animation: "fadeIn 0.25s ease-out" }}>
+      {/* Settings Header */}
+      <div>
+        <h1 className="font-heading" style={{ fontSize: "26px", marginBottom: "6px", letterSpacing: "-0.015em" }}>
+          Settings
+        </h1>
+        <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+          Manage your account preferences, configurations, and workspace appearance.
+        </p>
+      </div>
+
+      {/* Settings Sections */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        
+        {/* Appearance Settings Card */}
+        <div className="glass-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
+            <h3 className="font-heading" style={{ fontSize: "16px", marginBottom: "4px", letterSpacing: "-0.015em" }}>
+              Appearance
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+              Customize the look and feel of your FreelAi interface. Choose a style that matches your environment.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+            <div>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>Theme Selection</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                Switch between Light Mode and Dark Mode.
+              </p>
+            </div>
+
+            {/* Segmented Theme Picker */}
+            <div
+              style={{
+                display: "flex",
+                background: "var(--bg-elevated)",
+                padding: "4px",
+                borderRadius: "var(--radius-md)",
+                border: "1.5px solid var(--border)",
+              }}
+            >
+              <button
+                type="button"
+                id="theme-light-btn"
+                onClick={() => setTheme("light")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  background: theme === "light" ? "var(--bg-card)" : "transparent",
+                  color: theme === "light" ? "var(--text-primary)" : "var(--text-muted)",
+                  fontSize: "13px",
+                  fontWeight: theme === "light" ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  boxShadow: theme === "light" ? "var(--shadow-sm)" : "none",
+                }}
+              >
+                <Sun size={15} style={{ color: theme === "light" ? "var(--color-brand)" : "inherit" }} />
+                Light Mode
+              </button>
+              <button
+                type="button"
+                id="theme-dark-btn"
+                onClick={() => setTheme("dark")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  background: theme === "dark" ? "var(--bg-card)" : "transparent",
+                  color: theme === "dark" ? "var(--text-primary)" : "var(--text-muted)",
+                  fontSize: "13px",
+                  fontWeight: theme === "dark" ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  boxShadow: theme === "dark" ? "var(--shadow-sm)" : "none",
+                }}
+              >
+                <Moon size={15} style={{ color: theme === "dark" ? "var(--color-brand)" : "inherit" }} />
+                Dark Mode
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Card Mock for completeness */}
+        <div className="glass-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div>
+            <h3 className="font-heading" style={{ fontSize: "16px", marginBottom: "4px", letterSpacing: "-0.015em" }}>
+              General Account
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+              Manage your personal details and account status.
+            </p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Account Tier</span>
+              <span style={{ fontWeight: 600, color: "var(--color-brand)" }}>Pro Plan</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Billing Cycle</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Monthly</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function MockView({ tabName, setActiveNav }: { tabName: string; setActiveNav: (id: string) => void }) {
+  const title = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "28px", animation: "fadeIn 0.25s ease-out" }}>
+      <div>
+        <h1 className="font-heading" style={{ fontSize: "26px", marginBottom: "6px", letterSpacing: "-0.015em" }}>
+          {title}
+        </h1>
+        <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+          Access your {tabName} records, metrics, and communications.
+        </p>
+      </div>
+
+      <div className="glass-card" style={{ padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: "350px", gap: "16px" }}>
+        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
+          <Sparkles size={28} />
+        </div>
+        <div>
+          <h3 className="font-heading" style={{ fontSize: "18px", marginBottom: "6px", letterSpacing: "-0.015em" }}>
+            {title} is coming soon
+          </h3>
+          <p style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "340px", margin: "0 auto" }}>
+            Our engineering team is polishing the {tabName} modules. Check back soon for AI-powered updates!
+          </p>
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => setActiveNav("overview")}>
+          Back to Dashboard
+        </Button>
+      </div>
     </div>
   );
 }

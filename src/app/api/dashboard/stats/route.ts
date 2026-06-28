@@ -5,20 +5,7 @@ import Client from "@/models/Client";
 import Project from "@/models/Project";
 import Activity from "@/models/Activity";
 
-const DEFAULT_EARNINGS = [
-  { month: "Jan", earnings: 3200, projects: 4 },
-  { month: "Feb", earnings: 4100, projects: 5 },
-  { month: "Mar", earnings: 3800, projects: 4 },
-  { month: "Apr", earnings: 5600, projects: 7 },
-  { month: "May", earnings: 6200, projects: 8 },
-  { month: "Jun", earnings: 7400, projects: 9 },
-  { month: "Jul", earnings: 6800, projects: 8 },
-  { month: "Aug", earnings: 8200, projects: 10 },
-  { month: "Sep", earnings: 9100, projects: 11 },
-  { month: "Oct", earnings: 10400, projects: 12 },
-  { month: "Nov", earnings: 11200, projects: 14 },
-  { month: "Dec", earnings: 12840, projects: 15 },
-];
+
 
 export async function GET() {
   const session = await auth();
@@ -67,9 +54,8 @@ export async function GET() {
       }
     });
 
-    // If there is no project data at all, return the baseline/default earnings to maintain beautiful UI presentation
-    const totalPaidInChart = chartData.reduce((sum, item) => sum + item.earnings, 0);
-    const finalChartData = totalPaidInChart > 0 ? chartData : DEFAULT_EARNINGS;
+    // Return actual calculated chart data
+    const finalChartData = chartData;
 
     // 4. Fetch activities
     let activities = await Activity.find({ userId }).sort({ createdAt: -1 }).limit(10).lean();

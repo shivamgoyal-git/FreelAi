@@ -43,6 +43,24 @@ import type {
   ProjectFormData,
   ProjectMilestone,
 } from "@/types/project";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+
+const getBadgeVariant = (status: string) => {
+  switch (status) {
+    case "completed":
+    case "active":
+      return "active";
+    case "in_review":
+    case "on_hold":
+    case "draft":
+      return "pending";
+    case "cancelled":
+    default:
+      return "inactive";
+  }
+};
 
 // ─── CONFIG ──────────────────────────────────────────────────
 const STATUS_CFG: Record<
@@ -225,7 +243,7 @@ function ProjectFormModal({
 
   return (
     <div
-      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(8px)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px", animation:"fadeIn 0.18s ease" }}
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px", animation:"fadeIn 0.18s ease" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -265,20 +283,20 @@ function ProjectFormModal({
           {activeTab === "basics" && (
             <>
               {/* Title */}
-              <div className="input-group">
-                <label className="input-label" htmlFor="proj-title">Project Title *</label>
-                <input id="proj-title" className="input-field" value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Brand Identity for Bloom Studio" required />
+              <div className="form-group-redesign">
+                <label className="label-redesign" htmlFor="proj-title">Project Title *</label>
+                <input id="proj-title" className="input-redesign" value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Brand Identity for Bloom Studio" required />
               </div>
 
               {/* Client + Category */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-client">Client Name</label>
-                  <input id="proj-client" className="input-field" value={form.clientName ?? ""} onChange={(e) => set("clientName", e.target.value)} placeholder="Client or company" />
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-client">Client Name</label>
+                  <input id="proj-client" className="input-redesign" value={form.clientName ?? ""} onChange={(e) => set("clientName", e.target.value)} placeholder="Client or company" />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-category">Category</label>
-                  <select id="proj-category" className="input-field" value={form.category} onChange={(e) => set("category", e.target.value as ProjectCategory)} style={{ cursor:"pointer" }}>
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-category">Category</label>
+                  <select id="proj-category" className="input-redesign" value={form.category} onChange={(e) => set("category", e.target.value as ProjectCategory)} style={{ cursor:"pointer" }}>
                     {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
                       <option key={v} value={v}>{l}</option>
                     ))}
@@ -288,17 +306,17 @@ function ProjectFormModal({
 
               {/* Status + Priority */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-status">Status</label>
-                  <select id="proj-status" className="input-field" value={form.status} onChange={(e) => set("status", e.target.value as ProjectStatus)} style={{ cursor:"pointer" }}>
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-status">Status</label>
+                  <select id="proj-status" className="input-redesign" value={form.status} onChange={(e) => set("status", e.target.value as ProjectStatus)} style={{ cursor:"pointer" }}>
                     {Object.entries(STATUS_CFG).map(([v, c]) => (
                       <option key={v} value={v}>{c.label}</option>
                     ))}
                   </select>
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-priority">Priority</label>
-                  <select id="proj-priority" className="input-field" value={form.priority} onChange={(e) => set("priority", e.target.value as ProjectPriority)} style={{ cursor:"pointer" }}>
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-priority">Priority</label>
+                  <select id="proj-priority" className="input-redesign" value={form.priority} onChange={(e) => set("priority", e.target.value as ProjectPriority)} style={{ cursor:"pointer" }}>
                     {Object.entries(PRIORITY_CFG).map(([v, c]) => (
                       <option key={v} value={v}>{c.label}</option>
                     ))}
@@ -308,46 +326,46 @@ function ProjectFormModal({
 
               {/* Budget + Paid */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px" }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-budget">Budget ($)</label>
-                  <input id="proj-budget" className="input-field" type="number" min={0} value={form.budget} onChange={(e) => set("budget", Number(e.target.value))} />
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-budget">Budget ($)</label>
+                  <input id="proj-budget" className="input-redesign" type="number" min={0} value={form.budget} onChange={(e) => set("budget", Number(e.target.value))} />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-paid">Amount Paid ($)</label>
-                  <input id="proj-paid" className="input-field" type="number" min={0} value={form.paid} onChange={(e) => set("paid", Number(e.target.value))} />
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-paid">Amount Paid ($)</label>
+                  <input id="proj-paid" className="input-redesign" type="number" min={0} value={form.paid} onChange={(e) => set("paid", Number(e.target.value))} />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-progress">Progress (%)</label>
-                  <input id="proj-progress" className="input-field" type="number" min={0} max={100} value={form.progress} onChange={(e) => set("progress", Number(e.target.value))} />
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-progress">Progress (%)</label>
+                  <input id="proj-progress" className="input-redesign" type="number" min={0} max={100} value={form.progress} onChange={(e) => set("progress", Number(e.target.value))} />
                 </div>
               </div>
 
               {/* Start + Due Date */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-start">Start Date</label>
-                  <input id="proj-start" className="input-field" type="date" value={form.startDate ?? ""} onChange={(e) => set("startDate", e.target.value)} />
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-start">Start Date</label>
+                  <input id="proj-start" className="input-redesign" type="date" value={form.startDate ?? ""} onChange={(e) => set("startDate", e.target.value)} />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="proj-due">Due Date</label>
-                  <input id="proj-due" className="input-field" type="date" value={form.dueDate ?? ""} onChange={(e) => set("dueDate", e.target.value)} />
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-due">Due Date</label>
+                  <input id="proj-due" className="input-redesign" type="date" value={form.dueDate ?? ""} onChange={(e) => set("dueDate", e.target.value)} />
                 </div>
               </div>
 
               {/* Description */}
-              <div className="input-group">
-                <label className="input-label" htmlFor="proj-desc">Description</label>
-                <textarea id="proj-desc" className="input-field" value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Brief project description..." rows={2} style={{ resize:"vertical" }} />
+              <div className="form-group-redesign">
+                <label className="label-redesign" htmlFor="proj-desc">Description</label>
+                <textarea id="proj-desc" className="textarea-redesign" value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Brief project description..." rows={2} style={{ resize:"vertical" }} />
               </div>
 
               {/* Tags */}
-              <div className="input-group">
-                <label className="input-label">Tags</label>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", padding:"8px", background:"var(--bg-elevated)", border:"1.5px solid var(--border-default)", borderRadius:"var(--radius-md)", minHeight:"44px", alignItems:"center" }}>
+              <div className="form-group-redesign">
+                <label className="label-redesign">Tags</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", padding:"8px", background:"var(--surface-2)", border:"0.5px solid var(--border)", borderRadius:"var(--radius)", minHeight:"44px", alignItems:"center" }}>
                   {form.tags.map((t) => (
-                    <span key={t} style={{ display:"inline-flex", alignItems:"center", gap:"4px", padding:"3px 8px", background:"var(--primary-light)", color:"var(--primary)", borderRadius:"var(--radius-full)", fontSize:"12px", fontWeight:600 }}>
+                    <span key={t} style={{ display:"inline-flex", alignItems:"center", gap:"4px", padding:"3px 8px", background:"var(--color-brand-subtle)", color:"var(--color-brand-hover)", borderRadius:"var(--radius-pill)", fontSize:"12px", fontWeight:600 }}>
                       {t}
-                      <button type="button" onClick={() => set("tags", form.tags.filter((x) => x !== t))} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--primary)", display:"flex", padding:0 }}>
+                      <button type="button" onClick={() => set("tags", form.tags.filter((x) => x !== t))} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--color-brand-hover)", display:"flex", padding:0 }}>
                         <X size={10}/>
                       </button>
                     </span>
@@ -370,16 +388,16 @@ function ProjectFormModal({
               {/* Add milestone */}
               <div style={{ display:"flex", gap:"8px" }}>
                 <input
-                  className="input-field"
+                  className="input-redesign"
                   value={milestoneInput}
                   onChange={(e) => setMilestoneInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key==="Enter") { e.preventDefault(); addMilestone(); } }}
                   placeholder="Milestone title, e.g. Wireframes approved"
                   style={{ flex:1 }}
                 />
-                <button type="button" onClick={addMilestone} className="btn btn-primary btn-sm" style={{ borderRadius:"var(--radius-md)", gap:"5px", flexShrink:0 }}>
-                  <Plus size={13}/> Add
-                </button>
+                <Button type="button" onClick={addMilestone} variant="primary" size="sm" leftIcon={<Plus size={13}/>} style={{ flexShrink:0 }}>
+                  Add
+                </Button>
               </div>
 
               {form.milestones.length === 0 ? (
@@ -418,20 +436,18 @@ function ProjectFormModal({
 
           {/* ── TAB: NOTES ── */}
           {activeTab === "notes" && (
-            <div className="input-group">
-              <label className="input-label" htmlFor="proj-notes">Internal Notes</label>
-              <textarea id="proj-notes" className="input-field" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notes, links, instructions, anything relevant..." rows={8} style={{ resize:"vertical" }} />
+            <div className="form-group-redesign">
+              <label className="label-redesign" htmlFor="proj-notes">Internal Notes</label>
+              <textarea id="proj-notes" className="textarea-redesign" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notes, links, instructions, anything relevant..." rows={8} style={{ resize:"vertical" }} />
             </div>
           )}
 
           {/* Footer */}
           <div style={{ display:"flex", justifyContent:"flex-end", gap:"10px", paddingTop:"8px", borderTop:"1px solid var(--border-subtle)", marginTop:"4px" }}>
-            <button type="button" onClick={onClose} className="btn btn-secondary btn-sm" style={{ borderRadius:"var(--radius-md)" }} disabled={saving}>Cancel</button>
-            <button type="submit" id="project-form-submit" className="btn btn-primary btn-sm" style={{ borderRadius:"var(--radius-md)", gap:"6px", minWidth:"120px" }} disabled={saving}>
-              {saving
-                ? <><Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> Saving...</>
-                : isEdit ? "Save Changes" : "Create Project"}
-            </button>
+            <Button type="button" onClick={onClose} variant="secondary" size="sm" disabled={saving}>Cancel</Button>
+            <Button type="submit" id="project-form-submit" variant="primary" size="sm" style={{ minWidth:"120px" }} disabled={saving} leftIcon={saving ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> : undefined}>
+              {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Project"}
+            </Button>
           </div>
         </form>
       </div>
@@ -465,7 +481,7 @@ function DeleteModal({
 
   if (!project) return null;
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(8px)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px", animation:"fadeIn 0.18s ease" }}
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px", animation:"fadeIn 0.18s ease" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="glass-card" style={{ width:"100%", maxWidth:"400px", padding:"28px", animation:"scaleIn 0.2s ease", textAlign:"center" }}>
         <div style={{ width:"52px", height:"52px", borderRadius:"14px", background:"var(--error-bg)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
@@ -476,11 +492,10 @@ function DeleteModal({
           This will permanently remove <strong style={{ color:"var(--text-primary)" }}>{project.title}</strong>. This action cannot be undone.
         </p>
         <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
-          <button id="proj-delete-cancel" onClick={onClose} className="btn btn-secondary btn-sm" style={{ borderRadius:"var(--radius-md)" }} disabled={deleting}>Cancel</button>
-          <button id="proj-delete-confirm" onClick={handleDelete} className="btn btn-sm" style={{ borderRadius:"var(--radius-md)", background:"var(--error)", color:"white", gap:"6px", minWidth:"100px" }} disabled={deleting}>
-            {deleting ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> : <Trash2 size={13}/>}
+          <Button id="proj-delete-cancel" onClick={onClose} variant="secondary" size="sm" disabled={deleting}>Cancel</Button>
+          <Button id="proj-delete-confirm" onClick={handleDelete} variant="danger" size="sm" style={{ minWidth:"100px" }} disabled={deleting} leftIcon={deleting ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> : <Trash2 size={13}/>}>
             {deleting ? "Deleting..." : "Delete"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -515,10 +530,15 @@ function StatusDropdown({ project, onUpdated }: { project: Project; onUpdated: (
       <button
         id={`status-btn-${project._id}`}
         onClick={() => setOpen((v) => !v)}
-        className={`badge ${cfg.badge}`}
-        style={{ cursor:"pointer", gap:"4px", border:"none", display:"flex", alignItems:"center", fontSize:"11px" }}
+        style={{ cursor:"pointer", border:"none", background:"transparent", display:"flex", alignItems:"center", padding:0 }}
       >
-        {cfg.icon}{cfg.label}<ChevronDown size={9}/>
+        <Badge variant={getBadgeVariant(project.status)}>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:"4px" }}>
+            {cfg.icon}
+            <span>{cfg.label}</span>
+            <ChevronDown size={9}/>
+          </span>
+        </Badge>
       </button>
       {open && (
         <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--bg-elevated)", border:"1px solid var(--border-default)", borderRadius:"var(--radius-md)", boxShadow:"var(--shadow-lg)", zIndex:100, minWidth:"150px", overflow:"hidden", animation:"scaleIn 0.15s ease" }}>
@@ -558,15 +578,15 @@ function ProjectCard({ project, onEdit, onDelete, onUpdated }: { project: Projec
   return (
     <div
       className="glass-card"
-      style={{ padding:"18px", display:"flex", flexDirection:"column", gap:"12px", transition:"border-color 0.2s, box-shadow 0.2s, transform 0.2s", cursor:"default", borderLeft:`3px solid ${CATEGORY_COLORS[project.category]}` }}
-      onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderTopColor="var(--border-default)"; el.style.borderRightColor="var(--border-default)"; el.style.borderBottomColor="var(--border-default)"; el.style.boxShadow="var(--shadow-md)"; el.style.transform="translateY(-2px)"; }}
-      onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderTopColor="var(--border-default)"; el.style.borderRightColor="var(--border-default)"; el.style.borderBottomColor="var(--border-default)"; el.style.boxShadow="var(--shadow-sm)"; el.style.transform="translateY(0)"; }}
+      style={{ padding:"18px", display:"flex", flexDirection:"column", gap:"12px", transition:"border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease", cursor:"default", borderLeft:`3px solid ${CATEGORY_COLORS[project.category]}` }}
+      onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderTopColor="var(--border-strong)"; el.style.borderRightColor="var(--border-strong)"; el.style.borderBottomColor="var(--border-strong)"; }}
+      onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderTopColor="var(--border-default)"; el.style.borderRightColor="var(--border-default)"; el.style.borderBottomColor="var(--border-default)"; }}
     >
       {/* Top row */}
       <div style={{ display:"flex", alignItems:"flex-start", gap:"8px" }}>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:"6px", marginBottom:"4px" }}>
-            <span style={{ fontSize:"10px", fontWeight:700, color:CATEGORY_COLORS[project.category], textTransform:"uppercase", letterSpacing:"0.06em" }}>
+            <span style={{ fontSize:"11px", fontWeight:700, color:CATEGORY_COLORS[project.category], letterSpacing:"0.06em" }}>
               {CATEGORY_LABELS[project.category]}
             </span>
             <span style={{ display:"flex", alignItems:"center", gap:"3px", fontSize:"11px", color:pCfg.color }}>
@@ -639,13 +659,13 @@ function ProjectCard({ project, onEdit, onDelete, onUpdated }: { project: Projec
       {/* Budget row */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px" }}>
         <div>
-          <p style={{ fontSize:"10px", color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"2px" }}>Budget</p>
+          <p style={{ fontSize:"11px", color:"var(--text-muted)", letterSpacing:"0.06em", marginBottom:"2px" }}>Budget</p>
           <p style={{ fontSize:"14px", fontWeight:800, color:"var(--primary)" }}>
             {project.budget > 0 ? `$${project.budget.toLocaleString()}` : "—"}
           </p>
         </div>
         <div>
-          <p style={{ fontSize:"10px", color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"2px" }}>Paid</p>
+          <p style={{ fontSize:"11px", color:"var(--text-muted)", letterSpacing:"0.06em", marginBottom:"2px" }}>Paid</p>
           <p style={{ fontSize:"14px", fontWeight:800, color:"var(--success)" }}>
             {project.paid > 0 ? `$${project.paid.toLocaleString()}` : "—"}
           </p>
@@ -671,12 +691,14 @@ function ProjectCard({ project, onEdit, onDelete, onUpdated }: { project: Projec
           )}
         </div>
         <div style={{ display:"flex", gap:"4px" }}>
-          <Link href={`/dashboard/projects/${project._id}`} id={`proj-view-${project._id}`} className="btn btn-ghost btn-sm" style={{ padding:"5px 8px", borderRadius:"var(--radius-sm)", fontSize:"12px", gap:"4px" }}>
-            <Eye size={12}/> View
+          <Link href={`/dashboard/projects/${project._id}`} passHref legacyBehavior>
+            <Button variant="ghost" size="sm" leftIcon={<Eye size={12}/>}>
+              View
+            </Button>
           </Link>
-          <button id={`proj-edit-card-${project._id}`} onClick={() => onEdit(project)} className="btn btn-ghost btn-sm" style={{ padding:"5px 8px", borderRadius:"var(--radius-sm)", fontSize:"12px", gap:"4px" }}>
-            <Edit3 size={12}/> Edit
-          </button>
+          <Button id={`proj-edit-card-${project._id}`} onClick={() => onEdit(project)} variant="ghost" size="sm" leftIcon={<Edit3 size={12}/>}>
+            Edit
+          </Button>
         </div>
       </div>
     </div>
@@ -737,9 +759,17 @@ function ProjectRow({ project, onEdit, onDelete, onUpdated }: { project: Project
       {/* Actions */}
       <td style={{ padding:"14px 16px" }}>
         <div style={{ display:"flex", gap:"4px" }}>
-          <Link href={`/dashboard/projects/${project._id}`} id={`row-view-${project._id}`} className="btn btn-ghost btn-sm" style={{ padding:"6px 8px", borderRadius:"var(--radius-sm)" }}><Eye size={13}/></Link>
-          <button id={`row-edit-${project._id}`} onClick={() => onEdit(project)} className="btn btn-ghost btn-sm" style={{ padding:"6px 8px", borderRadius:"var(--radius-sm)" }}><Edit3 size={13}/></button>
-          <button id={`row-delete-${project._id}`} onClick={() => onDelete(project)} className="btn btn-ghost btn-sm" style={{ padding:"6px 8px", borderRadius:"var(--radius-sm)", color:"var(--error)" }}><Trash2 size={13}/></button>
+          <Link href={`/dashboard/projects/${project._id}`} passHref legacyBehavior>
+            <Button variant="ghost" size="sm">
+              <Eye size={13}/>
+            </Button>
+          </Link>
+          <Button id={`row-edit-${project._id}`} onClick={() => onEdit(project)} variant="ghost" size="sm">
+            <Edit3 size={13}/>
+          </Button>
+          <Button id={`row-delete-${project._id}`} onClick={() => onDelete(project)} variant="ghost" size="sm" style={{ color:"var(--color-danger)" }}>
+            <Trash2 size={13}/>
+          </Button>
         </div>
       </td>
     </tr>
@@ -832,9 +862,15 @@ export default function ProjectsPage() {
           <h1 className="font-heading" style={{ fontSize:"16px" }}>Projects</h1>
         </div>
         <div style={{ flex:1 }}/>
-        <button id="add-project-btn" onClick={openAdd} className="btn btn-primary btn-sm" style={{ borderRadius:"var(--radius-md)", gap:"6px" }}>
-          <Plus size={14}/> New Project
-        </button>
+        <Button
+          id="add-project-btn"
+          onClick={openAdd}
+          variant="primary"
+          size="sm"
+          leftIcon={<Plus size={14}/>}
+        >
+          New Project
+        </Button>
       </header>
 
       <main style={{ flex:1, padding:"28px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
@@ -864,7 +900,7 @@ export default function ProjectsPage() {
           <div style={{ position:"relative", flex:1, minWidth:"200px", maxWidth:"340px" }}>
             <Search size={14} style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", color:"var(--text-muted)", pointerEvents:"none" }}/>
             <input id="proj-search" type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects..." className="input-field has-icon" style={{ paddingLeft:"36px" }}/>
+              placeholder="Search projects..." className="input-redesign" style={{ paddingLeft:"36px" }}/>
           </div>
 
           {/* Status filter */}
@@ -879,7 +915,7 @@ export default function ProjectsPage() {
 
           {/* Priority filter */}
           <select id="priority-filter" value={priorityF} onChange={(e) => setPriorityF(e.target.value)}
-            className="input-field" style={{ width:"auto", paddingRight:"32px", cursor:"pointer", fontSize:"13px" }}>
+            className="input-redesign" style={{ width:"auto", height:"40px", cursor:"pointer", fontSize:"13px" }}>
             <option value="all">All Priorities</option>
             {Object.entries(PRIORITY_CFG).map(([v,c]) => (
               <option key={v} value={v}>{c.label}</option>
@@ -898,9 +934,9 @@ export default function ProjectsPage() {
             ))}
           </div>
 
-          <button id="proj-filter-btn" className="btn btn-secondary btn-sm" style={{ borderRadius:"var(--radius-md)", gap:"6px" }}>
-            <Filter size={13}/> Filter
-          </button>
+          <Button id="proj-filter-btn" variant="secondary" size="sm" leftIcon={<Filter size={13}/>}>
+            Filter
+          </Button>
         </div>
 
         {/* Content */}
@@ -910,24 +946,13 @@ export default function ProjectsPage() {
             <p style={{ fontSize:"14px" }}>Loading projects...</p>
           </div>
         ) : projects.length === 0 ? (
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"360px", gap:"16px", textAlign:"center" }}>
-            <div style={{ width:"72px", height:"72px", borderRadius:"20px", background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Briefcase size={28} color="var(--text-muted)"/>
-            </div>
-            <div>
-              <p className="font-heading" style={{ fontSize:"18px", marginBottom:"8px" }}>
-                {search || statusF !== "all" || priorityF !== "all" ? "No projects match your filters" : "No projects yet"}
-              </p>
-              <p style={{ fontSize:"14px", color:"var(--text-muted)" }}>
-                {search || statusF !== "all" ? "Try adjusting your filters" : "Create your first project to get started"}
-              </p>
-            </div>
-            {!search && statusF === "all" && priorityF === "all" && (
-              <button id="empty-add-proj-btn" onClick={openAdd} className="btn btn-primary btn-sm" style={{ borderRadius:"var(--radius-md)", gap:"6px" }}>
-                <Plus size={14}/> New Project
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={<Briefcase />}
+            heading={search || statusF !== "all" || priorityF !== "all" ? "No projects match your filters" : "No projects yet"}
+            description={search || statusF !== "all" ? "Try adjusting your filters" : "Create your first project to get started"}
+            actionLabel={!search && statusF === "all" && priorityF === "all" ? "New Project" : undefined}
+            onActionClick={openAdd}
+          />
         ) : viewMode === "grid" ? (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:"20px" }}>
             {projects.map((p) => (

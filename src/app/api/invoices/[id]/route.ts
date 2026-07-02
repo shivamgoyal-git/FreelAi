@@ -4,6 +4,7 @@ import connectDB from "@/lib/mongodb";
 import Invoice from "@/models/Invoice";
 import Client from "@/models/Client";
 import Project from "@/models/Project";
+import Activity from "@/models/Activity";
 import { logActivity } from "@/lib/activity";
 import { ActivityType } from "@/models/Activity";
 
@@ -47,7 +48,10 @@ export async function GET(_req: NextRequest, { params }: Params) {
       );
     }
 
-    return NextResponse.json({ invoice });
+    // Fetch related activities for history tracking
+    const activities = await Activity.find({ userId, invoiceId: id }).sort({ createdAt: 1 }).lean();
+
+    return NextResponse.json({ invoice, activities });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to fetch invoice";
     return NextResponse.json({ error: msg }, { status: 500 });

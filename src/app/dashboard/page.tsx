@@ -139,13 +139,13 @@ function TopBar({ userName, userInitial, userImage }: { userName: string; userIn
   return (
     <header
       style={{
-        height: "64px",
+        height: "60px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 28px",
-        borderBottom: "1px solid var(--border-default)",
-        background: "var(--bg-surface)",
+        padding: "0 24px",
+        borderBottom: "0.5px solid var(--border)",
+        background: "var(--surface-1)",
         position: "sticky",
         top: 0,
         zIndex: 20,
@@ -153,50 +153,26 @@ function TopBar({ userName, userInitial, userImage }: { userName: string; userIn
       }}
     >
       {/* Search */}
-      <div style={{ position: "relative", flex: 1, maxWidth: "360px" }}>
-        <Search
-          size={15}
-          style={{
-            position: "absolute",
-            left: "12px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "var(--text-muted)",
-          }}
-        />
+      <div className="search-input-wrapper" style={{ flex: 1, maxWidth: "360px" }}>
+        <span className="search-input-icon">
+          <Search size={14} />
+        </span>
         <input
           id="dashboard-search"
           type="text"
+          className="search-input"
           placeholder="Search projects, clients..."
-          style={{
-            width: "100%",
-            paddingLeft: "36px",
-            paddingRight: "14px",
-            paddingTop: "9px",
-            paddingBottom: "9px",
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-default)",
-            borderRadius: "var(--radius-full)",
-            fontSize: "13px",
-            fontFamily: "inherit",
-            color: "var(--text-primary)",
-            outline: "none",
-            transition: "border-color 0.2s",
-          }}
-          onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
-          onBlur={(e) => (e.target.style.borderColor = "var(--border-default)")}
         />
       </div>
 
       {/* Right Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <Link
           id="new-project-btn"
           href="/dashboard/projects"
-          className="btn btn-primary btn-sm"
-          style={{ borderRadius: "var(--radius-md)", gap: "6px" }}
+          className="btn-redesign btn-redesign-primary btn-redesign-sm"
         >
-          <Plus size={14} />
+          <Plus size={13} />
           New Project
         </Link>
 
@@ -205,14 +181,15 @@ function TopBar({ userName, userInitial, userImage }: { userName: string; userIn
           id="user-avatar-btn"
           className="avatar"
           style={{
-            width: "38px",
-            height: "38px",
-            background: "var(--gradient-primary)",
-            fontSize: "14px",
+            width: "34px",
+            height: "34px",
+            background: "var(--color-brand)",
+            fontSize: "13px",
             cursor: "pointer",
-            border: "2px solid var(--border-default)",
+            border: "0.5px solid var(--border-strong)",
             overflow: "hidden",
             padding: 0,
+            flexShrink: 0,
           }}
         >
           {userImage ? (
@@ -477,16 +454,15 @@ export default function DashboardPage() {
       style={{
         display: "flex",
         minHeight: "100vh",
-        background: "var(--bg-base)",
+        background: "var(--surface-0)",
       }}
     >
       <Sidebar active={activeNav} setActive={setActiveNav} userName={userName} userInitial={userInitial} userImage={userImage} />
-
       {/* Main Content */}
-      <div style={{ flex: 1, marginLeft: "256px", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <div style={{ flex: 1, marginLeft: "252px", display: "flex", flexDirection: "column", minHeight: "100vh", minWidth: 0 }}>
         <TopBar userName={userName} userInitial={userInitial} userImage={userImage} />
 
-        <main style={{ flex: 1, padding: "28px", overflowY: "auto" }}>
+        <main style={{ flex: 1, padding: "24px", overflowY: "auto" }}>
           {activeNav === "settings" ? (
             <SettingsView theme={theme} toggle={toggle} />
           ) : activeNav !== "overview" ? (
@@ -515,7 +491,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
-                  <Link href="/dashboard/projects" passHref legacyBehavior>
+                  <Link href="/dashboard/projects">
                     <Button variant="secondary" size="sm" leftIcon={<Briefcase size={14} />}>
                       Manage Projects
                     </Button>
@@ -532,20 +508,24 @@ export default function DashboardPage() {
               </div>
 
               {loading ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh", gap: "12px" }}>
-                  <Loader2 size={32} style={{ animation: "spin 1s linear infinite" }} color="var(--primary)" />
-                  <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>Loading dashboard statistics...</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="skeleton" style={{ height: "100px", borderRadius: "var(--radius-lg)" }} />
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "16px" }}>
+                    <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
+                    <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
+                  </div>
+                  <div className="skeleton" style={{ height: "360px", borderRadius: "var(--radius-lg)" }} />
                 </div>
               ) : (
                 <>
               {/* ── STAT CARDS ── */}
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "20px",
-                  marginBottom: "28px",
-                }}
+                className="grid-responsive-4"
+                style={{ marginBottom: "24px" }}
               >
                 {statCards.map((stat) => (
                   <StatCard
@@ -554,6 +534,7 @@ export default function DashboardPage() {
                     value={stat.value}
                     icon={<stat.icon />}
                     accentColor={stat.iconColor}
+                    change={stat.change}
                   />
                 ))}
               </div>
@@ -562,9 +543,9 @@ export default function DashboardPage() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 340px",
+                  gridTemplateColumns: "1fr 300px",
                   gap: "20px",
-                  marginBottom: "28px",
+                  marginBottom: "24px",
                 }}
               >
                 {/* Earnings Chart */}
@@ -824,61 +805,32 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "4px", borderRadius: "var(--radius-md)" }}>
-                      {["All", "In Progress", "Review", "Completed"].map((f) => (
-                        <button
-                          key={f}
-                          id={`filter-${f.toLowerCase().replace(" ", "-")}`}
-                          onClick={() => setProjectFilter(f)}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: "var(--radius-sm)",
-                            border: "none",
-                            background: projectFilter === f ? "var(--bg-card)" : "transparent",
-                            color: projectFilter === f ? "var(--text-primary)" : "var(--text-muted)",
-                            fontSize: "12px",
-                            fontWeight: projectFilter === f ? 700 : 500,
-                            cursor: "pointer",
-                            fontFamily: "inherit",
-                            boxShadow: projectFilter === f ? "var(--shadow-sm)" : "none",
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          {f}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="filter-tabs">
+                    {["All", "In Progress", "Review", "Completed"].map((f) => (
+                      <button
+                        key={f}
+                        id={`filter-${f.toLowerCase().replace(" ", "-")}`}
+                        onClick={() => setProjectFilter(f)}
+                        className={`filter-tab${projectFilter === f ? " active" : ""}`}
+                      >
+                        {f}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 {/* Table */}
                 <div style={{ overflowX: "auto" }}>
                   {filteredProjects.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "36px", color: "var(--text-muted)", fontSize: "14px" }}>
-                      No projects match the current filter.
+                    <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: "13px" }}>
+                      No projects match this filter.
                     </div>
                   ) : (
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <table className="data-table">
                       <thead>
                         <tr>
                           {["Project", "Category", "Progress", "Budget", "Due Date", "Status", ""].map((col) => (
-                            <th
-                              key={col}
-                              style={{
-                                padding: "10px 14px",
-                                textAlign: "left",
-                                fontSize: "12px",
-                                fontWeight: 700,
-                                color: "var(--text-muted)",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.06em",
-                                borderBottom: "1px solid var(--border-default)",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {col}
-                            </th>
+                            <th key={col}>{col}</th>
                           ))}
                         </tr>
                       </thead>
@@ -890,15 +842,7 @@ export default function DashboardPage() {
                           const sCfg = STATUS_CFG[project.status] || { label: project.status, badge: "badge-info", color: "var(--info)" };
 
                           return (
-                            <tr
-                              key={project._id}
-                              style={{
-                                borderBottom: i < filteredProjects.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                                transition: "background 0.15s",
-                              }}
-                              onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "var(--bg-elevated)")}
-                              onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}
-                            >
+                            <tr key={project._id}>
                               {/* Project Name */}
                               <td style={{ padding: "14px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -923,7 +867,6 @@ export default function DashboardPage() {
                                   </div>
                                 </div>
                               </td>
-
                               {/* Category */}
                               <td style={{ padding: "14px" }}>
                                 <span
@@ -938,7 +881,6 @@ export default function DashboardPage() {
                                   {categoryLabel}
                                 </span>
                               </td>
-
                               {/* Progress */}
                               <td style={{ padding: "14px", minWidth: "120px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -950,14 +892,12 @@ export default function DashboardPage() {
                                   </span>
                                 </div>
                               </td>
-
                               {/* Budget */}
                               <td style={{ padding: "14px" }}>
                                 <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
                                   ${project.budget.toLocaleString()}
                                 </span>
                               </td>
-
                               {/* Due Date */}
                               <td style={{ padding: "14px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -967,7 +907,6 @@ export default function DashboardPage() {
                                   </span>
                                 </div>
                               </td>
-
                               {/* Status */}
                               <td style={{ padding: "14px" }}>
                                 <Badge variant={getBadgeVariant(project.status)}>
@@ -978,11 +917,10 @@ export default function DashboardPage() {
                                   </span>
                                 </Badge>
                               </td>
-
                               {/* Actions */}
                               <td style={{ padding: "14px" }}>
                                 <div style={{ display: "flex", gap: "4px" }}>
-                                  <Link href={`/dashboard/projects/${project._id}`} passHref legacyBehavior>
+                                  <Link href={`/dashboard/projects/${project._id}`}>
                                     <Button variant="ghost" size="sm">
                                       <Eye size={14} />
                                     </Button>
@@ -1003,17 +941,17 @@ export default function DashboardPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginTop: "16px",
-                    paddingTop: "16px",
-                    borderTop: "1px solid var(--border-subtle)",
+                    marginTop: "14px",
+                    paddingTop: "14px",
+                    borderTop: "0.5px solid var(--border)",
                   }}
                 >
-                  <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                    Showing {filteredProjects.length} of {dbProjects.length} recent projects
+                  <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                    Showing {filteredProjects.length} of {dbProjects.length} projects
                   </p>
-                  <Link href="/dashboard/projects" passHref legacyBehavior>
+                  <Link href="/dashboard/projects">
                     <Button variant="ghost" size="sm" rightIcon={<ChevronRight size={14} />}>
-                      View All Projects
+                      View All
                     </Button>
                   </Link>
                 </div>
@@ -1044,7 +982,7 @@ export default function DashboardPage() {
                             gap: "14px",
                             paddingBottom: i < activities.length - 1 ? "16px" : 0,
                             marginBottom: i < activities.length - 1 ? "16px" : 0,
-                            borderBottom: i < activities.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                            borderBottom: i < activities.length - 1 ? "0.5px solid var(--border)" : "none",
                           }}
                         >
                           {/* Icon */}

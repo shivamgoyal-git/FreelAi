@@ -23,36 +23,41 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "48px 24px",
+        padding: "56px 24px",
         width: "100%",
-        height: "100%",
-        minHeight: "320px",
+        minHeight: "280px",
         textAlign: "center",
+        gap: "0",
       }}
     >
       <div
         style={{
-          width: "64px",
-          height: "64px",
+          width: "52px",
+          height: "52px",
           background: "var(--surface-2)",
-          borderRadius: "var(--radius-lg)",
+          border: "0.5px solid var(--border)",
+          borderRadius: "50%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          marginBottom: "14px",
         }}
       >
         {React.isValidElement(icon)
-          ? React.cloneElement(icon as React.ReactElement<{ size?: number; style?: React.CSSProperties }>, { size: 28, style: { color: "var(--text-muted)" } })
+          ? React.cloneElement(icon as React.ReactElement<{ size?: number; style?: React.CSSProperties }>, {
+              size: 22,
+              style: { color: "var(--text-muted)" },
+            })
           : icon}
       </div>
       <h3
         style={{
           fontSize: "15px",
-          fontWeight: 600,
+          fontWeight: 700,
           color: "var(--text-primary)",
-          marginTop: "16px",
-          marginBottom: "0",
           letterSpacing: "-0.015em",
+          margin: 0,
+          fontFamily: "var(--font-jakarta), var(--font-sans), sans-serif",
         }}
       >
         {heading}
@@ -61,10 +66,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         style={{
           fontSize: "13px",
           color: "var(--text-muted)",
-          marginTop: "4px",
-          marginBottom: "16px",
-          maxWidth: "280px",
-          lineHeight: "1.5",
+          marginTop: "6px",
+          marginBottom: "20px",
+          maxWidth: "300px",
+          lineHeight: "1.6",
         }}
       >
         {description}

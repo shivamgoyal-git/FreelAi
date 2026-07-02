@@ -142,119 +142,113 @@ function EditModal({ open, project, onClose, onSaved }: { open:boolean; project:
 
   if (!open) return null;
 
-  const tabBtn = (id: typeof tab, label: string) => (
-    <button type="button" onClick={() => setTab(id)}
-      style={{ padding:"7px 14px", borderRadius:"var(--radius-sm)", border:"none", background: tab===id ? "var(--bg-card)" : "transparent", color: tab===id ? "var(--primary)" : "var(--text-muted)", fontSize:"13px", fontWeight: tab===id ? 700 : 500, cursor:"pointer", fontFamily:"inherit", transition:"all 0.2s" }}>
-      {label}
-    </button>
-  );
-
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px", animation:"fadeIn 0.18s ease" }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="glass-card" style={{ width:"100%", maxWidth:"600px", maxHeight:"90vh", overflowY:"auto", padding:"28px", animation:"scaleIn 0.2s ease" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"20px" }}>
-          <h2 className="font-heading" style={{ fontSize:"18px" }}>Edit Project</h2>
-          <button onClick={onClose} style={{ width:"32px", height:"32px", borderRadius:"8px", border:"1px solid var(--border-default)", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"var(--text-muted)" }}><X size={15}/></button>
-        </div>
-        <div style={{ display:"flex", gap:"4px", background:"var(--bg-elevated)", padding:"4px", borderRadius:"var(--radius-md)", marginBottom:"20px" }}>
-          {tabBtn("basics","Details")}
-          {tabBtn("milestones",`Milestones (${form.milestones.length})`)}
-          {tabBtn("notes","Notes")}
-        </div>
-        {error && (
-          <div style={{ background:"var(--error-bg)", border:"1px solid var(--error)", borderRadius:"var(--radius-md)", padding:"10px 14px", marginBottom:"16px", display:"flex", alignItems:"center", gap:"8px", color:"var(--error)", fontSize:"13px" }}>
-            <AlertTriangle size={14}/> {error}
+    <div className="modal-overlay" style={{ zIndex: 200 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box" style={{ maxWidth:"600px", maxHeight:"90vh", display:"flex", flexDirection:"column" }}>
+        <div className="modal-header">
+          <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+            <div className="subpage-icon"><Briefcase size={14} /></div>
+            <h2 className="font-heading" style={{ fontSize:"17px" }}>Edit Project</h2>
           </div>
-        )}
-        <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
-          {tab === "basics" && (
-            <>
-              <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-title">Title *</label><input id="d-title" className="input-redesign" value={form.title} onChange={(e) => set("title",e.target.value)} required/></div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-client">Client Name</label><input id="d-client" className="input-redesign" value={form.clientName??""} onChange={(e) => set("clientName",e.target.value)}/></div>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-cat">Category</label>
-                  <select id="d-cat" className="input-redesign" value={form.category} onChange={(e) => set("category",e.target.value as ProjectCategory)} style={{ cursor:"pointer" }}>
-                    {Object.entries(CATEGORY_LABELS).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
+          <button className="modal-close-btn" onClick={onClose}><X size={14}/></button>
+        </div>
+        <div className="modal-body" style={{ overflowY:"auto" }}>
+          <div className="modal-tabs">
+            {(["basics", "milestones", "notes"] as const).map((id) => (
+              <button key={id} type="button" className={`modal-tab${tab === id ? " active" : ""}`} onClick={() => setTab(id)}>
+                {id === "basics" ? "Details" : id === "milestones" ? `Milestones (${form.milestones.length})` : "Notes"}
+              </button>
+            ))}
+          </div>
+          {error && <div className="error-banner"><AlertTriangle size={14}/> {error}</div>}
+          <form id="detail-edit-form" onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+            {tab === "basics" && (
+              <>
+                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-title">Title *</label><input id="d-title" className="input-redesign" value={form.title} onChange={(e) => set("title",e.target.value)} required/></div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-client">Client Name</label><input id="d-client" className="input-redesign" value={form.clientName??""} onChange={(e) => set("clientName",e.target.value)}/></div>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-cat">Category</label>
+                    <select id="d-cat" className="input-redesign" value={form.category} onChange={(e) => set("category",e.target.value as ProjectCategory)} style={{ cursor:"pointer" }}>
+                      {Object.entries(CATEGORY_LABELS).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
                 </div>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-status">Status</label>
-                  <select id="d-status" className="input-redesign" value={form.status} onChange={(e) => set("status",e.target.value as ProjectStatus)} style={{ cursor:"pointer" }}>
-                    {Object.entries(STATUS_CFG).map(([v,c]) => <option key={v} value={v}>{c.label}</option>)}
-                  </select>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-status">Status</label>
+                    <select id="d-status" className="input-redesign" value={form.status} onChange={(e) => set("status",e.target.value as ProjectStatus)} style={{ cursor:"pointer" }}>
+                      {Object.entries(STATUS_CFG).map(([v,c]) => <option key={v} value={v}>{c.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-priority">Priority</label>
+                    <select id="d-priority" className="input-redesign" value={form.priority} onChange={(e) => set("priority",e.target.value as ProjectPriority)} style={{ cursor:"pointer" }}>
+                      {Object.entries(PRIORITY_CFG).map(([v,c]) => <option key={v} value={v}>{c.label}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-priority">Priority</label>
-                  <select id="d-priority" className="input-redesign" value={form.priority} onChange={(e) => set("priority",e.target.value as ProjectPriority)} style={{ cursor:"pointer" }}>
-                    {Object.entries(PRIORITY_CFG).map(([v,c]) => <option key={v} value={v}>{c.label}</option>)}
-                  </select>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px" }}>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-budget">Budget ($)</label><input id="d-budget" className="input-redesign" type="number" min={0} value={form.budget} onChange={(e) => set("budget",Number(e.target.value))}/></div>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-paid">Paid ($)</label><input id="d-paid" className="input-redesign" type="number" min={0} value={form.paid} onChange={(e) => set("paid",Number(e.target.value))}/></div>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-progress">Progress (%)</label><input id="d-progress" className="input-redesign" type="number" min={0} max={100} value={form.progress} onChange={(e) => set("progress",Number(e.target.value))}/></div>
                 </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-start">Start Date</label><input id="d-start" className="input-redesign" type="date" value={form.startDate??""} onChange={(e) => set("startDate",e.target.value)}/></div>
+                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-due">Due Date</label><input id="d-due" className="input-redesign" type="date" value={form.dueDate??""} onChange={(e) => set("dueDate",e.target.value)}/></div>
+                </div>
+                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-desc">Description</label><textarea id="d-desc" className="textarea-redesign" value={form.description} onChange={(e) => set("description",e.target.value)} rows={3} style={{ resize:"vertical" }}/></div>
+                <div className="form-group-redesign">
+                  <label className="label-redesign">Tags</label>
+                  <div className="tag-input-container">
+                    {form.tags.map((t) => (
+                      <span key={t} className="tag-chip">
+                        {t}<button type="button" className="tag-chip-remove" onClick={() => set("tags",form.tags.filter((x) => x!==t))}><X size={10}/></button>
+                      </span>
+                    ))}
+                    <input value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key==="Enter"||e.key===",") { e.preventDefault(); const t=tagInput.trim(); if(t&&!form.tags.includes(t)){set("tags",[...form.tags,t]);} setTagInput(""); } }}
+                      placeholder="Add tag & Enter" className="tag-input-inner"/>
+                  </div>
+                </div>
+              </>
+            )}
+            {tab === "milestones" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+                <div style={{ display:"flex", gap:"8px" }}>
+                  <input className="input-redesign" value={milestoneInput} onChange={(e) => setMilestoneInput(e.target.value)}
+                    onKeyDown={(e) => { if(e.key==="Enter"){e.preventDefault();addMilestone();} }}
+                    placeholder="Milestone title..." style={{ flex:1 }}/>
+                  <Button type="button" onClick={addMilestone} variant="primary" size="sm" leftIcon={<Plus size={13}/>} style={{ flexShrink:0 }}>Add</Button>
+                </div>
+                {form.milestones.length === 0 ? (
+                  <p style={{ textAlign:"center", padding:"24px", color:"var(--text-muted)", fontSize:"13px" }}>No milestones yet.</p>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:"5px" }}>
+                    {form.milestones.map((m) => (
+                      <div key={m.id} className="milestone-item">
+                        <button type="button" className={`milestone-check${m.completed ? " done" : ""}`} onClick={() => set("milestones",form.milestones.map((x) => x.id===m.id?{...x,completed:!x.completed}:x))}>
+                          {m.completed && <CheckCircle size={10} color="white" fill="white"/>}
+                        </button>
+                        <span className={`milestone-title${m.completed ? " done" : ""}`}>{m.title}</span>
+                        <button type="button" className="milestone-remove" onClick={() => set("milestones",form.milestones.filter((x) => x.id!==m.id))}><X size={12}/></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px" }}>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-budget">Budget ($)</label><input id="d-budget" className="input-redesign" type="number" min={0} value={form.budget} onChange={(e) => set("budget",Number(e.target.value))}/></div>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-paid">Paid ($)</label><input id="d-paid" className="input-redesign" type="number" min={0} value={form.paid} onChange={(e) => set("paid",Number(e.target.value))}/></div>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-progress">Progress (%)</label><input id="d-progress" className="input-redesign" type="number" min={0} max={100} value={form.progress} onChange={(e) => set("progress",Number(e.target.value))}/></div>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-start">Start Date</label><input id="d-start" className="input-redesign" type="date" value={form.startDate??""} onChange={(e) => set("startDate",e.target.value)}/></div>
-                <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-due">Due Date</label><input id="d-due" className="input-redesign" type="date" value={form.dueDate??""} onChange={(e) => set("dueDate",e.target.value)}/></div>
-              </div>
-              <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-desc">Description</label><textarea id="d-desc" className="textarea-redesign" value={form.description} onChange={(e) => set("description",e.target.value)} rows={3} style={{ resize:"vertical" }}/></div>
+            )}
+            {tab === "notes" && (
               <div className="form-group-redesign">
-                <label className="label-redesign">Tags</label>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", padding:"8px", background:"var(--surface-2)", border:"0.5px solid var(--border)", borderRadius:"var(--radius)", minHeight:"44px", alignItems:"center" }}>
-                  {form.tags.map((t) => (
-                    <span key={t} style={{ display:"inline-flex", alignItems:"center", gap:"4px", padding:"3px 8px", background:"var(--color-brand-subtle)", color:"var(--color-brand-hover)", borderRadius:"var(--radius-pill)", fontSize:"12px", fontWeight:600 }}>
-                      {t}<button type="button" onClick={() => set("tags",form.tags.filter((x) => x!==t))} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--color-brand-hover)", display:"flex", padding:0 }}><X size={10}/></button>
-                    </span>
-                  ))}
-                  <input value={tagInput} onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key==="Enter"||e.key===",") { e.preventDefault(); const t=tagInput.trim(); if(t&&!form.tags.includes(t)){set("tags",[...form.tags,t]);} setTagInput(""); } }}
-                    placeholder="Add tag & Enter" style={{ flex:1, minWidth:"120px", background:"none", border:"none", outline:"none", fontSize:"13px", color:"var(--text-primary)", fontFamily:"inherit" }}/>
-                </div>
+                <label className="label-redesign" htmlFor="d-notes">Notes</label>
+                <textarea id="d-notes" className="textarea-redesign" value={form.notes} onChange={(e) => set("notes",e.target.value)} rows={8} style={{ resize:"vertical" }}/>
               </div>
-            </>
-          )}
-          {tab === "milestones" && (
-            <div style={{ display:"flex", flexDirection:"column", gap:"12px" }}>
-              <div style={{ display:"flex", gap:"8px" }}>
-                <input className="input-redesign" value={milestoneInput} onChange={(e) => setMilestoneInput(e.target.value)}
-                  onKeyDown={(e) => { if(e.key==="Enter"){e.preventDefault();addMilestone();} }}
-                  placeholder="Milestone title..." style={{ flex:1 }}/>
-                <Button type="button" onClick={addMilestone} variant="primary" size="sm" leftIcon={<Plus size={13}/>} style={{ flexShrink:0 }}>Add</Button>
-              </div>
-              {form.milestones.length === 0 ? (
-                <p style={{ textAlign:"center", padding:"28px", color:"var(--text-subtle)", fontSize:"13px" }}>No milestones yet.</p>
-              ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
-                  {form.milestones.map((m) => (
-                    <div key={m.id} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 12px", background:"var(--bg-elevated)", borderRadius:"var(--radius-md)", border:"1px solid var(--border-default)" }}>
-                      <button type="button" onClick={() => set("milestones",form.milestones.map((x) => x.id===m.id?{...x,completed:!x.completed}:x))}
-                        style={{ width:"18px", height:"18px", borderRadius:"50%", border:`2px solid ${m.completed?"var(--success)":"var(--border-strong)"}`, background:m.completed?"var(--success)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, transition:"all 0.2s" }}>
-                        {m.completed && <CheckCircle size={10} color="white" fill="white"/>}
-                      </button>
-                      <span style={{ flex:1, fontSize:"13px", color:m.completed?"var(--text-muted)":"var(--text-primary)", textDecoration:m.completed?"line-through":"none" }}>{m.title}</span>
-                      <button type="button" onClick={() => set("milestones",form.milestones.filter((x) => x.id!==m.id))} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-subtle)", display:"flex", padding:"2px", borderRadius:"4px" }}><X size={13}/></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {tab === "notes" && (
-            <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="d-notes">Notes</label>
-              <textarea id="d-notes" className="textarea-redesign" value={form.notes} onChange={(e) => set("notes",e.target.value)} rows={8} style={{ resize:"vertical" }}/>
-            </div>
-          )}
-          <div style={{ display:"flex", justifyContent:"flex-end", gap:"10px", paddingTop:"8px", borderTop:"1px solid var(--border-subtle)", marginTop:"4px" }}>
-            <Button type="button" onClick={onClose} variant="secondary" size="sm" disabled={saving}>Cancel</Button>
-            <Button type="submit" id="detail-edit-save" variant="primary" size="sm" style={{ minWidth:"120px" }} disabled={saving} leftIcon={saving ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> : undefined}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
+            )}
+          </form>
+        </div>
+        <div className="modal-footer">
+          <Button type="button" onClick={onClose} variant="secondary" size="sm" disabled={saving}>Cancel</Button>
+          <Button form="detail-edit-form" type="submit" id="detail-edit-save" variant="primary" size="sm" style={{ minWidth:"120px" }} disabled={saving} leftIcon={saving ? <Loader2 size={13} className="loading-spinner"/> : undefined}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -270,21 +264,22 @@ function DeleteModal({ project, onClose, onDeleted }: { project:Project|null; on
   };
   if (!project) return null;
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px", animation:"fadeIn 0.18s ease" }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="glass-card" style={{ width:"100%", maxWidth:"400px", padding:"28px", animation:"scaleIn 0.2s ease", textAlign:"center" }}>
-        <div style={{ width:"52px", height:"52px", borderRadius:"14px", background:"var(--error-bg)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-          <Trash2 size={22} color="var(--error)"/>
-        </div>
-        <h3 className="font-heading" style={{ fontSize:"18px", marginBottom:"8px" }}>Delete Project?</h3>
-        <p style={{ fontSize:"14px", color:"var(--text-muted)", marginBottom:"24px" }}>
-          Permanently remove <strong style={{ color:"var(--text-primary)" }}>{project.title}</strong>. This cannot be undone.
-        </p>
-        <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
-          <Button id="detail-del-cancel" onClick={onClose} variant="secondary" size="sm" disabled={deleting}>Cancel</Button>
-          <Button id="detail-del-confirm" onClick={handleDelete} variant="danger" size="sm" style={{ minWidth:"100px" }} disabled={deleting} leftIcon={deleting ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> : <Trash2 size={13}/>}>
-            {deleting ? "Deleting..." : "Delete"}
-          </Button>
+    <div className="modal-overlay" style={{ zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box" style={{ maxWidth:"380px", textAlign:"center" }}>
+        <div className="modal-body">
+          <div style={{ width:"52px", height:"52px", borderRadius:"var(--radius-lg)", background:"var(--color-danger-bg)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+            <Trash2 size={22} color="var(--color-danger)"/>
+          </div>
+          <h3 className="font-heading" style={{ fontSize:"17px", marginBottom:"6px" }}>Delete Project?</h3>
+          <p style={{ fontSize:"13.5px", color:"var(--text-muted)", marginBottom:"20px", lineHeight:"1.6" }}>
+            Permanently remove <strong style={{ color:"var(--text-primary)" }}>{project.title}</strong>. This cannot be undone.
+          </p>
+          <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
+            <Button id="detail-del-cancel" onClick={onClose} variant="secondary" size="sm" disabled={deleting}>Cancel</Button>
+            <Button id="detail-del-confirm" onClick={handleDelete} variant="danger" size="sm" style={{ minWidth:"100px" }} disabled={deleting} leftIcon={deleting ? <Loader2 size={13} className="loading-spinner"/> : <Trash2 size={13}/>}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -321,12 +316,12 @@ function InlineStatus({ project, onUpdated }: { project: Project; onUpdated:(p:P
         </Badge>
       </button>
       {open && (
-        <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--bg-elevated)", border:"1px solid var(--border-default)", borderRadius:"var(--radius-md)", boxShadow:"var(--shadow-lg)", zIndex:100, minWidth:"160px", overflow:"hidden", animation:"scaleIn 0.15s ease" }}>
+        <div className="dropdown-menu" style={{ top:"calc(100% + 6px)", left:0 }}>
           {(Object.keys(STATUS_CFG) as ProjectStatus[]).map((s) => {
             const c = STATUS_CFG[s];
             return (
               <button key={s} id={`status-opt-${s}`} onClick={() => change(s)}
-                style={{ width:"100%", display:"flex", alignItems:"center", gap:"8px", padding:"10px 14px", fontSize:"13px", color: s===project.status?"var(--primary)":"var(--text-secondary)", background: s===project.status?"var(--primary-light)":"transparent", border:"none", cursor:"pointer", fontFamily:"inherit", textAlign:"left", transition:"background 0.15s" }}>
+                className={`dropdown-item${s === project.status ? " active" : ""}`}>
                 <span style={{ color:c.color }}>{c.icon}</span>{c.label}
               </button>
             );
@@ -379,7 +374,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <p className="font-heading" style={{ fontSize:"20px", marginBottom:"8px" }}>Project not found</p>
           <p style={{ fontSize:"14px", color:"var(--text-muted)" }}>It may have been deleted or you don&apos;t have access.</p>
         </div>
-        <Link href="/dashboard/projects" passHref legacyBehavior>
+        <Link href="/dashboard/projects">
           <Button variant="primary" size="sm" leftIcon={<ChevronLeft size={14} />}>
             Back to Projects
           </Button>
@@ -399,12 +394,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div style={{ minHeight:"100vh", background:"var(--bg-base)", display:"flex", flexDirection:"column" }}>
       {/* Nav */}
-      <header style={{ height:"64px", display:"flex", alignItems:"center", gap:"16px", padding:"0 28px", borderBottom:"1px solid var(--border-default)", background:"var(--bg-surface)", position:"sticky", top:0, zIndex:20 }}>
+      <header style={{ height:"64px", display:"flex", alignItems:"center", gap:"16px", padding:"0 28px", borderBottom:"0.5px solid var(--border)", background:"var(--surface-1)", position:"sticky", top:0, zIndex:20 }}>
         <Link href="/dashboard/projects"
           style={{ display:"flex", alignItems:"center", gap:"6px", color:"var(--text-muted)", textDecoration:"none", fontSize:"13px", transition:"color 0.2s" }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color="var(--text-primary)")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color="var(--text-muted)")}
-        ><ChevronLeft size={15}/> Projects</Link>
+        >
+          <ChevronLeft size={15}/> Projects
+        </Link>
         <span style={{ color:"var(--border-strong)" }}>•</span>
         <p style={{ fontSize:"14px", fontWeight:600, color:"var(--text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{project.title}</p>
         <Button
@@ -442,8 +439,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"10px" }}>
             <InlineStatus project={project} onUpdated={setProject}/>
-            {overdue && (
-              <span style={{ display:"flex", alignItems:"center", gap:"5px", padding:"4px 10px", background:"var(--error-bg)", color:"var(--error)", borderRadius:"var(--radius-full)", fontSize:"12px", fontWeight:600 }}>
+          {overdue && (
+              <span className="status-pill-warn">
                 <AlertTriangle size={12}/> Overdue
               </span>
             )}
@@ -556,31 +553,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <div className="glass-card" style={{ padding:"20px" }}>
               <h3 className="font-heading" style={{ fontSize:"13px", color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"16px" }}>Project Details</h3>
               {[
-                { icon:<Calendar size={14}/>,    label:"Start Date", value: fmtDate(project.startDate) },
-                { icon:<Calendar size={14}/>,    label:"Due Date",   value: project.dueDate ? fmtDate(project.dueDate) : "—", warn: overdue },
-                { icon:<Briefcase size={14}/>,   label:"Category",   value: CATEGORY_LABELS[project.category] },
-                { icon:<DollarSign size={14}/>,  label:"Currency",   value: project.currency },
-              ].map((row) => (
-                <div key={row.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid var(--border-subtle)" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-                    <span style={{ color:"var(--text-muted)" }}>{row.icon}</span>
-                    <span style={{ fontSize:"13px", color:"var(--text-muted)" }}>{row.label}</span>
+                  { icon:<Calendar size={14}/>,    label:"Start Date", value: fmtDate(project.startDate) },
+                  { icon:<Calendar size={14}/>,    label:"Due Date",   value: project.dueDate ? fmtDate(project.dueDate) : "—", warn: overdue },
+                  { icon:<Briefcase size={14}/>,   label:"Category",   value: CATEGORY_LABELS[project.category] },
+                  { icon:<DollarSign size={14}/>,  label:"Currency",   value: project.currency },
+                ].map((row) => (
+                  <div key={row.label} className="detail-row">
+                    <span className="detail-row-label">{row.icon}{row.label}</span>
+                    <span className={`detail-row-value${row.warn ? " warn" : ""}`}>{row.value}</span>
                   </div>
-                  <span style={{ fontSize:"13px", fontWeight:600, color: row.warn ? "var(--error)" : "var(--text-primary)" }}>{row.value}</span>
-                </div>
-              ))}
+                ))}
             </div>
 
             {/* Tags */}
             {project.tags.length > 0 && (
               <div className="glass-card" style={{ padding:"20px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"12px" }}>
-                  <Tag size={14} color="var(--text-muted)"/>
-                  <h3 className="font-heading" style={{ fontSize:"13px", color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Tags</h3>
-                </div>
+                <p className="card-section-label">Tags</p>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
                   {project.tags.map((t) => (
-                    <span key={t} style={{ padding:"4px 10px", background:"var(--primary-light)", color:"var(--primary)", borderRadius:"var(--radius-full)", fontSize:"12px", fontWeight:600 }}>{t}</span>
+                    <span key={t} className="tag-chip">{t}</span>
                   ))}
                 </div>
               </div>

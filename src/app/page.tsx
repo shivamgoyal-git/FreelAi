@@ -49,7 +49,6 @@ function Hero() {
           pointerEvents: "none",
         }}
       />
-
       <div className="container-main" style={{ position: "relative", zIndex: 1, width: "100%", padding: "60px 24px" }}>
         <div
           style={{
@@ -103,12 +102,12 @@ function Hero() {
               className="animate-fade-in-up delay-300"
               style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "48px" }}
             >
-              <Link href="/signup" passHref legacyBehavior>
+              <Link href="/signup">
                 <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} />}>
                   Start for Free
                 </Button>
               </Link>
-              <Link href="#features" passHref legacyBehavior>
+              <Link href="#features">
                 <Button variant="secondary" size="lg">
                   See Features
                 </Button>
@@ -626,7 +625,7 @@ function Pricing() {
                 ))}
               </ul>
 
-              <Link href={plan.href} passHref legacyBehavior>
+              <Link href={plan.href}>
                 <Button
                   variant={plan.highlighted ? "primary" : "secondary"}
                   size="md"
@@ -807,12 +806,12 @@ function CTABanner() {
           </p>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/signup" passHref legacyBehavior>
+            <Link href="/signup">
               <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} />}>
                 Get Started Free
               </Button>
             </Link>
-            <Link href="/login" passHref legacyBehavior>
+            <Link href="/login">
               <Button variant="secondary" size="lg">
                 I Have an Account
               </Button>

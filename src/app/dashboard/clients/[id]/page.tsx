@@ -428,7 +428,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <p className="font-heading" style={{ fontSize: "20px", marginBottom: "8px" }}>Client not found</p>
           <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>This client may have been deleted or you don&apos;t have access.</p>
         </div>
-        <Link href="/dashboard/clients" passHref legacyBehavior>
+        <Link href="/dashboard/clients">
           <Button variant="primary" size="sm" leftIcon={<ChevronLeft size={14} />}>
             Back to Clients
           </Button>

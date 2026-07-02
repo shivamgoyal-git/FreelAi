@@ -827,7 +827,6 @@ function ClientCard({
           </div>
         </div>
       </div>
-
       {/* Contact Details */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <a
@@ -859,7 +858,6 @@ function ClientCard({
           </div>
         )}
       </div>
-
       {/* Tags */}
       {client.tags.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
@@ -885,7 +883,6 @@ function ClientCard({
           )}
         </div>
       )}
-
       {/* Stats Row */}
       <div
         style={{
@@ -913,10 +910,9 @@ function ClientCard({
           </p>
         </div>
       </div>
-
       {/* Footer */}
       <div style={{ display: "flex", gap: "6px" }}>
-        <Link href={`/dashboard/clients/${client._id}`} passHref legacyBehavior>
+        <Link href={`/dashboard/clients/${client._id}`}>
           <Button variant="secondary" size="sm" leftIcon={<Eye size={12} />} style={{ flex: 1 }}>
             View
           </Button>
@@ -1026,13 +1022,13 @@ export default function ClientsPage() {
       {/* Top Nav */}
       <header
         style={{
-          height: "64px",
+          height: "60px",
           display: "flex",
           alignItems: "center",
           gap: "16px",
-          padding: "0 28px",
-          borderBottom: "1px solid var(--border-default)",
-          background: "var(--bg-surface)",
+          padding: "0 24px",
+          borderBottom: "0.5px solid var(--border)",
+          background: "var(--surface-1)",
           position: "sticky",
           top: 0,
           zIndex: 20,
@@ -1047,160 +1043,91 @@ export default function ClientsPage() {
             color: "var(--text-muted)",
             textDecoration: "none",
             fontSize: "13px",
-            transition: "color 0.2s",
+            transition: "color 0.15s",
           }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
         >
-          <ChevronLeft size={15} />
+          <ChevronLeft size={14} />
           Dashboard
         </Link>
 
-        <span style={{ color: "var(--border-strong)" }}>•</span>
+        <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "8px",
-              background: "var(--primary-light)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Users size={13} color="var(--primary)" />
+          <div style={{ width: "26px", height: "26px", borderRadius: "7px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Users size={13} color="var(--color-brand)" />
           </div>
-          <h1 className="font-heading" style={{ fontSize: "16px", color: "var(--text-primary)" }}>
+          <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em", color: "var(--text-primary)" }}>
             Clients
           </h1>
         </div>
 
         <div style={{ flex: 1 }} />
 
-        <Button
+        <button
           id="add-client-btn"
           onClick={openAdd}
-          variant="primary"
-          size="sm"
-          leftIcon={<Plus size={14} />}
+          className="btn-redesign btn-redesign-primary btn-redesign-sm"
         >
-          Add Client
-        </Button>
+          <Plus size={13} /> Add Client
+        </button>
       </header>
-
       <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", width: "100%", margin: "0 auto" }}>
         {/* Page Title + Summary */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr repeat(3, auto)",
-            gap: "16px",
-            alignItems: "center",
-            marginBottom: "28px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
           <div>
-            <h2 className="font-heading" style={{ fontSize: "24px", marginBottom: "4px" }}>
+            <h2 className="font-heading" style={{ fontSize: "22px", marginBottom: "4px", letterSpacing: "-0.02em" }}>
               Client Management
             </h2>
-            <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
               {total} client{total !== 1 ? "s" : ""} in your network
             </p>
           </div>
 
           {/* Stat pills */}
-          {[
-            { icon: <Users size={14} />, label: "Total", value: total, color: "var(--primary)" },
-            { icon: <CheckCircle size={14} />, label: "Active", value: activeCount, color: "var(--success)" },
-            { icon: <DollarSign size={14} />, label: "Earned", value: `$${totalEarned.toLocaleString()}`, color: "var(--info)" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="glass-card"
-              style={{ padding: "12px 18px", display: "flex", alignItems: "center", gap: "10px" }}
-            >
-              <div style={{ color: s.color }}>{s.icon}</div>
-              <div>
-                <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
-                  {s.value}
-                </p>
-                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{s.label}</p>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            {[
+              { icon: <Users size={13} />, label: "Total", value: total, color: "var(--color-brand)" },
+              { icon: <CheckCircle size={13} />, label: "Active", value: activeCount, color: "var(--color-success)" },
+              { icon: <DollarSign size={13} />, label: "Earned", value: `$${totalEarned.toLocaleString()}`, color: "var(--color-accent)" },
+            ].map((s) => (
+              <div key={s.label} style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: "10px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "var(--radius)", background: `${s.color}18`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, flexShrink: 0 }}>{s.icon}</div>
+                <div>
+                  <p style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1, letterSpacing: "-0.02em" }}>{s.value}</p>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{s.label}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Filters */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            marginBottom: "24px",
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
           {/* Search */}
-          <div style={{ position: "relative", flex: "1", minWidth: "200px", maxWidth: "360px" }}>
-            <Search
-              size={14}
-              style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "var(--text-muted)",
-                pointerEvents: "none",
-              }}
-            />
+          <div className="search-input-wrapper" style={{ flex: "1", minWidth: "180px", maxWidth: "320px" }}>
+            <span className="search-input-icon"><Search size={13} /></span>
             <input
               id="client-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, company..."
-              className="input-field has-icon"
-              style={{ paddingLeft: "36px" }}
+              className="search-input"
             />
           </div>
 
           {/* Status filter */}
-          <div
-            style={{
-              display: "flex",
-              gap: "4px",
-              background: "var(--bg-elevated)",
-              padding: "4px",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
+          <div className="filter-tabs">
             {["all", "active", "inactive", "prospect", "archived"].map((s) => (
               <button
                 key={s}
                 id={`filter-status-${s}`}
                 onClick={() => setStatusFilter(s)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  background:
-                    statusFilter === s ? "var(--bg-card)" : "transparent",
-                  color:
-                    statusFilter === s
-                      ? "var(--text-primary)"
-                      : "var(--text-muted)",
-                  fontSize: "12px",
-                  fontWeight: statusFilter === s ? 700 : 500,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  boxShadow: statusFilter === s ? "var(--shadow-sm)" : "none",
-                  transition: "all 0.2s",
-                  textTransform: "capitalize",
-                }}
+                className={`filter-tab${statusFilter === s ? " active" : ""}`}
               >
-                {s === "all" ? "All" : s}
+                {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
           </div>
@@ -1208,32 +1135,13 @@ export default function ClientsPage() {
           <div style={{ flex: 1 }} />
 
           {/* View toggle */}
-          <div
-            style={{
-              display: "flex",
-              gap: "2px",
-              background: "var(--bg-elevated)",
-              padding: "4px",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
+          <div className="filter-tabs">
             {(["grid", "list"] as const).map((m) => (
               <button
                 key={m}
                 id={`view-${m}`}
                 onClick={() => setViewMode(m)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  background: viewMode === m ? "var(--bg-card)" : "transparent",
-                  color: viewMode === m ? "var(--primary)" : "var(--text-muted)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.15s",
-                }}
+                className={`filter-tab${viewMode === m ? " active" : ""}`}
               >
                 {m === "grid" ? (
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
@@ -1252,32 +1160,14 @@ export default function ClientsPage() {
               </button>
             ))}
           </div>
-
-          <button
-            id="clients-filter-btn"
-            className="btn btn-secondary btn-sm"
-            style={{ borderRadius: "var(--radius-md)", gap: "6px" }}
-          >
-            <Filter size={13} />
-            Filter
-          </button>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "320px",
-              gap: "12px",
-              color: "var(--text-muted)",
-            }}
-          >
-            <Loader2 size={28} style={{ animation: "spin 1s linear infinite" }} color="var(--primary)" />
-            <p style={{ fontSize: "14px" }}>Loading clients...</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="skeleton" style={{ height: "200px", borderRadius: "var(--radius-lg)" }} />
+            ))}
           </div>
         ) : clients.length === 0 ? (
           <EmptyState
@@ -1305,30 +1195,13 @@ export default function ClientsPage() {
             ))}
           </div>
         ) : (
-          /* ── LIST VIEW ── */
           <div className="glass-card" style={{ overflow: "hidden" }}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table className="data-table">
                 <thead>
                   <tr>
                     {["Client", "Company", "Status", "Tags", "Projects", "Earned", "Rating", ""].map((col) => (
-                      <th
-                        key={col}
-                        style={{
-                          padding: "12px 16px",
-                          textAlign: "left",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                          borderBottom: "1px solid var(--border-default)",
-                          whiteSpace: "nowrap",
-                          background: "var(--bg-elevated)",
-                        }}
-                      >
-                        {col}
-                      </th>
+                      <th key={col}>{col}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1439,7 +1312,7 @@ export default function ClientsPage() {
                         {/* Actions */}
                         <td style={{ padding: "14px 16px" }}>
                           <div style={{ display: "flex", gap: "4px" }}>
-                            <Link href={`/dashboard/clients/${c._id}`} passHref legacyBehavior>
+                            <Link href={`/dashboard/clients/${c._id}`}>
                               <Button variant="ghost" size="sm">
                                 <Eye size={13} />
                               </Button>
@@ -1472,7 +1345,6 @@ export default function ClientsPage() {
           </div>
         )}
       </main>
-
       {/* Modals */}
       <ClientFormModal
         open={formOpen}
@@ -1485,7 +1357,6 @@ export default function ClientsPage() {
         onClose={() => setDeleteTarget(null)}
         onDeleted={handleDeleted}
       />
-
       {/* Spin keyframe */}
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

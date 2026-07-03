@@ -500,21 +500,6 @@ export default function DashboardPage() {
                     Here&apos;s an overview of your freelance metrics and recent developments.
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <Link href="/dashboard/projects">
-                    <Button variant="secondary" size="sm" leftIcon={<Briefcase size={14} />}>
-                      Manage Projects
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<LogOut size={14} />}
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                  >
-                    Logout
-                  </Button>
-                </div>
               </div>
               
               {/* ── PROFILE PROMO CARD ── */}

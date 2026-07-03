@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Briefcase,
@@ -269,6 +270,7 @@ interface DashboardProjectItem {
 // ── MAIN DASHBOARD PAGE ───────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { theme, toggle } = useTheme();
   const [activeNav, setActiveNav] = useState("overview");
   const [projectFilter, setProjectFilter] = useState("All");
@@ -312,6 +314,22 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkProfileStatus = async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (res.status === 404) {
+          router.push("/dashboard/profile/setup");
+        }
+      } catch (err) {
+        console.error("Failed to check profile completeness status:", err);
+      }
+    };
+    if (session?.user?.id) {
+      checkProfileStatus();
+    }
+  }, [session, router]);
 
   useEffect(() => {
     fetchDashboardData();

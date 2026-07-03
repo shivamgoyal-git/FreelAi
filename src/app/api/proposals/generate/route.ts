@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
+import { AiContextService } from "@/lib/ai-context-service";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -28,6 +29,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Retrieve central freelancer identity context
+    const freelancerContext = await AiContextService.getAiSystemContext(session.user.id);
+    const profile = await AiContextService.getProfile(session.user.id);
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (apiKey) {
@@ -35,7 +40,9 @@ export async function POST(req: NextRequest) {
       const systemPrompt = `
 You are an expert freelance growth consultant. Your task is to analyze the provided Client Job Post and generate a highly personalized, structured proposal, pricing breakdown, and deep AI metrics analysis.
 
-Analyze client requirements, pain points, urgency, budget sensitivity, and complexity. Mirror the client's communication style while maintaining the selected tone: "${tone}".
+${freelancerContext}
+
+Analyze client requirements, pain points, urgency, budget sensitivity, and complexity. Mirror the client's communication style while maintaining the selected tone: "${tone}". Incorporate the freelancer's skills, experience, and custom AI notes directives.
 
 You must return a raw JSON object ONLY. Do not wrap in markdown codeblocks (e.g. do not write \`\`\`json). The JSON must match this TypeScript interface exactly:
 
@@ -109,19 +116,21 @@ User Inputs:
       const parsedResult = JSON.parse(rawText.trim());
       return NextResponse.json(parsedResult);
     } else {
-      // ─── HIGH-FIDELITY MOCK AI FALLBACK ──────────────────────────────
+      // ─── HIGH-FIDELITY MOCK AI FALLBACK (CUSTOMIZED VIA IDENTITY) ───
       // Provide a fully customized realistic proposal based on keywords in the job post
       const isMobile = /app|mobile|ios|android|phone/i.test(jobPost);
       const isDesign = /design|ui|ux|figma|branding|logo/i.test(jobPost);
       const isMarketing = /marketing|seo|growth|ads|social/i.test(jobPost);
       
-      let category = "Web Development";
-      if (isMobile) category = "Mobile Application";
-      else if (isDesign) category = "UI/UX Design";
-      else if (isMarketing) category = "Growth Marketing";
+      let category = profile?.professional?.primaryProfession || "Web Development";
+      if (isMobile && !profile) category = "Mobile Application";
+      else if (isDesign && !profile) category = "UI/UX Design";
+      else if (isMarketing && !profile) category = "Growth Marketing";
 
-      const finalBudget = budget || 4500;
-      const finalTimeline = timeline || "4 weeks";
+      const finalBudget = budget || (profile?.pricing?.hourlyRate ? profile.pricing.hourlyRate * 80 : 4500);
+      const finalTimeline = timeline || profile?.preferences?.defaultTimeline || "4 weeks";
+      const freelancerName = profile?.personal?.fullName || session.user.name || "Freelancer";
+      const freelancerTitle = profile?.personal?.professionalTitle || profile?.professional?.primaryProfession || "Freelancer";
 
       const mockResponse = {
         sections: {
@@ -130,22 +139,22 @@ Hi ${clientName},
 
 I reviewed your project post regarding **${category}** on ${platform}. It is clear that you are looking for a reliable expert who can hit the ground running, deliver clean results, and optimize for user engagement. 
 
-Based on my analysis, the main challenge is establishing a streamlined user flow while keeping page load speeds high. I have delivered similar projects for tech startups and would love to bring that experience to your workspace. By aligning our strategy directly with your target conversion goals, we can assure a high-quality build that delivers outcome-driven results.
+As a professional **${freelancerTitle}**, I specialize in establishing streamlined user flows while keeping quality high. I have delivered similar projects for multiple setups and would love to bring my expertise to your workspace. By aligning our strategy directly with your target goals, we can assure a high-quality build that delivers outcome-driven results.
 
 Below, you'll find a structured scope of work, timeline, and pricing breakdown. Let's schedule a call to finalize the details!`,
           scopeOfWork: `### Scope of Work
 Here is the proposed list of deliverables to satisfy your project brief:
 
-1. **Discovery & UX Research**: Deep-dive into user requirements, analyze competitors, and map out the layout structure.
-2. **Interactive UI Prototyping**: Deliver high-fidelity Figma mockups matching your requested **${tone}** tone.
-3. **Core Engineering**: Implement a fully responsive structure using modern Next.js and styled with clean CSS, ensuring fast page speeds and full SEO setups.
+1. **Discovery & Alignment**: Deep-dive into user requirements, analyze competitors, and map out the layout structure.
+2. **Design Prototyping**: Deliver high-fidelity mockups matching your requested **${tone}** tone.
+3. **Core Handoff**: Implement a fully responsive structure matching modern standard styling, ensuring fast page speeds and full setups.
 4. **Testing & QA**: Conduct cross-browser checks, mobile responsiveness tests, and load-time optimizations.`,
           timelineAndMilestones: `### Timeline & Milestones
 We propose completing this project in **${finalTimeline}** with the following milestones:
 
 * **Milestone 1**: Wireframes & Site Architecture Approval (Week 1)
-* **Milestone 2**: Final UI/UX Design Mockups & Style Guide Signoff (Week 2)
-* **Milestone 3**: Clean Frontend Code Delivery & Integration (Week 3)
+* **Milestone 2**: Final Design Mockups & Style Guide Signoff (Week 2)
+* **Milestone 3**: Clean Code Delivery & Integration (Week 3)
 * **Milestone 4**: Final Polish, Launch, & Handoff (Week 4)`,
           callToAction: `### Call to Action
 If this alignment matches your expectations, here are the next steps:
@@ -155,7 +164,7 @@ If this alignment matches your expectations, here are the next steps:
 3. **Kickoff**: Initiate research on Milestone 1 immediately!
 
 Looking forward to collaborating,
-*FreelAI Copilot on behalf of ${session.user.name || "Freelancer"}*`,
+*FreelAI Identity Copilot on behalf of ${freelancerName}*`,
         },
         pricingBreakdown: {
           basic: {
@@ -176,20 +185,20 @@ Looking forward to collaborating,
         },
         aiAnalysis: {
           readability: "Easy" as const,
-          personalization: 88,
-          professionalism: 92,
-          confidence: 90,
+          personalization: 90,
+          professionalism: 95,
+          confidence: 93,
           urgency: /urgent|soon|asap|fast/i.test(jobPost) ? ("High" as const) : ("Medium" as const),
           budgetSensitivity: /budget|cheap|low cost|tight/i.test(jobPost) ? ("High" as const) : ("Medium" as const),
           complexity: /complex|difficult|expert|scale|senior/i.test(jobPost) ? ("High" as const) : ("Medium" as const),
           communicationStyle: tone === "Friendly" ? "Conversational" : "Technical & Outcome-driven",
         },
         scoreBreakdown: {
-          overall: 88,
-          clarity: 90,
-          alignment: 85,
-          callToAction: 92,
-          valueProposition: 85,
+          overall: 92,
+          clarity: 93,
+          alignment: 90,
+          callToAction: 95,
+          valueProposition: 90,
         },
         detectedPainPoints: [
           "Requirement for high-converting layout structure aligned with conversion goals.",
@@ -201,7 +210,7 @@ Looking forward to collaborating,
           "Incorporate a 10% early-bird discount on the Standard tier to trigger immediate client conversion.",
           "Add details about post-launch support windows (e.g. 30 days free bug-fixing) to boost trust scores.",
         ],
-        promptVersion: "v2.0 (Mock Fallback)",
+        promptVersion: "v2.1 (Context Integrated Mock)",
       };
 
       // Artificially simulate delay to give real AI feel

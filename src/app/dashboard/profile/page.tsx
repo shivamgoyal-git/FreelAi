@@ -190,7 +190,12 @@ export default function ProfilePage() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      alert("Please fix the highlighted validation errors before saving.");
+      // Auto-switch to the first tab that has an error
+      if (newErrors.fullName || newErrors.professionalTitle) {
+        setActiveTab("identity");
+      } else if (newErrors.skills || newErrors.services) {
+        setActiveTab("services");
+      }
       return;
     }
     setErrors({});
@@ -337,10 +342,10 @@ export default function ProfilePage() {
           {/* Tabs bar */}
           <div style={{ display: "flex", gap: "4px", background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
             {[
-              { id: "identity", label: "Identity & Business", icon: <User size={13} /> },
-              { id: "services", label: "Skills & Services", icon: <Layers size={13} /> },
-              { id: "preferences", label: "Work & AI Preferences", icon: <Settings size={13} /> },
-              { id: "voice", label: "Brand Voice & AI Notes", icon: <Volume2 size={13} /> },
+              { id: "identity", label: "Identity & Business", icon: <User size={13} />, hasError: !!errors.fullName || !!errors.professionalTitle },
+              { id: "services", label: "Skills & Services", icon: <Layers size={13} />, hasError: !!errors.skills || !!errors.services },
+              { id: "preferences", label: "Work & AI Preferences", icon: <Settings size={13} />, hasError: false },
+              { id: "voice", label: "Brand Voice & AI Notes", icon: <Volume2 size={13} />, hasError: false },
             ].map((t) => (
               <button
                 key={t.id}
@@ -364,6 +369,9 @@ export default function ProfilePage() {
               >
                 {t.icon}
                 <span>{t.label}</span>
+                {t.hasError && (
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--color-danger)" }} />
+                )}
               </button>
             ))}
           </div>

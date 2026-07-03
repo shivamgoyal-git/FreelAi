@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Briefcase,
@@ -33,6 +32,7 @@ import {
   Loader2,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
 import {
   LineChart,
@@ -270,10 +270,11 @@ interface DashboardProjectItem {
 // ── MAIN DASHBOARD PAGE ───────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const router = useRouter();
   const { theme, toggle } = useTheme();
   const [activeNav, setActiveNav] = useState("overview");
   const [projectFilter, setProjectFilter] = useState("All");
+  const [profileCompleteness, setProfileCompleteness] = useState<number | null>(null);
+  const [showPromoCard, setShowPromoCard] = useState<boolean>(true);
 
   // Dynamic States
   const [stats, setStats] = useState({
@@ -316,20 +317,23 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const checkProfileStatus = async () => {
+    const loadProfileStatus = async () => {
       try {
         const res = await fetch("/api/profile");
-        if (res.status === 404) {
-          router.push("/dashboard/profile/setup");
+        if (res.ok) {
+          const data = await res.json();
+          setProfileCompleteness(data.profile.profileCompleteness);
+        } else if (res.status === 404 || res.status === 403) {
+          setProfileCompleteness(0);
         }
       } catch (err) {
-        console.error("Failed to check profile completeness status:", err);
+        console.error("Failed to check profile completeness:", err);
       }
     };
     if (session?.user?.id) {
-      checkProfileStatus();
+      loadProfileStatus();
     }
-  }, [session, router]);
+  }, [session]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -524,6 +528,66 @@ export default function DashboardPage() {
                   </Button>
                 </div>
               </div>
+              
+              {/* ── PROFILE PROMO CARD ── */}
+              {profileCompleteness !== null && profileCompleteness < 100 && showPromoCard && (
+                <div style={{
+                  background: "var(--surface-1)",
+                  border: "0.5px solid var(--border-strong)",
+                  borderRadius: "var(--radius)",
+                  padding: "20px",
+                  marginBottom: "24px",
+                  position: "relative",
+                  boxShadow: "var(--shadow-sm)"
+                }}>
+                  <button
+                    onClick={() => setShowPromoCard(false)}
+                    style={{
+                      position: "absolute",
+                      top: "14px",
+                      right: "14px",
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                  <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
+                    <div style={{ flex: 1, minWidth: "260px" }}>
+                      <h4 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Sparkles size={14} color="var(--color-brand)" /> Complete your Freelancer Profile
+                      </h4>
+                      <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "4px", maxWidth: "560px" }}>
+                        Configure your professional skills and services to unlock AI-powered proposal generation, automatic reply assistants, and smart pricing tools.
+                      </p>
+                      <div style={{ display: "flex", gap: "16px", marginTop: "12px", fontSize: "11px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                        <span>Unlock:</span>
+                        <span>✓ AI Proposal Generator</span>
+                        <span>✓ AI Client Reply Assistant</span>
+                        <span>✓ AI Pricing Assistant</span>
+                      </div>
+                    </div>
+                    
+                    {/* Progress meter */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "bold" }}>
+                        <span style={{ color: "var(--text-secondary)" }}>Onboarding Progress</span>
+                        <span style={{ color: "var(--color-brand)" }}>{profileCompleteness}%</span>
+                      </div>
+                      <div style={{ height: "6px", background: "var(--surface-2)", borderRadius: "3px", overflow: "hidden" }}>
+                        <div style={{ width: `${profileCompleteness}%`, height: "100%", background: "var(--color-brand)", borderRadius: "3px", transition: "width 0.4s ease" }} />
+                      </div>
+                      <Link href="/dashboard/profile/setup" style={{ textDecoration: "none", marginTop: "4px" }}>
+                        <Button variant="primary" size="sm" style={{ width: "100%", height: "28px", fontSize: "11px" }}>
+                          Complete Profile
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {loading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

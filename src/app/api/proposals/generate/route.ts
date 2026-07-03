@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import { AiContextService } from "@/lib/ai-context-service";
+import { requireFreelancerProfile } from "@/lib/profile-gate";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const profileGateResponse = await requireFreelancerProfile(session.user.id);
+  if (profileGateResponse) return profileGateResponse;
 
   await connectDB();
 

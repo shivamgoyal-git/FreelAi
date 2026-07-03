@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import ProfileGuard from "@/components/ProfileGuard";
 import {
   Sparkles,
   ChevronLeft,
@@ -565,7 +566,8 @@ ${editingSections.callToAction}
   const getCompareProposal = () => proposals.find((p) => p._id === comparePropId);
 
   return (
-    <div className="proposals-page-container" style={{ minHeight: "100vh", background: "var(--surface-0)", display: "flex", flexDirection: "column" }}>
+    <ProfileGuard feature="proposal-generator">
+      <div className="proposals-page-container" style={{ minHeight: "100vh", background: "var(--surface-0)", display: "flex", flexDirection: "column" }}>
       
       {/* Printable CSS Page Styles for PDF Handoff */}
       <style>{`
@@ -1489,5 +1491,6 @@ ${editingSections.callToAction}
 
       </main>
     </div>
+    </ProfileGuard>
   );
 }

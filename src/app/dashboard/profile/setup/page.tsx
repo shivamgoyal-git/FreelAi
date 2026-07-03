@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Sparkles,
   ArrowRight,
@@ -22,27 +23,35 @@ interface IServiceInput {
   features: string[];
 }
 
-export default function ProfileSetupPage() {
+function OnboardingSetupWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  
+  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [parseLoading, setParseLoading] = useState<boolean>(false);
+  const [loadDraftLoading, setLoadDraftLoading] = useState<boolean>(true);
 
   // Resume raw text
   const [resumeText, setResumeText] = useState("");
 
-  // Step 2 Form States
+  // Step 1 Form States: Basic Information
   const [fullName, setFullName] = useState("");
   const [professionalTitle, setProfessionalTitle] = useState("");
-  const [primaryProfession, setPrimaryProfession] = useState("");
-  const [yearsOfExperience, setYearsOfExperience] = useState<number>(3);
-  const [bio, setBio] = useState("");
   const [country, setCountry] = useState("United States");
   const [timezone, setTimezone] = useState("EST");
 
-  // Step 3 Form States
+  // Step 2 Form States: Professional Details
+  const [primaryProfession, setPrimaryProfession] = useState("");
+  const [yearsOfExperience, setYearsOfExperience] = useState<number>(3);
+  const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
+
+  // Step 3 Form States: Services
   const [services, setServices] = useState<IServiceInput[]>([
     {
       name: "",
@@ -55,12 +64,62 @@ export default function ProfileSetupPage() {
   ]);
   const [newFeatureText, setNewFeatureText] = useState<Record<number, string>>({});
 
-  // Step 4 Form States
+  // Pricing default overrides
   const [hourlyRate, setHourlyRate] = useState<number>(50);
   const [currency, setCurrency] = useState("USD");
-  const [pricingModel, setPricingModel] = useState<"hourly" | "fixed" | "custom">("fixed");
   const [availability, setAvailability] = useState<"Available" | "Busy" | "Part-Time" | "Vacation">("Available");
   const [preferredTone, setPreferredTone] = useState("Professional");
+
+  // On mount: fetch existing profile to load as draft
+  useEffect(() => {
+    const loadDraft = async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const data = await res.json();
+          const p = data.profile;
+          if (p) {
+            setFullName(p.personal?.fullName || "");
+            setProfessionalTitle(p.personal?.professionalTitle || "");
+            setCountry(p.personal?.country || "United States");
+            setTimezone(p.personal?.timezone || "EST");
+
+            setPrimaryProfession(p.professional?.primaryProfession || "");
+            setYearsOfExperience(p.professional?.yearsOfExperience || 3);
+            setBio(p.professional?.bio || "");
+            setSkills(p.professional?.skills || []);
+            
+            if (p.professional?.services && p.professional.services.length > 0) {
+              setServices(p.professional.services);
+            }
+
+            setHourlyRate(p.pricing?.hourlyRate || 50);
+            setCurrency(p.pricing?.currency || "USD");
+            setAvailability(p.availability || "Available");
+            setPreferredTone(p.preferences?.preferredProposalTone || "Professional");
+
+            // Resume furthest step
+            if (p.professional?.services && p.professional.services.length > 0 && p.professional.services[0].name !== "") {
+              setStep(4);
+            } else if (p.professional?.skills && p.professional.skills.length > 0) {
+              setStep(3);
+            } else if (p.personal?.fullName && p.professional?.primaryProfession) {
+              setStep(2);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load profile draft:", err);
+      } finally {
+        setLoadDraftLoading(false);
+      }
+    };
+    if (session?.user?.id) {
+      loadDraft();
+    } else {
+      setLoadDraftLoading(false);
+    }
+  }, [session]);
 
   // AI Autofill from Resume text
   const handleAutofill = async () => {
@@ -89,8 +148,7 @@ export default function ProfileSetupPage() {
         if (data.services && data.services.length > 0) {
           setServices(data.services);
         }
-        alert("AI successfully parsed your resume! Reviewing setup foundation fields next.");
-        setStep(2);
+        alert("AI successfully parsed details! Proceeding to verify basic details.");
       } else {
         alert(data.error || "Autofill parser failed");
       }
@@ -114,6 +172,7 @@ export default function ProfileSetupPage() {
     setSkills(skills.filter((s) => s !== sk));
   };
 
+  // Service list modifiers
   const handleServiceChange = (index: number, key: keyof IServiceInput, value: string | number | string[]) => {
     const updated = [...services];
     updated[index] = { ...updated[index], [key]: value };
@@ -157,30 +216,8 @@ export default function ProfileSetupPage() {
     setServices(updated);
   };
 
-  // Validation checking per step
-  const handleNextStep = () => {
-    if (step === 2) {
-      if (!fullName.trim() || !primaryProfession.trim()) {
-        alert("Full Name and Primary Profession are required.");
-        return;
-      }
-    }
-    if (step === 3) {
-      if (skills.length === 0) {
-        alert("Please add at least one professional skill.");
-        return;
-      }
-      const hasEmptyService = services.some((s) => !s.name.trim() || !s.description.trim());
-      if (hasEmptyService) {
-        alert("Please complete details (Name & Description) for all services.");
-        return;
-      }
-    }
-    setStep((prev) => prev + 1);
-  };
-
-  // Submit profile setup
-  const handleSubmit = async () => {
+  // Save draft progress after each step completes
+  const saveStepDraft = async (targetStep: number) => {
     setLoading(true);
     try {
       const payload = {
@@ -192,16 +229,20 @@ export default function ProfileSetupPage() {
           languages: ["English"],
         },
         professional: {
-          primaryProfession,
+          primaryProfession: primaryProfession || "Freelancer",
           yearsOfExperience,
           bio,
           skills,
-          services,
+          services: services.map((s) => ({
+            ...s,
+            name: s.name || "General Service",
+            description: s.description || "Consultation and delivery",
+          })),
         },
         pricing: {
           hourlyRate,
           currency,
-          pricingModel,
+          pricingModel: "fixed",
         },
         brandVoice: {
           voiceDescriptors: [preferredTone],
@@ -217,26 +258,58 @@ export default function ProfileSetupPage() {
         },
       };
 
-      const res = await fetch("/api/profile", {
-        method: "POST",
+      await fetch("/api/profile", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert("Profile setup completed successfully!");
-        router.push("/dashboard");
-      } else {
-        alert(data.error || "Failed to save profile");
-      }
+      setStep(targetStep);
     } catch (err) {
-      console.error(err);
-      alert("Error saving profile details.");
+      console.error("Auto-save draft error:", err);
+      // Still proceed to next step even if draft save hits a network issue
+      setStep(targetStep);
     } finally {
       setLoading(false);
     }
   };
+
+  // Validation checking per step
+  const handleNextStep = async () => {
+    if (step === 1) {
+      if (!fullName.trim()) {
+        alert("Full Name is required.");
+        return;
+      }
+      await saveStepDraft(2);
+    } else if (step === 2) {
+      if (!primaryProfession.trim() || skills.length === 0) {
+        alert("Primary Profession and at least one Skill are required.");
+        return;
+      }
+      await saveStepDraft(3);
+    } else if (step === 3) {
+      const hasEmptyService = services.some((s) => !s.name.trim() || !s.description.trim());
+      if (hasEmptyService || services.length === 0) {
+        alert("Please complete Name and Description for at least one service.");
+        return;
+      }
+      await saveStepDraft(4);
+    }
+  };
+
+  // Redirect back to query destination
+  const handleContinue = () => {
+    router.push(redirectUrl);
+  };
+
+  if (loadDraftLoading) {
+    return (
+      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader2 size={24} color="var(--color-brand)" style={{ animation: "spin 1s linear infinite" }} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--surface-0)", padding: "40px 20px" }}>
@@ -247,16 +320,16 @@ export default function ProfileSetupPage() {
           <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Sparkles size={16} color="var(--color-brand)" />
           </div>
-          <h2 className="font-heading" style={{ fontSize: "18px", letterSpacing: "-0.015em" }}>Freelancer Identity Onboarding</h2>
+          <h2 className="font-heading" style={{ fontSize: "18px", letterSpacing: "-0.015em" }}>Freelancer Profile Setup</h2>
         </div>
 
         {/* Step Progress indicators */}
         <div style={{ display: "flex", gap: "8px", background: "var(--surface-2)", padding: "4px", borderRadius: "8px" }}>
           {[
-            { n: 1, l: "Resume Parsing" },
-            { n: 2, l: "Foundation" },
-            { n: 3, l: "Skills & Services" },
-            { n: 4, l: "Pricing & Prefs" },
+            { n: 1, l: "Basic Info" },
+            { n: 2, l: "Professional Details" },
+            { n: 3, l: "Services Offered" },
+            { n: 4, l: "Finish Setup" },
           ].map((s) => (
             <div
               key={s.n}
@@ -289,7 +362,7 @@ export default function ProfileSetupPage() {
               }}>
                 {step > s.n ? <Check size={9} /> : s.n}
               </span>
-              <span style={{ display: "inline-block" }}>{s.l}</span>
+              <span>{s.l}</span>
             </div>
           ))}
         </div>
@@ -297,111 +370,62 @@ export default function ProfileSetupPage() {
         {/* Wizard step cards */}
         <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "28px", boxShadow: "var(--shadow-md)" }}>
           
-          {/* STEP 1: RESUME UPLOAD / PASTE */}
+          {/* STEP 1: BASIC INFORMATION & RESUME AUTOFILL */}
           {step === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)" }}>Autofill Identity Profile</h3>
+                <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Basic Information</h3>
                 <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Paste your resume text, LinkedIn description, or agency biography brief. Our AI will automatically parse skills, services, and profile structures to bypass manual configuration.
+                  Provide your name and professional title.
                 </p>
               </div>
 
-              <div className="input-group">
-                <label className="input-label">Resume / CV Copy Paste Block</label>
+              {/* Optional Resume parsing helper */}
+              <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "6px", padding: "14px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  💡 Tip: AI Resume Autofill
+                </span>
                 <textarea
                   value={resumeText}
                   onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste your professional experience summary, key accomplishments, skills lists, and education here..."
+                  placeholder="Paste resume bio text here to parse and prefill all onboarding fields automatically..."
                   className="input-field"
-                  style={{ height: "200px", fontSize: "12.5px", resize: "none", lineHeight: "1.5" }}
+                  style={{ height: "70px", fontSize: "11.5px", resize: "none", marginBottom: "8px", lineHeight: "1.4" }}
                 />
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
                 <Button
-                  variant="primary"
+                  variant="secondary"
+                  size="sm"
                   onClick={handleAutofill}
                   disabled={parseLoading}
-                  leftIcon={parseLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={13} />}
+                  leftIcon={parseLoading ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={11} />}
                 >
-                  {parseLoading ? "Analyzing resume text..." : "AI Autofill Profile Setup"}
-                </Button>
-                <Button variant="secondary" onClick={() => setStep(2)}>
-                  Skip, configure manually
+                  {parseLoading ? "Parsing CV..." : "Autofill Setup Fields"}
                 </Button>
               </div>
-            </div>
-          )}
 
-          {/* STEP 2: PROFILE FOUNDATION */}
-          {step === 2 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)" }}>Professional Foundation</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Provide your primary identity markers. Full Name and Profession are required.
-                </p>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px" }}>
                 <div className="input-group">
                   <label className="input-label">Full Name *</label>
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Sarah Jenkins"
+                    placeholder="e.g. Liam Foster"
                     className="input-field"
-                    style={{ fontSize: "13px" }}
+                    style={{ fontSize: "12.5px" }}
                   />
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Primary Profession *</label>
-                  <input
-                    type="text"
-                    value={primaryProfession}
-                    onChange={(e) => setPrimaryProfession(e.target.value)}
-                    placeholder="e.g. UI/UX Designer, Copywriter"
-                    className="input-field"
-                    style={{ fontSize: "13px" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Professional Title (Optional)</label>
+                  <label className="input-label">Professional Title</label>
                   <input
                     type="text"
                     value={professionalTitle}
                     onChange={(e) => setProfessionalTitle(e.target.value)}
-                    placeholder="e.g. Senior Product & Handoff Designer"
+                    placeholder="e.g. Senior Copywriter"
                     className="input-field"
-                    style={{ fontSize: "13px" }}
+                    style={{ fontSize: "12.5px" }}
                   />
                 </div>
-                <div className="input-group">
-                  <label className="input-label">Years of Experience</label>
-                  <input
-                    type="number"
-                    value={yearsOfExperience}
-                    onChange={(e) => setYearsOfExperience(Number(e.target.value))}
-                    className="input-field"
-                    style={{ fontSize: "13px" }}
-                  />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Professional Bio Summary</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Summarize your credentials, target audience alignment, and key accomplishments..."
-                  className="input-field"
-                  style={{ height: "90px", fontSize: "13px", resize: "none", lineHeight: "1.5" }}
-                />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -412,7 +436,7 @@ export default function ProfileSetupPage() {
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     className="input-field"
-                    style={{ fontSize: "13px" }}
+                    style={{ fontSize: "12.5px" }}
                   />
                 </div>
                 <div className="input-group">
@@ -422,36 +446,72 @@ export default function ProfileSetupPage() {
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
                     className="input-field"
-                    style={{ fontSize: "13px" }}
+                    style={{ fontSize: "12.5px" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
-                <Button variant="secondary" onClick={() => setStep(1)} leftIcon={<ArrowLeft size={13} />}>
-                  Back
-                </Button>
-                <div style={{ flex: 1 }} />
-                <Button variant="primary" onClick={handleNextStep} rightIcon={<ArrowRight size={13} />}>
-                  Next: Skills & Services
+              <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
+                <Button
+                  variant="primary"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                  rightIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowRight size={13} />}
+                >
+                  {loading ? "Saving draft..." : "Next: Professional Details"}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: SKILLS & SERVICES */}
-          {step === 3 && (
+          {/* STEP 2: PROFESSIONAL DETAILS */}
+          {step === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)" }}>Skills & Services</h3>
+                <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Professional Details</h3>
                 <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Add at least one professional skill and at least one catalogued service.
+                  Specify your primary profession and add your skills. At least one skill is required.
                 </p>
               </div>
 
-              {/* Skills Tag input */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+                <div className="input-group">
+                  <label className="input-label">Primary Profession *</label>
+                  <input
+                    type="text"
+                    value={primaryProfession}
+                    onChange={(e) => setPrimaryProfession(e.target.value)}
+                    placeholder="e.g. UI/UX Designer, Web Developer"
+                    className="input-field"
+                    style={{ fontSize: "12.5px" }}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Years of Experience</label>
+                  <input
+                    type="number"
+                    value={yearsOfExperience}
+                    onChange={(e) => setYearsOfExperience(Number(e.target.value))}
+                    className="input-field"
+                    style={{ fontSize: "12.5px" }}
+                  />
+                </div>
+              </div>
+
               <div className="input-group">
-                <label className="input-label">Professional Skills *</label>
+                <label className="input-label">Bio Summary</label>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell clients about your background and primary focus..."
+                  className="input-field"
+                  style={{ height: "80px", fontSize: "12.5px", resize: "none", lineHeight: "1.4" }}
+                />
+              </div>
+
+              {/* Skills Tags input */}
+              <div className="input-group">
+                <label className="input-label">Expert Skills *</label>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input
                     type="text"
@@ -460,7 +520,7 @@ export default function ProfileSetupPage() {
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
                     placeholder="e.g. Next.js, Figma, SEO"
                     className="input-field"
-                    style={{ fontSize: "13px" }}
+                    style={{ fontSize: "12.5px" }}
                   />
                   <Button variant="secondary" onClick={addSkill} style={{ height: "38px" }}>
                     <Plus size={13} /> Add
@@ -468,7 +528,7 @@ export default function ProfileSetupPage() {
                 </div>
 
                 {skills.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "8px" }}>
                     {skills.map((sk) => (
                       <span
                         key={sk}
@@ -480,7 +540,7 @@ export default function ProfileSetupPage() {
                           color: "var(--text-secondary)",
                           padding: "4px 8px",
                           borderRadius: "4px",
-                          fontSize: "11.5px",
+                          fontSize: "11px",
                           fontWeight: 600,
                           border: "1px solid var(--border)",
                         }}
@@ -490,7 +550,7 @@ export default function ProfileSetupPage() {
                           onClick={() => removeSkill(sk)}
                           style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}
                         >
-                          <X size={11} />
+                          <X size={10} />
                         </button>
                       </span>
                     ))}
@@ -498,10 +558,34 @@ export default function ProfileSetupPage() {
                 )}
               </div>
 
-              {/* Services Repeater */}
+              <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
+                <Button variant="secondary" onClick={() => setStep(1)} leftIcon={<ArrowLeft size={13} />}>
+                  Back
+                </Button>
+                <div style={{ flex: 1 }} />
+                <Button
+                  variant="primary"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                  rightIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowRight size={13} />}
+                >
+                  {loading ? "Saving draft..." : "Next: Services"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: SERVICES CATALOG */}
+          {step === 3 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
+                <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Services Offered</h3>
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                  Catalog at least one service offered. Complete the Name and Description fields.
+                </p>
+              </div>
+
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <label className="input-label">Services Catalogue *</label>
-                
                 {services.map((svc, idx) => (
                   <div key={idx} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px", background: "var(--surface-2)", position: "relative" }}>
                     {services.length > 1 && (
@@ -509,12 +593,12 @@ export default function ProfileSetupPage() {
                         onClick={() => removeServiceRow(idx)}
                         style={{ position: "absolute", top: "12px", right: "12px", background: "none", border: "none", color: "var(--error)", cursor: "pointer" }}
                       >
-                        <Trash2 size={13} />
+                        <X size={14} />
                       </button>
                     )}
 
-                    <span style={{ fontSize: "11px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>
-                      Service #{idx + 1}
+                    <span style={{ fontSize: "10px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>
+                      Service Item #{idx + 1}
                     </span>
 
                     <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px", marginBottom: "10px" }}>
@@ -522,7 +606,7 @@ export default function ProfileSetupPage() {
                         type="text"
                         value={svc.name}
                         onChange={(e) => handleServiceChange(idx, "name", e.target.value)}
-                        placeholder="Service Name (e.g. Website Development)"
+                        placeholder="Service Name (e.g. Website Implementation)"
                         className="input-field"
                         style={{ fontSize: "12.5px" }}
                       />
@@ -548,7 +632,7 @@ export default function ProfileSetupPage() {
                           value={svc.startingPrice}
                           onChange={(e) => handleServiceChange(idx, "startingPrice", Number(e.target.value))}
                           className="input-field"
-                          style={{ fontSize: "12.5px", padding: "4px 8px" }}
+                          style={{ fontSize: "12px", padding: "4px 8px" }}
                         />
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -559,7 +643,7 @@ export default function ProfileSetupPage() {
                           onChange={(e) => handleServiceChange(idx, "deliveryTime", e.target.value)}
                           placeholder="e.g. 5 days"
                           className="input-field"
-                          style={{ fontSize: "12.5px", padding: "4px 8px" }}
+                          style={{ fontSize: "12px", padding: "4px 8px" }}
                         />
                       </div>
                     </div>
@@ -567,25 +651,25 @@ export default function ProfileSetupPage() {
                     <textarea
                       value={svc.description}
                       onChange={(e) => handleServiceChange(idx, "description", e.target.value)}
-                      placeholder="Service description outlining main deliverables and handoff specifications..."
+                      placeholder="Service deliverables..."
                       className="input-field"
                       style={{ height: "60px", fontSize: "12.5px", resize: "none", marginBottom: "10px", lineHeight: "1.4" }}
                     />
 
-                    {/* Features checklist inside service */}
+                    {/* Features repeater */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 600 }}>Features / Deliverables checklist</span>
+                      <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 600 }}>Deliverables list</span>
                       <div style={{ display: "flex", gap: "8px" }}>
                         <input
                           type="text"
                           value={newFeatureText[idx] || ""}
                           onChange={(e) => setNewFeatureText({ ...newFeatureText, [idx]: e.target.value })}
                           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addServiceFeature(idx); } }}
-                          placeholder="e.g. 3 Revisions, SEO setup"
+                          placeholder="Add feature..."
                           className="input-field"
-                          style={{ fontSize: "11.5px", height: "28px" }}
+                          style={{ fontSize: "11.5px", height: "26px" }}
                         />
-                        <Button variant="secondary" size="sm" onClick={() => addServiceFeature(idx)} style={{ height: "28px" }}>
+                        <Button variant="secondary" size="sm" onClick={() => addServiceFeature(idx)} style={{ height: "26px" }}>
                           Add
                         </Button>
                       </div>
@@ -602,10 +686,11 @@ export default function ProfileSetupPage() {
                         </div>
                       )}
                     </div>
+
                   </div>
                 ))}
 
-                <Button variant="secondary" size="sm" onClick={addServiceRow} leftIcon={<Plus size={13} />}>
+                <Button variant="secondary" size="sm" onClick={addServiceRow} leftIcon={<Plus size={12} />}>
                   Add another Service
                 </Button>
               </div>
@@ -615,111 +700,33 @@ export default function ProfileSetupPage() {
                   Back
                 </Button>
                 <div style={{ flex: 1 }} />
-                <Button variant="primary" onClick={handleNextStep} rightIcon={<ArrowRight size={13} />}>
-                  Next: Pricing & Preferences
+                <Button
+                  variant="primary"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                  rightIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowRight size={13} />}
+                >
+                  {loading ? "Saving draft..." : "Next: Finish Setup"}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* STEP 4: PRICING & PREFERENCES */}
+          {/* STEP 4: FINISH */}
           {step === 4 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)" }}>Pricing & AI Preferences</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Configure your pricing model, preferred tone, and system preferences.
-                </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px", alignItems: "center", textAlign: "center", padding: "20px 0" }}>
+              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(16,185,129,0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #10b981", marginBottom: "8px" }}>
+                <Check size={24} color="#10b981" />
               </div>
+              
+              <h3 className="font-heading" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Your Freelancer Profile is ready.</h3>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "340px", lineHeight: "1.5" }}>
+                Your professional brand voice, skills, services, and default rates are now saved as your central identity layer. You are ready to generate custom, personalized AI content!
+              </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Hourly Rate ($ USD)</label>
-                  <input
-                    type="number"
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(Number(e.target.value))}
-                    className="input-field"
-                    style={{ fontSize: "13px" }}
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Default Currency</label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="input-field"
-                    style={{ fontSize: "13px" }}
-                  >
-                    {["USD", "EUR", "GBP", "CAD", "AUD", "INR"].map((cur) => (
-                      <option key={cur} value={cur}>
-                        {cur}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Pricing Model Preference</label>
-                  <select
-                    value={pricingModel}
-                    onChange={(e) => setPricingModel(e.target.value as "hourly" | "fixed" | "custom")}
-                    className="input-field"
-                    style={{ fontSize: "13px" }}
-                  >
-                    <option value="hourly">Hourly Billing</option>
-                    <option value="fixed">Fixed-Price milestones</option>
-                    <option value="custom">Custom Retainers</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Availability Status</label>
-                  <select
-                    value={availability}
-                    onChange={(e) => setAvailability(e.target.value as "Available" | "Busy" | "Part-Time" | "Vacation")}
-                    className="input-field"
-                    style={{ fontSize: "13px" }}
-                  >
-                    <option value="Available">Available (Open for work)</option>
-                    <option value="Busy">Busy (No bandwidth)</option>
-                    <option value="Part-Time">Part-Time availability</option>
-                    <option value="Vacation">On Vacation</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Preferred Brand Voice/Proposal Tone</label>
-                <select
-                  value={preferredTone}
-                  onChange={(e) => setPreferredTone(e.target.value)}
-                  className="input-field"
-                  style={{ fontSize: "13px" }}
-                >
-                  {["Professional", "Friendly", "Corporate", "Confident", "Minimal"].map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
-                <Button variant="secondary" onClick={() => setStep(3)} leftIcon={<ArrowLeft size={13} />}>
-                  Back
-                </Button>
-                <div style={{ flex: 1 }} />
-                <Button
-                  variant="primary"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  leftIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={13} />}
-                >
-                  {loading ? "Completing setup..." : "Complete Identity Setup"}
-                </Button>
-              </div>
+              <Button variant="primary" onClick={handleContinue} style={{ width: "200px", marginTop: "12px" }}>
+                Continue
+              </Button>
             </div>
           )}
 
@@ -730,24 +737,10 @@ export default function ProfileSetupPage() {
   );
 }
 
-// Simple Trash icon mock component to keep code self-contained without imports
-function Trash2({ size = 14, ...props }: React.SVGProps<SVGSVGElement> & { size?: number }) {
+export default function ProfileSetupPage() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M3 6h18" />
-      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading onboarding...</div>}>
+      <OnboardingSetupWizard />
+    </Suspense>
   );
 }

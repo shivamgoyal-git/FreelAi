@@ -17,6 +17,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import ProfileCompletion from "@/components/ProfileCompletion";
 
 interface IServiceItem {
   name: string;
@@ -989,34 +990,18 @@ export default function ProfilePage() {
               <ShieldCheck size={14} color="var(--color-brand)" /> Identity Authenticated
             </h3>
             
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", fontWeight: 600 }}>Completeness Score</span>
-              <span style={{ fontSize: "12.5px", fontWeight: "bold", color: completeness >= 80 ? "#10b981" : "var(--color-brand)" }}>{completeness}%</span>
-            </div>
-
-            {/* Progress bar */}
-            <div style={{ height: "6px", background: "var(--surface-2)", borderRadius: "3px", overflow: "hidden", marginBottom: "16px" }}>
-              <div
-                style={{
-                  width: `${completeness}%`,
-                  height: "100%",
-                  background: completeness >= 80 ? "#10b981" : "var(--color-brand)",
-                  borderRadius: "3px",
-                  transition: "width 0.4s ease",
-                }}
-              />
+            <div style={{ marginBottom: "16px" }}>
+              <ProfileCompletion percentage={completeness} showProgressLine={true} />
             </div>
 
             {/* Checklist */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "11.5px", color: "var(--text-secondary)" }}>
               {[
-                { label: "Personal Foundation", ok: !!fullName && !!primaryProfession },
-                { label: "Experience Credentials", ok: yearsOfExperience > 0 && !!bio },
+                { label: "Basic Information", ok: !!fullName && !!professionalTitle },
                 { label: "Expert Skills List", ok: skills.length > 0 },
                 { label: "Services Cataloged", ok: services.length > 0 },
-                { label: "Hourly Pricing Set", ok: hourlyRate > 0 },
-                { label: "Portfolio / Social Links", ok: !!website || !!github || !!linkedin },
-                { label: "AI Brand Voice Tone", ok: voiceDescriptors.length > 0 && !!aiNotes },
+                { label: "Portfolio / Social Links", ok: !!website || !!github || !!linkedin || !!behance || !!dribbble },
+                { label: "Hourly Pricing Set", ok: hourlyRate > 0 && !!pricingModel },
               ].map((item, idx) => (
                 <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{

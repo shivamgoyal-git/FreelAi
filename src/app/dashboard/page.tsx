@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import AccountDropdown from "@/components/AccountDropdown";
 import {
   LayoutDashboard,
   Briefcase,
@@ -137,6 +138,8 @@ function timeAgo(dateString?: string) {
 
 // ── TOP BAR ──────────────────────────────────────────────────
 function TopBar({ userName, userInitial, userImage }: { userName: string; userInitial: string; userImage?: string | null }) {
+  const { data: session } = useSession();
+
   return (
     <header
       style={{
@@ -177,28 +180,13 @@ function TopBar({ userName, userInitial, userImage }: { userName: string; userIn
           New Project
         </Link>
 
-        {/* Avatar */}
-        <div
-          id="user-avatar-btn"
-          className="avatar"
-          style={{
-            width: "34px",
-            height: "34px",
-            background: "var(--color-brand)",
-            fontSize: "13px",
-            cursor: "pointer",
-            border: "0.5px solid var(--border-strong)",
-            overflow: "hidden",
-            padding: 0,
-            flexShrink: 0,
-          }}
-        >
-          {userImage ? (
-            <img src={userImage} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            userInitial
-          )}
-        </div>
+        {/* Avatar Dropdown */}
+        <AccountDropdown
+          userName={userName}
+          userInitial={userInitial}
+          userImage={userImage}
+          userEmail={session?.user?.email}
+        />
       </div>
     </header>
   );

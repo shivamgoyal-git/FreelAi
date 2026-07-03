@@ -48,30 +48,27 @@ export class AiContextService {
   static calculateCompleteness(data: Partial<IFreelancerProfile>): number {
     let score = 0;
 
-    // 1. Personal (Max 20%)
-    if (data.personal?.fullName) score += 10;
-    if (data.personal?.professionalTitle) score += 5;
-    if (data.personal?.country || data.personal?.timezone) score += 5;
-
-    // 2. Professional (Max 45%)
-    if (data.professional?.primaryProfession) score += 15;
-    if (data.professional?.bio) score += 10;
-    if (data.professional?.skills && data.professional.skills.length > 0) score += 10;
-    if (data.professional?.services && data.professional.services.length > 0) score += 10;
-
-    // 3. Pricing & Business (Max 15%)
-    if (data.pricing?.hourlyRate && data.pricing.hourlyRate > 0) score += 5;
-    if (data.pricing?.pricingModel) score += 5;
-    if (data.business?.companyName || data.business?.vatTaxId) score += 5;
-
-    // 4. Social Links (Max 10%)
-    const socials = (data.socialLinks || {}) as Record<string, unknown>;
-    const hasSocial = Object.values(socials).some((val) => typeof val === "string" && val.trim().length > 0);
-    if (hasSocial) score += 10;
-
-    // 5. Brand Voice & AI Notes (Max 10%)
-    if (data.brandVoice?.voiceDescriptors && data.brandVoice.voiceDescriptors.length > 0) score += 5;
-    if (data.aiNotes && data.aiNotes.trim().length > 0) score += 5;
+    // 1. Basic Info (20%): Name & Professional Title
+    if (data.personal?.fullName && data.personal?.professionalTitle) {
+      score += 20;
+    }
+    // 2. Skills (20%): At least one skill
+    if (data.professional?.skills && data.professional.skills.length > 0) {
+      score += 20;
+    }
+    // 3. Services (20%): At least one service
+    if (data.professional?.services && data.professional.services.length > 0) {
+      score += 20;
+    }
+    // 4. Portfolio (20%): At least one portfolio/social link
+    const s = data.socialLinks || {};
+    if (s.website || s.github || s.linkedin || s.behance || s.dribbble) {
+      score += 20;
+    }
+    // 5. Pricing (20%): Hourly rate greater than 0 and pricing model
+    if (data.pricing?.hourlyRate && data.pricing.hourlyRate > 0 && data.pricing?.pricingModel) {
+      score += 20;
+    }
 
     return Math.min(Math.max(score, 0), 100);
   }

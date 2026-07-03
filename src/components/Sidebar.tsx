@@ -20,7 +20,7 @@ const navItems = [
   { icon: MessageSquare,   label: "Messages",  id: "messages",  badge: "3",  href: null },
   { icon: DollarSign,      label: "Payments",  id: "payments",  badge: null, href: "/dashboard/invoices" },
   { icon: BarChart3,       label: "Analytics", id: "analytics", badge: null, href: "/dashboard/analytics" },
-  { icon: Palette,         label: "Portfolio", id: "portfolio", badge: null, href: null },
+  { icon: Sparkles,        label: "AI Proposals", id: "proposals", badge: null, href: "/dashboard/proposals" },
   { icon: Users,           label: "Clients",   id: "clients",   badge: null, href: "/dashboard/clients" },
   { icon: Settings,        label: "Settings",  id: "settings",  badge: null, href: null },
 ];

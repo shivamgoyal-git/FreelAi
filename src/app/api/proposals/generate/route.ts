@@ -126,7 +126,7 @@ User Inputs:
       const isDesign = /design|ui|ux|figma|branding|logo/i.test(jobPost);
       const isMarketing = /marketing|seo|growth|ads|social/i.test(jobPost);
       
-      let category = profile?.professional?.primaryProfession || "Web Development";
+      let category = profile?.personal?.professionalTitle || "Web Development";
       if (isMobile && !profile) category = "Mobile Application";
       else if (isDesign && !profile) category = "UI/UX Design";
       else if (isMarketing && !profile) category = "Growth Marketing";
@@ -134,7 +134,7 @@ User Inputs:
       const finalBudget = budget || (profile?.pricing?.hourlyRate ? profile.pricing.hourlyRate * 80 : 4500);
       const finalTimeline = timeline || profile?.preferences?.defaultTimeline || "4 weeks";
       const freelancerName = profile?.personal?.fullName || session.user.name || "Freelancer";
-      const freelancerTitle = profile?.personal?.professionalTitle || profile?.professional?.primaryProfession || "Freelancer";
+      const freelancerTitle = profile?.personal?.professionalTitle || "Freelancer";
 
       const mockResponse = {
         sections: {

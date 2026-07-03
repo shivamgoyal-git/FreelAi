@@ -31,6 +31,7 @@ interface IServiceItem {
 export default function ProfilePage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [saveLoading, setSaveLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<"identity" | "services" | "preferences" | "voice">("identity");
 
   // Profile data states
@@ -47,7 +48,6 @@ export default function ProfilePage() {
   const [vatTaxId, setVatTaxId] = useState("");
   const [address, setAddress] = useState("");
 
-  const [primaryProfession, setPrimaryProfession] = useState("");
   const [yearsOfExperience, setYearsOfExperience] = useState<number>(0);
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -119,7 +119,6 @@ export default function ProfilePage() {
           setVatTaxId(p.business?.vatTaxId || "");
           setAddress(p.business?.address || "");
 
-          setPrimaryProfession(p.professional?.primaryProfession || "");
           setYearsOfExperience(p.professional?.yearsOfExperience || 0);
           setBio(p.professional?.bio || "");
           setSkills(p.professional?.skills || []);
@@ -175,25 +174,33 @@ export default function ProfilePage() {
 
   // Handle Save
   const handleSave = async () => {
-    if (!fullName.trim() || !primaryProfession.trim()) {
-      alert("Full Name and Primary Profession are required.");
-      return;
+    const newErrors: Record<string, string> = {};
+    if (!fullName.trim()) {
+      newErrors.fullName = "Full Name is required.";
+    }
+    if (!professionalTitle.trim()) {
+      newErrors.professionalTitle = "Professional Title is required.";
     }
     if (skills.length === 0) {
-      alert("Please add at least one skill.");
-      return;
+      newErrors.skills = "Please add at least one skill tag.";
     }
     if (services.length === 0) {
-      alert("Please add at least one service.");
+      newErrors.services = "Please add at least one service offering.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      alert("Please fix the highlighted validation errors before saving.");
       return;
     }
+    setErrors({});
 
     setSaveLoading(true);
     try {
       const payload = {
         personal: { fullName, professionalTitle, profilePhoto, country, timezone, languages },
         business: { companyName, structure, vatTaxId, address },
-        professional: { primaryProfession, yearsOfExperience, bio, skills, services },
+        professional: { yearsOfExperience, bio, skills, services },
         pricing: { hourlyRate, currency, pricingModel },
         workPreferences: { industries, maxProjects, preferredSizes, projectTypes, weeklyCapacity },
         aiPreferences: { enableAi, preferredModel, autoDraftReplies, contextRefresh },
@@ -203,6 +210,8 @@ export default function ProfilePage() {
         socialLinks: { website, github, linkedin, behance, dribbble, youtube, instagram, other: otherSocial },
         preferences: { preferredProposalTone, preferredCurrency, defaultTimeline, defaultRevisionCount },
       };
+
+      console.log("Submitting frontend profile payload:", JSON.stringify(payload, null, 2));
 
       const res = await fetch("/api/profile", {
         method: "PUT",
@@ -373,11 +382,13 @@ export default function ProfilePage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                     <div className="input-group">
                       <label className="input-label">Full Name *</label>
-                      <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-field" style={{ fontSize: "12.5px" }} />
+                      <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-field" style={{ fontSize: "12.5px", borderColor: errors.fullName ? "var(--color-danger)" : "var(--border)" }} />
+                      {errors.fullName && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.fullName}</span>}
                     </div>
                     <div className="input-group">
-                      <label className="input-label">Professional Title</label>
-                      <input type="text" value={professionalTitle} onChange={(e) => setProfessionalTitle(e.target.value)} className="input-field" style={{ fontSize: "12.5px" }} />
+                      <label className="input-label">Professional Title *</label>
+                      <input type="text" value={professionalTitle} onChange={(e) => setProfessionalTitle(e.target.value)} className="input-field" style={{ fontSize: "12.5px", borderColor: errors.professionalTitle ? "var(--color-danger)" : "var(--border)" }} />
+                      {errors.professionalTitle && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.professionalTitle}</span>}
                     </div>
                   </div>
 
@@ -503,11 +514,7 @@ export default function ProfilePage() {
                 <div>
                   <h3 className="font-heading" style={{ fontSize: "14px", borderBottom: "1px solid var(--border)", paddingBottom: "8px", marginBottom: "14px" }}>Professional Credentials</h3>
                   
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px", marginBottom: "12px" }}>
-                    <div className="input-group">
-                      <label className="input-label">Primary Profession *</label>
-                      <input type="text" value={primaryProfession} onChange={(e) => setPrimaryProfession(e.target.value)} className="input-field" style={{ fontSize: "12.5px" }} />
-                    </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                     <div className="input-group">
                       <label className="input-label">Years of Experience</label>
                       <input type="number" value={yearsOfExperience} onChange={(e) => setYearsOfExperience(Number(e.target.value))} className="input-field" style={{ fontSize: "12.5px" }} />
@@ -548,6 +555,7 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     )}
+                    {errors.skills && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.skills}</span>}
                   </div>
                 </div>
 
@@ -559,6 +567,7 @@ export default function ProfilePage() {
                       Add Service Item
                     </Button>
                   </div>
+                  {errors.services && <div style={{ color: "var(--color-danger)", fontSize: "11px", marginBottom: "12px", fontWeight: 500 }}>{errors.services}</div>}
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     {services.map((svc, idx) => (

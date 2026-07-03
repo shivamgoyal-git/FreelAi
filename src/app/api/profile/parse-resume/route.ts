@@ -22,10 +22,9 @@ You are an expert AI parser specializing in extracting freelancer profiles from 
 
 Your task is to analyze the provided resume text and return a raw JSON object ONLY matching this schema:
 
-{
+  {
   "fullName": string,
-  "professionalTitle": string,
-  "primaryProfession": string, // e.g. "Software Engineer", "UI/UX Designer", "Copywriter"
+  "professionalTitle": string, // e.g. "Software Engineer", "UI/UX Designer", "Copywriter"
   "yearsOfExperience": number,
   "bio": string, // A concise 2-3 sentence summary of the freelancer's background
   "skills": string[], // Extract at least 3 skills
@@ -83,24 +82,21 @@ Resume Text:
         "blogting", "content", "python", "django", "aws", "docker", "flutter", "swift"
       ];
       const detectedSkills = skillKeywords
-        .filter((sk) => lowerText.includes(sk))
-        .map((sk) => sk === "nextjs" ? "Next.js" : sk.charAt(0).toUpperCase() + sk.slice(1));
+          .filter((sk) => lowerText.includes(sk))
+          .map((sk) => sk === "nextjs" ? "Next.js" : sk.charAt(0).toUpperCase() + sk.slice(1));
 
       if (detectedSkills.length === 0) {
         detectedSkills.push("Web Development", "UI Design", "Freelancing");
       }
 
       // Determine profession
-      let primaryProfession = "Web Developer";
       let professionalTitle = "Senior Full-Stack Developer";
       let category = "Development";
 
       if (lowerText.includes("design") || lowerText.includes("ui") || lowerText.includes("ux")) {
-        primaryProfession = "UI/UX Designer";
         professionalTitle = "Product Designer & UI Consultant";
         category = "Design";
       } else if (lowerText.includes("copywriter") || lowerText.includes("writing") || lowerText.includes("seo")) {
-        primaryProfession = "Content Strategist";
         professionalTitle = "SEO Copywriter & Content Specialist";
         category = "Writing";
       }
@@ -113,12 +109,12 @@ Resume Text:
       const expMatch = resumeText.match(/(\d+)\+?\s*years?/i);
       const yearsOfExperience = expMatch ? parseInt(expMatch[1]) : 5;
 
-      const bio = `Experienced ${primaryProfession} specialized in delivering high-impact solutions. Proven track record of collaborating with clients to build modern applications and streamline customer experiences.`;
+      const bio = `Experienced ${professionalTitle} specialized in delivering high-impact solutions. Proven track record of collaborating with clients to build modern applications and streamline customer experiences.`;
 
       // Mock Services list
       const services = [
         {
-          name: `Custom ${primaryProfession} Solutions`,
+          name: `Custom ${professionalTitle} Solutions`,
           description: `End-to-end design or implementation focusing on client requirements and modern layouts.`,
           startingPrice: category === "Development" ? 1500 : 800,
           deliveryTime: "2 weeks",
@@ -139,7 +135,6 @@ Resume Text:
       return NextResponse.json({
         fullName,
         professionalTitle,
-        primaryProfession,
         yearsOfExperience,
         bio,
         skills: detectedSkills,

@@ -109,8 +109,7 @@ export class AiContextService {
 === FREELANCER IDENTITY LAYER CONTEXT ===
 You are writing on behalf of:
 - **Full Name**: ${personal.fullName}
-- **Professional Title**: ${personal.professionalTitle || professional.primaryProfession}
-- **Primary Profession**: ${professional.primaryProfession}
+- **Professional Title**: ${personal.professionalTitle || "Freelancer"}
 - **Years of Experience**: ${professional.yearsOfExperience || 0} years
 - **Bio**: "${professional.bio || "N/A"}"
 - **Country**: ${personal.country || "N/A"} (Timezone: ${personal.timezone || "N/A"})

@@ -45,7 +45,7 @@ function OnboardingSetupWizard() {
   const [timezone, setTimezone] = useState("EST");
 
   // Step 2 Form States: Professional Details
-  const [primaryProfession, setPrimaryProfession] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [yearsOfExperience, setYearsOfExperience] = useState<number>(3);
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -84,7 +84,7 @@ function OnboardingSetupWizard() {
             setCountry(p.personal?.country || "United States");
             setTimezone(p.personal?.timezone || "EST");
 
-            setPrimaryProfession(p.professional?.primaryProfession || "");
+
             setYearsOfExperience(p.professional?.yearsOfExperience || 3);
             setBio(p.professional?.bio || "");
             setSkills(p.professional?.skills || []);
@@ -103,7 +103,7 @@ function OnboardingSetupWizard() {
               setStep(4);
             } else if (p.professional?.skills && p.professional.skills.length > 0) {
               setStep(3);
-            } else if (p.personal?.fullName && p.professional?.primaryProfession) {
+            } else if (p.personal?.fullName && p.personal?.professionalTitle) {
               setStep(2);
             }
           }
@@ -139,7 +139,7 @@ function OnboardingSetupWizard() {
       if (res.ok) {
         setFullName(data.fullName || "");
         setProfessionalTitle(data.professionalTitle || "");
-        setPrimaryProfession(data.primaryProfession || "");
+
         setYearsOfExperience(Number(data.yearsOfExperience) || 3);
         setBio(data.bio || "");
         if (data.skills && data.skills.length > 0) {
@@ -187,7 +187,7 @@ function OnboardingSetupWizard() {
         description: "",
         startingPrice: 500,
         deliveryTime: "1 week",
-        category: primaryProfession || "Development",
+        category: "Development",
         features: [],
       },
     ]);
@@ -229,7 +229,6 @@ function OnboardingSetupWizard() {
           languages: ["English"],
         },
         professional: {
-          primaryProfession: primaryProfession || "Freelancer",
           yearsOfExperience,
           bio,
           skills,
@@ -276,24 +275,40 @@ function OnboardingSetupWizard() {
 
   // Validation checking per step
   const handleNextStep = async () => {
+    const newErrors: Record<string, string> = {};
     if (step === 1) {
       if (!fullName.trim()) {
-        alert("Full Name is required.");
+        newErrors.fullName = "Full Name is required.";
+      }
+      if (!professionalTitle.trim()) {
+        newErrors.professionalTitle = "Professional Title is required.";
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       await saveStepDraft(2);
     } else if (step === 2) {
-      if (!primaryProfession.trim() || skills.length === 0) {
-        alert("Primary Profession and at least one Skill are required.");
+      if (skills.length === 0) {
+        newErrors.skills = "Please add at least one expert skill.";
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       await saveStepDraft(3);
     } else if (step === 3) {
       const hasEmptyService = services.some((s) => !s.name.trim() || !s.description.trim());
       if (hasEmptyService || services.length === 0) {
-        alert("Please complete Name and Description for at least one service.");
+        newErrors.services = "Please complete Name and Description for all service items.";
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
         return;
       }
+      setErrors({});
       await saveStepDraft(4);
     }
   };
@@ -412,19 +427,21 @@ function OnboardingSetupWizard() {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Liam Foster"
                     className="input-field"
-                    style={{ fontSize: "12.5px" }}
+                    style={{ fontSize: "12.5px", borderColor: errors.fullName ? "var(--color-danger)" : "var(--border)" }}
                   />
+                  {errors.fullName && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.fullName}</span>}
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Professional Title</label>
+                  <label className="input-label">Professional Title *</label>
                   <input
                     type="text"
                     value={professionalTitle}
                     onChange={(e) => setProfessionalTitle(e.target.value)}
                     placeholder="e.g. Senior Copywriter"
                     className="input-field"
-                    style={{ fontSize: "12.5px" }}
+                    style={{ fontSize: "12.5px", borderColor: errors.professionalTitle ? "var(--color-danger)" : "var(--border)" }}
                   />
+                  {errors.professionalTitle && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.professionalTitle}</span>}
                 </div>
               </div>
 
@@ -470,22 +487,11 @@ function OnboardingSetupWizard() {
               <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
                 <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Professional Details</h3>
                 <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Specify your primary profession and add your skills. At least one skill is required.
+                  Specify your professional details and add your skills. At least one skill is required.
                 </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Primary Profession *</label>
-                  <input
-                    type="text"
-                    value={primaryProfession}
-                    onChange={(e) => setPrimaryProfession(e.target.value)}
-                    placeholder="e.g. UI/UX Designer, Web Developer"
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div className="input-group">
                   <label className="input-label">Years of Experience</label>
                   <input
@@ -528,34 +534,18 @@ function OnboardingSetupWizard() {
                 </div>
 
                 {skills.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "8px" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
                     {skills.map((sk) => (
-                      <span
-                        key={sk}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          background: "var(--surface-2)",
-                          color: "var(--text-secondary)",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          border: "1px solid var(--border)",
-                        }}
-                      >
+                      <span key={sk} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "var(--surface-2)", border: "1px solid var(--border)", padding: "2px 6px", borderRadius: "4px", fontSize: "11px" }}>
                         {sk}
-                        <button
-                          onClick={() => removeSkill(sk)}
-                          style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}
-                        >
+                        <button onClick={() => removeSkill(sk)} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center" }}>
                           <X size={10} />
                         </button>
                       </span>
                     ))}
                   </div>
                 )}
+                {errors.skills && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.skills}</span>}
               </div>
 
               <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
@@ -580,9 +570,10 @@ function OnboardingSetupWizard() {
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
                 <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Services Offered</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Catalog at least one service offered. Complete the Name and Description fields.
-                </p>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block" }}>
+                  Create up to 3 services you offer to clients. Details are loaded dynamically by AI.
+                </span>
+                {errors.services && <div style={{ color: "var(--color-danger)", fontSize: "12px", marginTop: "6px", fontWeight: 500 }}>{errors.services}</div>}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

@@ -11,7 +11,7 @@ export interface IServiceItem {
 
 export interface IPersonalInfo {
   fullName: string;
-  professionalTitle?: string;
+  professionalTitle: string;
   profilePhoto?: string;
   country?: string;
   timezone?: string;
@@ -26,7 +26,6 @@ export interface IBusinessInfo {
 }
 
 export interface IProfessionalInfo {
-  primaryProfession: string;
   yearsOfExperience?: number;
   bio?: string;
   skills: string[];
@@ -109,7 +108,7 @@ const ServiceItemSchema = new Schema<IServiceItem>({
 
 const PersonalInfoSchema = new Schema<IPersonalInfo>({
   fullName: { type: String, required: [true, "Full name is required"] },
-  professionalTitle: { type: String, default: "" },
+  professionalTitle: { type: String, required: [true, "Professional title is required"] },
   profilePhoto: { type: String, default: "" },
   country: { type: String, default: "" },
   timezone: { type: String, default: "" },
@@ -124,7 +123,6 @@ const BusinessInfoSchema = new Schema<IBusinessInfo>({
 }, { _id: false });
 
 const ProfessionalInfoSchema = new Schema<IProfessionalInfo>({
-  primaryProfession: { type: String, required: [true, "Primary profession is required"] },
   yearsOfExperience: { type: Number, default: 0 },
   bio: { type: String, default: "" },
   skills: {

@@ -1,23 +1,25 @@
 "use client";
-
+ 
 import Link from "next/link";
 import {
   LayoutDashboard,
   Briefcase,
   MessageSquare,
   DollarSign,
+  BarChart3,
   Settings,
   Zap,
   Users,
   Palette,
   Sparkles,
 } from "lucide-react";
-
+ 
 const navItems = [
   { icon: LayoutDashboard, label: "Overview",  id: "overview",  badge: null, href: null },
   { icon: Briefcase,       label: "Projects",  id: "projects",  badge: null, href: "/dashboard/projects" },
   { icon: MessageSquare,   label: "Messages",  id: "messages",  badge: "3",  href: null },
   { icon: DollarSign,      label: "Payments",  id: "payments",  badge: null, href: "/dashboard/invoices" },
+  { icon: BarChart3,       label: "Analytics", id: "analytics", badge: null, href: "/dashboard/analytics" },
   { icon: Palette,         label: "Portfolio", id: "portfolio", badge: null, href: null },
   { icon: Users,           label: "Clients",   id: "clients",   badge: null, href: "/dashboard/clients" },
   { icon: Settings,        label: "Settings",  id: "settings",  badge: null, href: null },

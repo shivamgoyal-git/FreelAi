@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -33,36 +34,18 @@ export default function AccountSettingsPage() {
     try {
       // Simulate save response
       await new Promise((resolve) => setTimeout(resolve, 800));
-      alert("Account Settings updated successfully!");
+      toast.success("Account Settings updated successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to update account settings.");
+      toast.error("Failed to update account settings.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-0)" }}>
-      <Sidebar active="settings" setActive={() => {}} userName="User" userInitial="U" />
-
-      <div style={{ flex: 1, marginLeft: "252px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-        
-        {/* Navigation Header */}
-        <header style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
-          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px" }}>
-            <ChevronLeft size={14} /> Dashboard
-          </Link>
-          <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Settings size={13} color="var(--color-brand)" />
-            </div>
-            <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>Account Settings</h1>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, padding: "28px", maxWidth: "800px", width: "100%", margin: "0 auto" }}>
+    <div className="page-enter">
+      <div style={{ maxWidth: "800px", width: "100%", margin: "0 auto" }}>
           <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "28px", boxShadow: "var(--shadow-md)" }}>
             <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "20px" }}>
               <h2 className="font-heading" style={{ fontSize: "16px", color: "var(--text-primary)" }}>General Settings</h2>
@@ -189,9 +172,7 @@ export default function AccountSettingsPage() {
             )}
 
           </div>
-        </main>
-
+        </div>
       </div>
-    </div>
   );
 }

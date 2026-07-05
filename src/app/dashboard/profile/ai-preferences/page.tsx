@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Sparkles, ChevronLeft, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Sidebar from "@/components/Sidebar";
+import { toast } from "sonner";
 
 export default function AIPreferencesPage() {
   const [loading, setLoading] = useState(true);
@@ -81,40 +82,22 @@ export default function AIPreferencesPage() {
       });
 
       if (res.ok) {
-        alert("AI Preferences saved successfully!");
+        toast.success("AI Preferences saved successfully!");
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to update AI preferences");
+        toast.error(data.error || "Failed to update AI preferences");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving AI preferences");
+      toast.error("Error saving AI preferences");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-0)" }}>
-      <Sidebar active="settings" setActive={() => {}} userName="User" userInitial="U" />
-
-      <div style={{ flex: 1, marginLeft: "252px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-        
-        {/* Navigation Header */}
-        <header style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
-          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px" }}>
-            <ChevronLeft size={14} /> Dashboard
-          </Link>
-          <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Sparkles size={13} color="var(--color-brand)" />
-            </div>
-            <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>AI Preferences</h1>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, padding: "28px", maxWidth: "800px", width: "100%", margin: "0 auto" }}>
+    <div className="page-enter">
+      <div style={{ maxWidth: "800px", width: "100%", margin: "0 auto" }}>
           <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "28px", boxShadow: "var(--shadow-md)" }}>
             <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "20px" }}>
               <h2 className="font-heading" style={{ fontSize: "16px", color: "var(--text-primary)" }}>AI Agent Customizations</h2>
@@ -228,9 +211,7 @@ export default function AIPreferencesPage() {
             )}
 
           </div>
-        </main>
-
+        </div>
       </div>
-    </div>
   );
 }

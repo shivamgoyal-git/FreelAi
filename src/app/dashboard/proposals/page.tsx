@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import ProfileGuard from "@/components/ProfileGuard";
 import {
   Sparkles,
@@ -72,6 +73,13 @@ interface IProposalVersion {
   detectedPainPoints: string[];
   aiSuggestions: string[];
   promptVersion: string;
+  proposalBody?: string;
+  jobAnalysis?: any;
+  matchedPortfolio?: any[];
+  explainableScores?: any;
+  winChecklist?: any[];
+  winChecklistPercentage?: number;
+  generationMetadata?: any;
   createdAt: string;
 }
 
@@ -157,7 +165,7 @@ export default function AIProposalsPage() {
   const [jobPost, setJobPost] = useState("");
   const [budget, setBudget] = useState("");
   const [timeline, setTimeline] = useState("");
-  const [tone, setTone] = useState("Professional");
+  const [tone, setTone] = useState("Auto");
   const [portfolios, setPortfolios] = useState<string[]>([]);
   const [newPortfolioLink, setNewPortfolioLink] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("custom");
@@ -165,6 +173,13 @@ export default function AIProposalsPage() {
   // AI Active Proposal States
   const [activeProposal, setActiveProposal] = useState<IProposal | null>(null);
   const [activeVersionNumber, setActiveVersionNumber] = useState<number>(1);
+  const [proposalBody, setProposalBody] = useState<string>("");
+  const [jobAnalysis, setJobAnalysis] = useState<any>(null);
+  const [matchedPortfolio, setMatchedPortfolio] = useState<any[]>([]);
+  const [explainableScores, setExplainableScores] = useState<any>(null);
+  const [winChecklist, setWinChecklist] = useState<any[]>([]);
+  const [generationMetadata, setGenerationMetadata] = useState<any>(null);
+
   const [editingSections, setEditingSections] = useState<IProposalSection>({
     executiveSummary: "",
     scopeOfWork: "",
@@ -177,8 +192,65 @@ export default function AIProposalsPage() {
     premium: { price: 0, description: "", timeline: "" },
   });
 
-  // Section Tab inside Right Workspace
-  const [activeSectionTab, setActiveSectionTab] = useState<keyof IProposalSection | "pricing" | "analysis">("executiveSummary");
+  // Section Tab inside Right Workspace - Phase 11 Tab Options
+  const [activeSectionTab, setActiveSectionTab] = useState<"proposal" | "analysis" | "portfolio" | "score" | "suggestions" | "versions">("proposal");
+
+  // Undo / Redo & Autosave States
+  const [bodyHistory, setBodyHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Last saved just now">("Saved");
+
+  const updateBody = (newBody: string, pushToHistory = true) => {
+    setProposalBody(newBody);
+    if (pushToHistory) {
+      const nextHistory = bodyHistory.slice(0, historyIndex + 1);
+      nextHistory.push(newBody);
+      if (nextHistory.length > 20) {
+        nextHistory.shift();
+      }
+      setBodyHistory(nextHistory);
+      setHistoryIndex(nextHistory.length - 1);
+    }
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      setProposalBody(bodyHistory[prevIndex]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < bodyHistory.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setProposalBody(bodyHistory[nextIndex]);
+    }
+  };
+
+  // Autosave effect
+  useEffect(() => {
+    if (!proposalBody || !activeProposal) return;
+    const timer = setInterval(() => {
+      setSaveStatus("Saving...");
+      localStorage.setItem(`autosave-proposal-${activeProposal._id || "draft"}`, proposalBody);
+      setTimeout(() => {
+        setSaveStatus("Saved");
+      }, 600);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [proposalBody, activeProposal]);
+
+  // Section Improvement States
+  const [improvingProposal, setImprovingProposal] = useState(false);
+  const [improveFocusArea, setImproveFocusArea] = useState<string>("Introduction");
+  const [improveFeedbackText, setImproveFeedbackText] = useState("");
+
+  // Dev Debug Panel States (Phase 11 Bug Fix)
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [regressionTestResults, setRegressionTestResults] = useState<any>(null);
+  const [runningRegressionTests, setRunningRegressionTests] = useState(false);
 
   // Version Comparison States
   const [comparePropId, setComparePropId] = useState("");
@@ -253,7 +325,7 @@ export default function AIProposalsPage() {
   // Trigger proposal generation
   const handleGenerateProposal = async () => {
     if (!clientName.trim() || !jobPost.trim()) {
-      alert("Please fill in the Client Name and Job Post details.");
+      toast.error("Please fill in the Client Name and Job Post details.");
       return;
     }
 
@@ -266,18 +338,36 @@ export default function AIProposalsPage() {
           clientName,
           platform,
           jobPost,
-          portfolios,
           budget: Number(budget) || 0,
           timeline,
           tone,
+          proposalId: activeProposal?._id || undefined,
         }),
       });
 
       const generated = await res.json();
       if (res.ok) {
-        // Construct a new unsaved active proposal local wrapper
+        // Construct a new active proposal local wrapper
+        const newVersion = {
+          versionNumber: activeProposal ? activeProposal.versions.length + 1 : 1,
+          sections: generated.sections,
+          pricingBreakdown: generated.pricingBreakdown,
+          aiAnalysis: generated.aiAnalysis,
+          scoreBreakdown: generated.scoreBreakdown,
+          detectedPainPoints: generated.detectedPainPoints,
+          aiSuggestions: generated.aiSuggestions,
+          promptVersion: generated.promptVersion,
+          proposalBody: generated.proposalBody || "",
+          jobAnalysis: generated.jobAnalysis || null,
+          matchedPortfolio: generated.matchedPortfolio || [],
+          explainableScores: generated.explainableScores || null,
+          winChecklist: generated.winChecklist || [],
+          generationMetadata: generated.generationMetadata || null,
+          createdAt: new Date().toISOString(),
+        };
+
         const mockProposal: IProposal = {
-          _id: activeProposal?._id || "", // keep id if regenerating/versioning
+          _id: activeProposal?._id || "",
           title: `Proposal for ${clientName}`,
           status: "draft",
           value: generated.pricingBreakdown.standard.price,
@@ -292,49 +382,30 @@ export default function AIProposalsPage() {
           tone,
           activeVersionIndex: activeProposal ? activeProposal.versions.length : 0,
           versions: activeProposal
-            ? [
-                ...activeProposal.versions,
-                {
-                  versionNumber: activeProposal.versions.length + 1,
-                  sections: generated.sections,
-                  pricingBreakdown: generated.pricingBreakdown,
-                  aiAnalysis: generated.aiAnalysis,
-                  scoreBreakdown: generated.scoreBreakdown,
-                  detectedPainPoints: generated.detectedPainPoints,
-                  aiSuggestions: generated.aiSuggestions,
-                  promptVersion: generated.promptVersion,
-                  createdAt: new Date().toISOString(),
-                },
-              ]
-            : [
-                {
-                  versionNumber: 1,
-                  sections: generated.sections,
-                  pricingBreakdown: generated.pricingBreakdown,
-                  aiAnalysis: generated.aiAnalysis,
-                  scoreBreakdown: generated.scoreBreakdown,
-                  detectedPainPoints: generated.detectedPainPoints,
-                  aiSuggestions: generated.aiSuggestions,
-                  promptVersion: generated.promptVersion,
-                  createdAt: new Date().toISOString(),
-                },
-              ],
+            ? [...activeProposal.versions, newVersion]
+            : [newVersion],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
         setActiveProposal(mockProposal);
-        const lastIdx = mockProposal.versions.length - 1;
-        setActiveVersionNumber(mockProposal.versions[lastIdx].versionNumber);
-        setEditingSections(mockProposal.versions[lastIdx].sections);
-        setEditingPricing(mockProposal.versions[lastIdx].pricingBreakdown);
-        setActiveSectionTab("executiveSummary");
+        setActiveVersionNumber(newVersion.versionNumber);
+        setProposalBody(newVersion.proposalBody);
+        setJobAnalysis(newVersion.jobAnalysis);
+        setMatchedPortfolio(newVersion.matchedPortfolio);
+        setExplainableScores(newVersion.explainableScores);
+        setWinChecklist(newVersion.winChecklist);
+        setGenerationMetadata(newVersion.generationMetadata);
+
+        setEditingSections(newVersion.sections);
+        setEditingPricing(newVersion.pricingBreakdown);
+        setActiveSectionTab("proposal");
       } else {
-        alert(generated.error || "Failed to generate proposal");
+        toast.error(generated.error || "Failed to generate proposal");
       }
     } catch (err) {
       console.error(err);
-      alert("Error generating proposal");
+      toast.error("Error generating proposal");
     } finally {
       setLoading(false);
     }
@@ -361,13 +432,23 @@ export default function AIProposalsPage() {
         timeline: activeProposal.timeline,
         tone: activeProposal.tone,
         templateId: selectedTemplateId === "custom" ? null : selectedTemplateId,
-        sections: editingSections, // save edited overrides
+        sections: {
+          ...editingSections,
+          executiveSummary: proposalBody || editingSections.executiveSummary, // Fallback binding
+        },
         pricingBreakdown: editingPricing,
         aiAnalysis: activeVer.aiAnalysis,
         scoreBreakdown: activeVer.scoreBreakdown,
         detectedPainPoints: activeVer.detectedPainPoints,
         aiSuggestions: activeVer.aiSuggestions,
         promptVersion: activeVer.promptVersion,
+        // Phase 11 Fields
+        proposalBody,
+        jobAnalysis,
+        matchedPortfolio,
+        explainableScores,
+        winChecklist,
+        generationMetadata,
       };
 
       const res = await fetch("/api/proposals", {
@@ -380,16 +461,28 @@ export default function AIProposalsPage() {
       if (res.ok && data.success) {
         setActiveProposal(data.proposal);
         const lastIdx = data.proposal.versions.length - 1;
-        setActiveVersionNumber(data.proposal.versions[lastIdx].versionNumber);
-        setEditingSections(data.proposal.versions[lastIdx].sections);
-        setEditingPricing(data.proposal.versions[lastIdx].pricingBreakdown);
-        alert(isUpdate ? "New version saved successfully!" : "Proposal saved successfully!");
+        const savedVer = data.proposal.versions[lastIdx];
+        
+        setActiveVersionNumber(savedVer.versionNumber);
+        const initialBody = savedVer.proposalBody || savedVer.sections.executiveSummary || "";
+        setProposalBody(initialBody);
+        setBodyHistory([initialBody]);
+        setHistoryIndex(0);
+        setJobAnalysis(savedVer.jobAnalysis || null);
+        setMatchedPortfolio(savedVer.matchedPortfolio || []);
+        setExplainableScores(savedVer.explainableScores || null);
+        setWinChecklist(savedVer.winChecklist || []);
+        setGenerationMetadata(savedVer.generationMetadata || null);
+
+        setEditingSections(savedVer.sections);
+        setEditingPricing(savedVer.pricingBreakdown);
+        toast.success(isUpdate ? "New version saved successfully!" : "Proposal saved successfully!");
       } else {
-        alert(data.error || "Failed to save proposal");
+        toast.error(data.error || "Failed to save proposal");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving proposal");
+      toast.error("Error saving proposal");
     } finally {
       setLoading(false);
     }
@@ -411,9 +504,16 @@ export default function AIProposalsPage() {
     const version = prop.versions[activeIdx];
     
     setActiveVersionNumber(version.versionNumber);
+    setProposalBody(version.proposalBody || version.sections.executiveSummary || "");
+    setJobAnalysis(version.jobAnalysis || null);
+    setMatchedPortfolio(version.matchedPortfolio || []);
+    setExplainableScores(version.explainableScores || null);
+    setWinChecklist(version.winChecklist || []);
+    setGenerationMetadata(version.generationMetadata || null);
+
     setEditingSections(version.sections);
     setEditingPricing(version.pricingBreakdown);
-    setActiveSectionTab("executiveSummary");
+    setActiveSectionTab("proposal");
     setActiveTab("workspace");
   };
 
@@ -423,6 +523,13 @@ export default function AIProposalsPage() {
     const ver = activeProposal.versions.find((v) => v.versionNumber === versionNum);
     if (ver) {
       setActiveVersionNumber(versionNum);
+      setProposalBody(ver.proposalBody || ver.sections.executiveSummary || "");
+      setJobAnalysis(ver.jobAnalysis || null);
+      setMatchedPortfolio(ver.matchedPortfolio || []);
+      setExplainableScores(ver.explainableScores || null);
+      setWinChecklist(ver.winChecklist || []);
+      setGenerationMetadata(ver.generationMetadata || null);
+
       setEditingSections(ver.sections);
       setEditingPricing(ver.pricingBreakdown);
     }
@@ -442,7 +549,7 @@ export default function AIProposalsPage() {
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to delete proposal");
+      toast.error("Failed to delete proposal");
     }
   };
 
@@ -489,7 +596,7 @@ export default function AIProposalsPage() {
 
   // Copy full proposal markdown to clipboard
   const handleCopyToClipboard = () => {
-    const combined = `
+    const textToCopy = proposalBody || `
 # ${activeProposal?.title}
 ---
 
@@ -510,13 +617,13 @@ ${editingSections.callToAction}
 - **Standard Tier**: $${editingPricing.standard.price.toLocaleString()} (${editingPricing.standard.timeline}) - ${editingPricing.standard.description}
 - **Premium Tier**: $${editingPricing.premium.price.toLocaleString()} (${editingPricing.premium.timeline}) - ${editingPricing.premium.description}
 `;
-    navigator.clipboard.writeText(combined.trim());
-    alert("Proposal copied to clipboard in Markdown format!");
+    navigator.clipboard.writeText(textToCopy.trim());
+    toast.success("Proposal copied to clipboard!");
   };
 
   // Export as markdown file download
   const handleExportMarkdown = () => {
-    const combined = `
+    const textToCopy = proposalBody || `
 # ${activeProposal?.title}
 ---
 
@@ -537,7 +644,7 @@ ${editingSections.callToAction}
 - **Standard Tier**: $${editingPricing.standard.price.toLocaleString()} (${editingPricing.standard.timeline}) - ${editingPricing.standard.description}
 - **Premium Tier**: $${editingPricing.premium.price.toLocaleString()} (${editingPricing.premium.timeline}) - ${editingPricing.premium.description}
 `;
-    const blob = new Blob([combined.trim()], { type: "text/markdown;charset=utf-8;" });
+    const blob = new Blob([textToCopy.trim()], { type: "text/markdown;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.setAttribute("download", `proposal_${clientName.replace(/\s+/g, "_")}.md`);
@@ -618,7 +725,7 @@ ${editingSections.callToAction}
         {/* Workspace Tab Selectors */}
         <div style={{ display: "flex", gap: "4px", background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-sm)" }}>
           {[
-            { id: "workspace", label: "Workspace" },
+            { id: "workspace", label: "Proposal Generator" },
             { id: "compare", label: "Compare Versions" },
             { id: "history", label: "Proposal History" },
           ].map((t) => (
@@ -640,6 +747,29 @@ ${editingSections.callToAction}
               {t.label}
             </button>
           ))}
+          {/* Intelligence — navigates to dedicated page */}
+          <Link
+            href="/dashboard/proposals/intelligence"
+            style={{
+              padding: "6px 14px",
+              fontSize: "12px",
+              fontWeight: 600,
+              borderRadius: "var(--radius-sm)",
+              border: "none",
+              background: "transparent",
+              color: "var(--color-brand)",
+              cursor: "pointer",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              transition: "background var(--dur-fast)",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-brand-subtle)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
+          >
+            ✦ Proposal Intelligence
+          </Link>
         </div>
       </header>
 
@@ -743,50 +873,71 @@ ${editingSections.callToAction}
               </div>
 
               <div className="input-group">
-                <label className="input-label">Proposal Tone Style</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label className="input-label">Proposal Tone Style</label>
+                  {generationMetadata?.isMockMode && (
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "1px 6px",
+                        borderRadius: "var(--radius-pill)",
+                        background: "var(--color-warning-bg)",
+                        color: "var(--color-warning)",
+                        border: "0.5px solid rgba(217,119,6,0.2)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      Development Mode
+                    </span>
+                  )}
+                </div>
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
                   className="input-field"
                   style={{ fontSize: "12.5px" }}
                 >
-                  {["Professional", "Friendly", "Confident", "Expert", "Premium Agency"].map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
+                  <option value="Auto">Auto (Recommended)</option>
+                  <option value="Professional">Professional</option>
+                  <option value="Friendly">Friendly</option>
+                  <option value="Confident">Confident</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Minimal">Minimal</option>
                 </select>
               </div>
 
-              {/* Portfolio Link Manager */}
-              <div className="input-group" style={{ gap: "6px" }}>
-                <label className="input-label">Portfolio Link References</label>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input
-                    type="text"
-                    value={newPortfolioLink}
-                    onChange={(e) => setNewPortfolioLink(e.target.value)}
-                    placeholder="https://behance.net/work"
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                  <Button variant="secondary" size="sm" onClick={addPortfolioLink} style={{ height: "36px" }}>
-                    <Plus size={13} /> Add
-                  </Button>
-                </div>
-                {portfolios.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
-                    {portfolios.map((link, idx) => (
-                      <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface-2)", padding: "4px 10px", borderRadius: "4px", fontSize: "11px" }}>
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "260px", color: "var(--text-secondary)" }}>{link}</span>
-                        <button onClick={() => removePortfolioLink(idx)} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer" }}>
-                          <X size={12} />
-                        </button>
+              {/* Auto-Matched Portfolio Preview (Phase 11) */}
+              {matchedPortfolio && matchedPortfolio.length > 0 && (
+                <div className="input-group" style={{ gap: "6px" }}>
+                  <label className="input-label">Auto-Matched Portfolio</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    {matchedPortfolio.map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background: "var(--surface-2)",
+                          padding: "6px 10px",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          border: "0.5px solid var(--border)",
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
+                          {item.project.title}
+                        </span>
+                        <span style={{ color: "var(--color-success)", fontWeight: 700 }}>
+                          {item.matchScore}% match
+                        </span>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Trigger button */}
               <Button
@@ -796,7 +947,7 @@ ${editingSections.callToAction}
                 leftIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={13} />}
                 style={{ marginTop: "8px" }}
               >
-                {loading ? "Analyzing & Generating..." : activeProposal ? "Regenerate Proposal" : "Generate Proposal Blueprint"}
+                {loading ? "Analyzing & Generating..." : activeProposal ? "Regenerate Proposal" : "Generate Proposal"}
               </Button>
             </section>
 
@@ -813,7 +964,30 @@ ${editingSections.callToAction}
                   {/* Top Version bar & Actions */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)", paddingBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
                     <div>
-                      <h3 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)" }}>Proposal Document Editor</h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <h3 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)" }}>Proposal Document Editor</h3>
+                        {(() => {
+                          const activeVer = activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber);
+                          const conf = activeVer?.aiAnalysis?.confidence ?? 90;
+                          return (
+                            <span
+                              title={activeVer?.explainableScores?.authenticity?.reason || "Based on verification of profile, portfolio, and job description."}
+                              style={{
+                                fontSize: "10.5px",
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: "var(--radius-pill)",
+                                background: conf >= 85 ? "var(--color-success-bg)" : "var(--color-warning-bg)",
+                                color: conf >= 85 ? "var(--color-success)" : "var(--color-warning)",
+                                cursor: "help",
+                                border: "0.5px solid rgba(0,0,0,0.05)",
+                              }}
+                            >
+                              ✦ {conf}% Confidence
+                            </span>
+                          );
+                        })()}
+                      </div>
                       {activeProposal._id && (
                         <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Document ID: {activeProposal._id}</p>
                       )}
@@ -843,20 +1017,19 @@ ${editingSections.callToAction}
                       </button>
                     </div>
                   </div>
-
-                  {/* Right Panel Tabs */}
+                  {/* Right Panel Tabs (Phase 11) */}
                   <div style={{ display: "flex", gap: "4px", background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-sm)", overflowX: "auto" }}>
-                    {([
-                      { id: "executiveSummary", label: "Executive Summary" },
-                      { id: "scopeOfWork", label: "Scope" },
-                      { id: "timelineAndMilestones", label: "Timeline" },
-                      { id: "callToAction", label: "CTA" },
-                      { id: "pricing", label: "Pricing Breakdown" },
-                      { id: "analysis", label: "AI Analysis" },
-                    ] as const).map((tab) => (
+                    {[
+                      { id: "proposal", label: "Proposal" },
+                      { id: "analysis", label: "Client Analysis" },
+                      { id: "portfolio", label: "Portfolio References" },
+                      { id: "score", label: "Proposal Score" },
+                      { id: "suggestions", label: "Suggestions" },
+                      { id: "versions", label: "Versions" },
+                    ].map((tab) => (
                       <button
                         key={tab.id}
-                        onClick={() => setActiveSectionTab(tab.id)}
+                        onClick={() => setActiveSectionTab(tab.id as any)}
                         style={{
                           padding: "6px 10px",
                           fontSize: "11px",
@@ -874,171 +1047,310 @@ ${editingSections.callToAction}
                     ))}
                   </div>
 
-                  {/* Tab Contents: Textareas for standard sections */}
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                    {activeSectionTab === "executiveSummary" && (
-                      <textarea
-                        value={editingSections.executiveSummary}
-                        onChange={(e) => setEditingSections({ ...editingSections, executiveSummary: e.target.value })}
-                        className="input-field"
-                        style={{ flex: 1, minHeight: "260px", resize: "none", fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: "1.65", padding: "12px 14px", background: "var(--surface-2)" }}
-                      />
-                    )}
-                    {activeSectionTab === "scopeOfWork" && (
-                      <textarea
-                        value={editingSections.scopeOfWork}
-                        onChange={(e) => setEditingSections({ ...editingSections, scopeOfWork: e.target.value })}
-                        className="input-field"
-                        style={{ flex: 1, minHeight: "260px", resize: "none", fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: "1.65", padding: "12px 14px", background: "var(--surface-2)" }}
-                      />
-                    )}
-                    {activeSectionTab === "timelineAndMilestones" && (
-                      <textarea
-                        value={editingSections.timelineAndMilestones}
-                        onChange={(e) => setEditingSections({ ...editingSections, timelineAndMilestones: e.target.value })}
-                        className="input-field"
-                        style={{ flex: 1, minHeight: "260px", resize: "none", fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: "1.65", padding: "12px 14px", background: "var(--surface-2)" }}
-                      />
-                    )}
-                    {activeSectionTab === "callToAction" && (
-                      <textarea
-                        value={editingSections.callToAction}
-                        onChange={(e) => setEditingSections({ ...editingSections, callToAction: e.target.value })}
-                        className="input-field"
-                        style={{ flex: 1, minHeight: "260px", resize: "none", fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: "1.65", padding: "12px 14px", background: "var(--surface-2)" }}
-                      />
-                    )}
-
-                    {/* Pricing Tier Inputs */}
-                    {activeSectionTab === "pricing" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                        {(["basic", "standard", "premium"] as const).map((tier) => (
-                          <div key={tier} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px 16px", background: "var(--surface-2)" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                              <span style={{ fontSize: "12.5px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-primary)" }}>{tier} Tier</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Price ($)</span>
-                                <input
-                                  type="number"
-                                  value={editingPricing[tier].price}
-                                  onChange={(e) => handlePricingFieldChange(tier, "price", Number(e.target.value))}
-                                  className="input-field"
-                                  style={{ width: "80px", height: "26px", padding: "2px 6px", fontSize: "12px" }}
-                                />
-                              </div>
+                  {/* Tab Contents */}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px", minHeight: 0 }}>
+                    
+                    {/* 1. PROPOSAL BODY TAB */}
+                    {activeSectionTab === "proposal" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>PROPOSAL TEXT</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                              {proposalBody ? proposalBody.split(/\s+/).filter(Boolean).length : 0} words
+                            </span>
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleUndo}
+                                disabled={historyIndex <= 0}
+                                style={{ padding: "2px 8px", height: "24px", fontSize: "11px" }}
+                              >
+                                Undo
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleRedo}
+                                disabled={historyIndex >= bodyHistory.length - 1}
+                                style={{ padding: "2px 8px", height: "24px", fontSize: "11px" }}
+                              >
+                                Redo
+                              </Button>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px" }}>
-                              <input
-                                type="text"
-                                value={editingPricing[tier].description}
-                                onChange={(e) => handlePricingFieldChange(tier, "description", e.target.value)}
-                                placeholder="Core deliverables..."
-                                className="input-field"
-                                style={{ height: "28px", padding: "2px 8px", fontSize: "12px" }}
-                              />
-                              <input
-                                type="text"
-                                value={editingPricing[tier].timeline}
-                                onChange={(e) => handlePricingFieldChange(tier, "timeline", e.target.value)}
-                                placeholder="Timeline (e.g. 2 weeks)"
-                                className="input-field"
-                                style={{ height: "28px", padding: "2px 8px", fontSize: "12px" }}
-                              />
-                            </div>
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{saveStatus}</span>
                           </div>
-                        ))}
+                        </div>
+                        <textarea
+                          value={proposalBody}
+                          onChange={(e) => updateBody(e.target.value)}
+                          className="input-field"
+                          placeholder="Proposal text will generate here..."
+                          style={{
+                            flex: 1,
+                            minHeight: "260px",
+                            resize: "none",
+                            fontFamily: "var(--font-sans)",
+                            fontSize: "13px",
+                            lineHeight: "1.6",
+                            padding: "12px 14px",
+                            background: "var(--surface-2)",
+                            outline: "none",
+                          }}
+                        />
+
+                        {/* Section-Specific Improvement Engine (Phase 11) */}
+                        <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px 14px" }}>
+                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "8px" }}>
+                            Improve Focus Section
+                          </span>
+                          <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: "8px", marginBottom: "8px" }}>
+                            <select
+                              value={improveFocusArea}
+                              onChange={(e) => setImproveFocusArea(e.target.value)}
+                              className="input-field"
+                              style={{ height: "32px", fontSize: "12px" }}
+                            >
+                              {["Introduction", "Body", "Portfolio Mention", "Pricing", "CTA", "Readability", "Personalization", "Grammar", "Tone"].map((f) => (
+                                <option key={f} value={f}>{f}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              value={improveFeedbackText}
+                              onChange={(e) => setImproveFeedbackText(e.target.value)}
+                              placeholder="e.g. Make it more casual, add hourly rate context..."
+                              className="input-field"
+                              style={{ height: "32px", fontSize: "12px" }}
+                            />
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={improvingProposal || !proposalBody}
+                            onClick={async () => {
+                              if (!proposalBody) return;
+                              setImprovingProposal(true);
+                              try {
+                                const res = await fetch("/api/proposals/improve", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    proposalText: proposalBody,
+                                    jobPost,
+                                    focus: improveFocusArea,
+                                    feedback: improveFeedbackText,
+                                  }),
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                  setProposalBody(data.rewritten);
+                                  setImproveFeedbackText("");
+                                  toast.success(`Improved proposal for "${improveFocusArea}"!`);
+                                } else {
+                                  toast.error(data.error || "Failed to improve section");
+                                }
+                              } catch {
+                                toast.error("Failed to improve section");
+                              } finally {
+                                setImprovingProposal(false);
+                              }
+                            }}
+                            leftIcon={improvingProposal ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={11} />}
+                            style={{ width: "100%", height: "32px" }}
+                          >
+                            {improvingProposal ? "Refining draft..." : `Improve ${improveFocusArea}`}
+                          </Button>
+                        </div>
                       </div>
                     )}
 
-                    {/* AI Scoring & Analytics view */}
+                    {/* 2. CLIENT ANALYSIS TAB */}
                     {activeSectionTab === "analysis" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        
-                        {/* Explainable Scoring */}
-                        {activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber) && (
-                          (() => {
-                            const ver = activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber)!;
-                            return (
-                              <>
-                                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr", gap: "16px", alignItems: "center", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "14px 18px" }}>
-                                  
-                                  {/* Overall score radial feel */}
-                                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRight: "1px solid var(--border)", paddingRight: "16px" }}>
-                                    <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: ver.scoreBreakdown.overall >= 80 ? "rgba(16,185,129,0.1)" : "rgba(245,166,35,0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid", borderColor: ver.scoreBreakdown.overall >= 80 ? "#10b981" : "var(--color-brand)", marginBottom: "6px" }}>
-                                      <span style={{ fontSize: "20px", fontWeight: "bold", color: ver.scoreBreakdown.overall >= 80 ? "#10b981" : "var(--color-brand)" }}>{ver.scoreBreakdown.overall}</span>
-                                    </div>
-                                    <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: "bold", textTransform: "uppercase" }}>Overall Score</span>
-                                  </div>
-
-                                  {/* Detailed Score breakdown */}
-                                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11px" }}>
-                                    {[
-                                      { label: "Clarity", val: ver.scoreBreakdown.clarity },
-                                      { label: "Alignment", val: ver.scoreBreakdown.alignment },
-                                      { label: "CTA Strength", val: ver.scoreBreakdown.callToAction },
-                                      { label: "Value Proposition", val: ver.scoreBreakdown.valueProposition },
-                                    ].map((s) => (
-                                      <div key={s.label}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px", fontWeight: 600 }}>
-                                          <span style={{ color: "var(--text-secondary)" }}>{s.label}</span>
-                                          <span style={{ color: "var(--text-primary)" }}>{s.val}/100</span>
-                                        </div>
-                                        <div style={{ height: "4px", background: "var(--surface-3)", borderRadius: "2px", overflow: "hidden" }}>
-                                          <div style={{ width: `${s.val}%`, height: "100%", background: "var(--color-brand)", borderRadius: "2px" }} />
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "400px", overflowY: "auto", paddingRight: "4px" }}>
+                        {jobAnalysis ? (
+                          <>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "11.5px" }}>
+                              {[
+                                { label: "Client Tone", val: jobAnalysis.clientTone },
+                                { label: "Communication style", val: jobAnalysis.communicationStyle },
+                                { label: "Complexity", val: jobAnalysis.projectComplexity },
+                                { label: "Budget Sensitivity", val: jobAnalysis.budgetSensitivity },
+                                { label: "Urgency", val: jobAnalysis.urgency },
+                                { label: "Risk Level", val: jobAnalysis.riskLevel },
+                                { label: "Decision Driver", val: jobAnalysis.decisionDrivers?.join(", ") || "Quality" },
+                                { label: "Experience Expected", val: jobAnalysis.preferredExperience },
+                              ].map((item) => (
+                                <div key={item.label} style={{ padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px" }}>
+                                  <span style={{ fontSize: "10px", color: "var(--text-muted)", display: "block" }}>{item.label}</span>
+                                  <span style={{ fontWeight: "bold", color: "var(--text-secondary)" }}>{item.val || "Medium"}</span>
                                 </div>
-
-                                {/* Advanced AI analysis matrix */}
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "11.5px" }}>
-                                  {[
-                                    { label: "Readability", value: ver.aiAnalysis.readability, color: "var(--text-primary)" },
-                                    { label: "Communication Style", value: ver.aiAnalysis.communicationStyle, color: "var(--text-primary)" },
-                                    { label: "Project Complexity", value: ver.aiAnalysis.complexity, color: ver.aiAnalysis.complexity === "High" ? "var(--color-brand)" : "var(--text-secondary)" },
-                                    { label: "Budget Sensitivity", value: ver.aiAnalysis.budgetSensitivity, color: ver.aiAnalysis.budgetSensitivity === "High" ? "var(--error)" : "var(--text-secondary)" },
-                                    { label: "Urgency Detected", value: ver.aiAnalysis.urgency, color: ver.aiAnalysis.urgency === "High" ? "var(--error)" : "var(--text-secondary)" },
-                                    { label: "Professionalism", value: `${ver.aiAnalysis.professionalism}%`, color: "#10b981" },
-                                    { label: "Confidence", value: `${ver.aiAnalysis.confidence}%`, color: "#10b981" },
-                                    { label: "Personalization", value: `${ver.aiAnalysis.personalization}%`, color: "#10b981" },
-                                  ].map((m) => (
-                                    <div key={m.label} style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "4px", background: "var(--surface-2)", display: "flex", justifyContent: "space-between" }}>
-                                      <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>{m.label}</span>
-                                      <span style={{ color: m.color, fontWeight: "bold" }}>{m.value}</span>
-                                    </div>
-                                  ))}
-                                </div>
-
-                                {/* Pain Points list */}
-                                <div>
-                                  <span style={{ fontSize: "11px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Detected Pain Points</span>
-                                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                    {ver.detectedPainPoints.map((pt, i) => (
-                                      <div key={i} style={{ display: "flex", gap: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                                        <span style={{ color: "var(--error)" }}>•</span>
-                                        <span>{pt}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Suggestions list */}
-                                <div>
-                                  <span style={{ fontSize: "11px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>AI Improvement Suggestions</span>
-                                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                    {ver.aiSuggestions.map((sug, i) => (
-                                      <div key={i} style={{ display: "flex", gap: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                                        <span style={{ color: "var(--color-brand)" }}>→</span>
-                                        <span>{sug}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </>
-                            );
-                          })()
+                              ))}
+                            </div>
+                            <div style={{ fontSize: "12px", background: "var(--surface-2)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                              <span style={{ fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>Extracted Pain Points</span>
+                              {jobAnalysis.painPoints?.map((p: string, i: number) => (
+                                <p key={i} style={{ margin: "2px 0", color: "var(--text-secondary)" }}>• {p}</p>
+                              ))}
+                            </div>
+                            <div style={{ fontSize: "12px", background: "var(--surface-2)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                              <span style={{ fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>Important Keywords</span>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                                {jobAnalysis.importantKeywords?.map((kw: string) => (
+                                  <span key={kw} style={{ background: "var(--surface-3)", padding: "2px 6px", borderRadius: "var(--radius-pill)", fontSize: "10px" }}>{kw}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Client analysis details will populate after generation.</p>
                         )}
+                      </div>
+                    )}
+
+                    {/* 3. PORTFOLIO REFERENCES */}
+                    {activeSectionTab === "portfolio" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "400px", overflowY: "auto" }}>
+                        {matchedPortfolio && matchedPortfolio.length > 0 ? (
+                          matchedPortfolio.map((item, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: "12px 14px",
+                                background: "var(--surface-2)",
+                                border: "1.5px solid var(--border)",
+                                borderLeft: "4px solid var(--color-success)",
+                                borderRadius: "var(--radius)",
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-primary)" }}>
+                                  {item.project.title}
+                                </span>
+                                <span style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: 700 }}>
+                                  {item.matchScore}% Match
+                                </span>
+                              </div>
+                              <p style={{ fontSize: "11.5px", color: "var(--text-secondary)", margin: "0 0 6px" }}>
+                                {item.project.description}
+                              </p>
+                              <span style={{ fontSize: "10.5px", color: "var(--text-muted)", display: "block" }}>
+                                <strong>Why matched:</strong> {item.matchReason}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No portfolio projects were automatically matched.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 4. PROPOSAL SCORES & WIN CHECKLIST */}
+                    {activeSectionTab === "score" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "420px", overflowY: "auto", paddingRight: "4px" }}>
+                        {explainableScores ? (
+                          <>
+                            {/* Win Checklist Completion */}
+                            <div style={{ padding: "12px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", gap: "14px" }}>
+                              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--color-success-bg)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--color-success)" }}>
+                                <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--color-success)" }}>
+                                  {activeProposal?.versions.find((v) => v.versionNumber === activeVersionNumber)?.winChecklistPercentage || 85}%
+                                </span>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--text-primary)", display: "block" }}>Win Checklist Score</span>
+                                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Reflects completeness and key freelancer indicators.</span>
+                              </div>
+                            </div>
+
+                            {/* Scores List */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              {Object.entries(explainableScores).map(([key, item]: any) => {
+                                const barColor = item.score >= 80 ? "var(--color-success)" : item.score >= 60 ? "var(--color-brand)" : "var(--color-danger)";
+                                return (
+                                  <div key={key} style={{ padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                      <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "capitalize" }}>
+                                        {key.replace(/([A-Z])/g, " $1")}
+                                      </span>
+                                      <span style={{ fontSize: "11px", fontWeight: 700, color: barColor }}>{item.score}%</span>
+                                    </div>
+                                    <div style={{ height: "4px", background: "var(--surface-3)", borderRadius: "999px", overflow: "hidden", marginBottom: "4px" }}>
+                                      <div style={{ width: `${item.score}%`, height: "100%", background: barColor }} />
+                                    </div>
+                                    <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>{item.reason}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Win Checklist Items */}
+                            {winChecklist && winChecklist.length > 0 && (
+                              <div style={{ padding: "10px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+                                <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>Win Checklist Items</span>
+                                {winChecklist.map((item, idx) => (
+                                  <div key={idx} style={{ display: "flex", gap: "6px", fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                                    <span style={{ color: item.passed ? "var(--color-success)" : "var(--color-danger)" }}>
+                                      {item.passed ? "✓" : "✗"}
+                                    </span>
+                                    <span><strong>{item.label}:</strong> {item.explanation}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Proposal scores are calculated upon generation.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 5. AI SUGGESTIONS TAB */}
+                    {activeSectionTab === "suggestions" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "400px", overflowY: "auto" }}>
+                        {activeProposal?.versions.find((v) => v.versionNumber === activeVersionNumber)?.aiSuggestions && (
+                          activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber)!.aiSuggestions.map((sug, i) => (
+                            <div key={i} style={{ padding: "10px 12px", background: "var(--surface-2)", borderLeft: "3px solid var(--color-brand)", borderRadius: "var(--radius-sm)", fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+                              {sug}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* 6. VERSIONS TAB */}
+                    {activeSectionTab === "versions" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "400px", overflowY: "auto" }}>
+                        {activeProposal?.versions.map((ver) => (
+                          <button
+                            key={ver.versionNumber}
+                            onClick={() => handleSwitchVersion(ver.versionNumber)}
+                            style={{
+                              padding: "10px 12px",
+                              textAlign: "left",
+                              background: ver.versionNumber === activeVersionNumber ? "var(--color-brand-subtle)" : "var(--surface-2)",
+                              border: "1px solid",
+                              borderColor: ver.versionNumber === activeVersionNumber ? "var(--color-brand)" : "var(--border)",
+                              borderRadius: "var(--radius)",
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <div>
+                              <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--text-primary)", display: "block" }}>
+                                Version {ver.versionNumber}
+                              </span>
+                              <span style={{ fontSize: "10.5px", color: "var(--text-muted)" }}>
+                                Generated on {new Date(ver.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-brand)" }}>
+                              Score: {ver.scoreBreakdown.overall}/100
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1067,6 +1379,127 @@ ${editingSections.callToAction}
                       {activeProposal._id ? "Save version" : "Save Proposal"}
                     </Button>
                   </div>
+
+                  {/* Collapsible Development Debug Panel (Phase 11 Bug Fix) */}
+                  {process.env.NODE_ENV === "development" && (
+                    <div style={{ marginTop: "14px", borderTop: "1px solid var(--border)", paddingTop: "14px" }} className="no-print">
+                      <button
+                        onClick={() => setShowDebugPanel(!showDebugPanel)}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 12px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          background: "var(--surface-2)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "var(--radius)",
+                          cursor: "pointer",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        <span>[DEV ONLY] Generation Pipeline Debug Panel</span>
+                        <span>{showDebugPanel ? "Collapse ▲" : "Expand ▼"}</span>
+                      </button>
+                      
+                      {showDebugPanel && (
+                        <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px", fontSize: "11px", maxHeight: "350px", overflowY: "auto", background: "var(--surface-1)", padding: "10px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                          {/* Cache & Cost Metadata */}
+                          {generationMetadata && (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
+                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
+                                <strong>Prompt Size / Tokens:</strong> {generationMetadata.promptTokens || "N/A"}
+                              </div>
+                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
+                                <strong>Completion Tokens:</strong> {generationMetadata.completionTokens || "N/A"}
+                              </div>
+                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
+                                <strong>Cache Status:</strong> {generationMetadata.cacheStatus || "MISS"}
+                              </div>
+                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
+                                <strong>Generation Time:</strong> {generationMetadata.generationTimeMs}ms
+                              </div>
+                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
+                                <strong>Retry Count:</strong> {generationMetadata.validationAttempts}
+                              </div>
+                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
+                                <strong>Word / Char Count:</strong> {generationMetadata.wordCount} / {generationMetadata.charCount}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Raw Job Post */}
+                          <div>
+                            <strong>Raw Job Post:</strong>
+                            <pre style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: "6px", borderRadius: "4px", margin: "4px 0", maxHeight: "80px", overflowY: "auto" }}>
+                              {jobPost}
+                            </pre>
+                          </div>
+
+                          {/* Gemini Job Analysis */}
+                          {jobAnalysis && (
+                            <div>
+                              <strong>Extracted Client Analysis:</strong>
+                              <pre style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: "6px", borderRadius: "4px", margin: "4px 0", maxHeight: "80px", overflowY: "auto" }}>
+                                {JSON.stringify(jobAnalysis, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* Matched Portfolio */}
+                          {matchedPortfolio && matchedPortfolio.length > 0 && (
+                            <div>
+                              <strong>Matched Portfolios:</strong>
+                              <pre style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: "6px", borderRadius: "4px", margin: "4px 0", maxHeight: "80px", overflowY: "auto" }}>
+                                {JSON.stringify(matchedPortfolio, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* Regression Testing Trigger */}
+                          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "4px" }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={runningRegressionTests}
+                              onClick={async () => {
+                                setRunningRegressionTests(true);
+                                try {
+                                  const res = await fetch("/api/proposals/test-regression");
+                                  const data = await res.json();
+                                  setRegressionTestResults(data);
+                                } catch {
+                                  toast.error("Failed to run regression tests");
+                                } finally {
+                                  setRunningRegressionTests(false);
+                                }
+                              }}
+                              style={{ width: "100%" }}
+                            >
+                              {runningRegressionTests ? "Running Test Suite..." : "Execute Automated Regression Tests"}
+                            </Button>
+
+                            {regressionTestResults && (
+                              <div style={{ marginTop: "6px", background: "var(--surface-2)", padding: "8px", borderRadius: "4px" }}>
+                                <span style={{ fontWeight: "bold", color: regressionTestResults.success ? "var(--color-success)" : "var(--color-danger)" }}>
+                                  Test Results: {regressionTestResults.success ? "SUCCESS" : "FAILURE"} ({regressionTestResults.testCount} tests run)
+                                </span>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
+                                  {regressionTestResults.results?.map((r: any, idx: number) => (
+                                    <div key={idx} style={{ color: r.passed ? "var(--color-success)" : "var(--color-danger)" }}>
+                                      {r.passed ? "✓" : "✗"} {r.name}: {r.message}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </section>
@@ -1279,7 +1712,7 @@ ${editingSections.callToAction}
                   padding: "0 14px",
                   borderRadius: "var(--radius)",
                   border: "1px solid var(--border-strong)",
-                  background: favoriteFilter ? "rgba(245,166,35,0.08)" : "transparent",
+                  background: favoriteFilter ? "rgba(99,102,241,0.08)" : "transparent",
                   color: favoriteFilter ? "var(--color-brand)" : "var(--text-secondary)",
                   cursor: "pointer",
                   display: "flex",
@@ -1371,7 +1804,7 @@ ${editingSections.callToAction}
                                 borderRadius: "4px",
                                 fontSize: "11px",
                                 fontWeight: "bold",
-                                background: activeVer.scoreBreakdown.overall >= 80 ? "rgba(16,185,129,0.1)" : "rgba(245,166,35,0.1)",
+                                background: activeVer.scoreBreakdown.overall >= 80 ? "rgba(16,185,129,0.1)" : "rgba(99,102,241,0.1)",
                                 color: activeVer.scoreBreakdown.overall >= 80 ? "#10b981" : "var(--color-brand)",
                               }}>
                                 {activeVer.scoreBreakdown.overall}

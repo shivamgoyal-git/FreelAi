@@ -47,12 +47,15 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/layout/app-shell";
+import { MetricWidget } from "@/components/features/analytics/metric-widget";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTheme } from "@/components/ThemeProvider";
+import { toast } from "sonner";
+import { OnboardingFlow } from "@/components/features/onboarding/onboarding-flow";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -460,47 +463,30 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "var(--surface-0)",
-      }}
-    >
-      <Sidebar active={activeNav} setActive={setActiveNav} userName={userName} userInitial={userInitial} userImage={userImage} />
-      {/* Main Content */}
-      <div style={{ flex: 1, marginLeft: "252px", display: "flex", flexDirection: "column", minHeight: "100vh", minWidth: 0 }}>
-        <TopBar userName={userName} userInitial={userInitial} userImage={userImage} />
-
-        <main style={{ flex: 1, padding: "24px", overflowY: "auto" }}>
-          {activeNav === "settings" ? (
-            <SettingsView theme={theme} toggle={toggle} />
-          ) : activeNav !== "overview" ? (
-            <MockView tabName={activeNav} setActiveNav={setActiveNav} />
-          ) : (
-            <>
-              {/* Page Header */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "28px",
-                  flexWrap: "wrap",
-                  gap: "16px",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                    <h1 className="font-heading" style={{ fontSize: "26px" }}>
-                      Welcome back, {userName.split(" ")[0]} ✨
-                    </h1>
-                  </div>
-                  <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
-                    Here&apos;s an overview of your freelance metrics and recent developments.
-                  </p>
-                </div>
+    <div className="page-enter">
+      <OnboardingFlow />
+      {/* Page Header */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: "28px",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <h1 className="font-heading" style={{ fontSize: "26px" }}>
+                  Welcome back, {userName.split(" ")[0]} ✨
+                </h1>
               </div>
+              <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+                Here&apos;s an overview of your freelance metrics and recent developments.
+              </p>
+            </div>
+          </div>
               
               {/* ── PROFILE PROMO CARD ── */}
               {profileCompleteness !== null && profileCompleteness < 100 && showPromoCard && (
@@ -1076,10 +1062,7 @@ export default function DashboardPage() {
               </div>
             </>
           )}
-            </>
-          )}
-        </main>
-      </div>
+
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -1216,7 +1199,6 @@ function SettingsView({ theme, toggle }: { theme: "light" | "dark"; toggle: () =
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

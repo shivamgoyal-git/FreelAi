@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -124,7 +125,7 @@ function OnboardingSetupWizard() {
   // AI Autofill from Resume text
   const handleAutofill = async () => {
     if (!resumeText.trim()) {
-      alert("Please paste your resume or CV bio text first.");
+      toast.error("Please paste your resume or CV bio text first.");
       return;
     }
 
@@ -148,13 +149,13 @@ function OnboardingSetupWizard() {
         if (data.services && data.services.length > 0) {
           setServices(data.services);
         }
-        alert("AI successfully parsed details! Proceeding to verify basic details.");
+        toast.success("AI successfully parsed details! Proceeding to verify basic details.");
       } else {
-        alert(data.error || "Autofill parser failed");
+        toast.error(data.error || "Autofill parser failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to connect to resume parsing API.");
+      toast.error("Failed to connect to resume parsing API.");
     } finally {
       setParseLoading(false);
     }

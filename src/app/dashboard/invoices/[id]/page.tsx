@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -133,11 +134,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setPaymentOpen(false);
         fetchDetails(); // reload data
       } else {
-        alert(data.error || "Failed to record payment.");
+        toast.error(data.error || "Failed to record payment.");
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to communicate with payment API.");
+      toast.error("Failed to communicate with payment API.");
     } finally {
       setRecording(false);
     }
@@ -156,7 +157,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setCancelOpen(false);
         fetchDetails(); // reload data
       } else {
-        alert("Failed to cancel invoice.");
+        toast.error("Failed to cancel invoice.");
       }
     } catch (err) {
       console.error(err);
@@ -175,7 +176,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (res.ok) {
         router.push("/dashboard/invoices");
       } else {
-        alert("Failed to delete invoice.");
+        toast.error("Failed to delete invoice.");
       }
     } catch (err) {
       console.error(err);

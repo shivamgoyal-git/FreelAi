@@ -1,4 +1,5 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
+import type { IProposalIntelligence } from "@/lib/proposal-intelligence";
 
 export type ProposalStatus = "draft" | "sent" | "won" | "lost";
 export type FreelancePlatform = "Upwork" | "Freelancer" | "Fiverr" | "LinkedIn" | "Direct" | "Other";
@@ -50,6 +51,17 @@ export interface IProposalVersion {
   detectedPainPoints: string[];
   aiSuggestions: string[];
   promptVersion: string;
+  // Phase 11 Authentic Proposal Fields
+  proposalBody?: string;
+  jobAnalysis?: any;
+  matchedPortfolio?: any;
+  explainableScores?: any;
+  winChecklist?: any;
+  generationMetadata?: any;
+  // Phase 11 v4 Pipeline Fields
+  pipelineVersion?: string;
+  copilotSuggestions?: any[];
+  similarityScore?: number;
   createdAt: Date;
 }
 
@@ -71,9 +83,23 @@ export interface IProposal extends Document {
   templateId?: string;
   activeVersionIndex: number;
   versions: IProposalVersion[];
+  // ── Intelligence Layer (Phase 10) ─────────────────────────────────────────
+  intelligence?: IProposalIntelligence;        // latest cached analysis
+  intelligenceHistory?: IProposalIntelligence[]; // all past analyses (capped at 10)
+  // ── Proposal Memory (Phase 11 v4) ─────────────────────────────────────────
+  proposalMemory?: {
+    sentAt?: Date;
+    wonAt?: Date;
+    lostAt?: Date;
+    winCategory?: string;  // e.g. "video-editing", "web-development"
+    lossReason?: string;   // optional feedback
+  };
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Re-export for convenience
+export type { IProposalIntelligence };
 
 const ProposalSectionSchema = new Schema<IProposalSection>({
   executiveSummary: { type: String, required: true },
@@ -122,6 +148,16 @@ const ProposalVersionSchema = new Schema<IProposalVersion>({
   detectedPainPoints: { type: [String], default: [] },
   aiSuggestions: { type: [String], default: [] },
   promptVersion: { type: String, required: true },
+  proposalBody: { type: String, default: "" },
+  jobAnalysis: { type: Schema.Types.Mixed, default: null },
+  matchedPortfolio: { type: Schema.Types.Mixed, default: null },
+  explainableScores: { type: Schema.Types.Mixed, default: null },
+  winChecklist: { type: Schema.Types.Mixed, default: null },
+  generationMetadata: { type: Schema.Types.Mixed, default: null },
+  // Phase 11 v4 Pipeline Fields
+  pipelineVersion: { type: String, default: "" },
+  copilotSuggestions: { type: [Schema.Types.Mixed], default: [] },
+  similarityScore: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 }, { _id: false });
 
@@ -209,6 +245,20 @@ const ProposalSchema = new Schema<IProposal>(
     versions: {
       type: [ProposalVersionSchema],
       default: [],
+    },
+    // ── Intelligence Layer ────────────────────────────────────────────────
+    intelligence: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    intelligenceHistory: {
+      type: [Schema.Types.Mixed],
+      default: [],
+    },
+    // ── Proposal Memory ──────────────────────────────────────────────────
+    proposalMemory: {
+      type: Schema.Types.Mixed,
+      default: null,
     },
   },
   {

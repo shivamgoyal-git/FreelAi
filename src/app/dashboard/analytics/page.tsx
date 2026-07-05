@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -232,11 +233,11 @@ export default function AnalyticsPage() {
         await fetchAllAnalytics();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to generate demo workspace");
+        toast.error(data.error || "Failed to generate demo workspace");
       }
     } catch (err) {
       console.error("Error generating demo workspace:", err);
-      alert("Error generating demo workspace");
+      toast.error("Error generating demo workspace");
     } finally {
       setSeeding(false);
     }
@@ -625,7 +626,7 @@ export default function AnalyticsPage() {
                       key={idx}
                       style={{
                         padding: "10px 14px",
-                        background: "rgba(245, 166, 35, 0.04)",
+                        background: "rgba(99, 102, 241, 0.05)",
                         borderLeft: "2px solid var(--color-brand)",
                         fontSize: "12.5px",
                         color: "var(--text-secondary)",

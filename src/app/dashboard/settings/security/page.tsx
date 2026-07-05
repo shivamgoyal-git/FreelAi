@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import React, { useState } from "react";
 import Link from "next/link";
 import { Shield, ChevronLeft, Loader2, Save, Key, AppWindow, ShieldAlert } from "lucide-react";
@@ -16,50 +17,32 @@ export default function SecuritySettingsPage() {
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || !confirmPassword) {
-      alert("Please fill all password fields.");
+      toast.error("Please fill all password fields.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert("New password and confirm password must match.");
+      toast.error("New password and confirm password must match.");
       return;
     }
 
     setSaving(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      alert("Password updated successfully!");
+      toast.success("Password updated successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error(err);
-      alert("Failed to update password.");
+      toast.error("Failed to update password.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-0)" }}>
-      <Sidebar active="settings" setActive={() => {}} userName="User" userInitial="U" />
-
-      <div style={{ flex: 1, marginLeft: "252px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-        
-        {/* Navigation Header */}
-        <header style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
-          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px" }}>
-            <ChevronLeft size={14} /> Dashboard
-          </Link>
-          <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Shield size={13} color="var(--color-brand)" />
-            </div>
-            <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>Security settings</h1>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, padding: "28px", maxWidth: "800px", width: "100%", margin: "0 auto" }}>
+    <div className="page-enter">
+      <div style={{ maxWidth: "800px", width: "100%", margin: "0 auto" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             
             {/* Password section */}
@@ -173,12 +156,9 @@ export default function SecuritySettingsPage() {
                   </div>
                   <Button variant="secondary" size="sm">Revoke</Button>
                 </div>
-              </div>
             </div>
-
           </div>
-        </main>
-
+        </div>
       </div>
     </div>
   );

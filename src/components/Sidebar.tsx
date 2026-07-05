@@ -109,7 +109,7 @@ export default function Sidebar({
         <div style={{
           padding: "14px 16px",
           background: "var(--color-brand-subtle)",
-          border: "0.5px solid rgba(245,166,35,0.25)",
+          border: "0.5px solid rgba(99,102,241,0.25)",
           borderRadius: "var(--radius-lg)",
           marginBottom: "10px",
         }}>

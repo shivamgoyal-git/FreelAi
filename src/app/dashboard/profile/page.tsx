@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
@@ -226,13 +227,13 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setCompleteness(data.profile.profileCompleteness);
-        alert("Identity profile saved successfully!");
+        toast.success("Identity profile saved successfully!");
       } else {
-        alert(data.error || "Failed to update profile");
+        toast.error(data.error || "Failed to update profile");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving profile");
+      toast.error("Error saving profile");
     } finally {
       setSaveLoading(false);
     }

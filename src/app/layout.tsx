@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -38,6 +39,18 @@ export default function RootLayout({
       <body className={`${inter.variable} ${plusJakarta.variable} antialiased`}>
         <ThemeProvider>
           <SessionProvider>{children}</SessionProvider>
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: "var(--surface-2)",
+                border: "0.5px solid var(--border-strong)",
+                color: "var(--text-primary)",
+                fontSize: "13px",
+                borderRadius: "var(--radius-lg)",
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

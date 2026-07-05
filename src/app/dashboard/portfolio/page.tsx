@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Briefcase, ChevronLeft, Loader2, Plus, Trash2, Globe, Sparkles, X } from "lucide-react";
@@ -58,7 +59,7 @@ export default function PortfolioManagerPage() {
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description || !link) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
 
@@ -75,7 +76,7 @@ export default function PortfolioManagerPage() {
         setLink("");
         setSkills([]);
         await fetchProjects();
-        alert("Portfolio project added successfully!");
+        toast.success("Portfolio project added successfully!");
       }
     } catch (err) {
       console.error("Failed to save portfolio project:", err);
@@ -92,7 +93,7 @@ export default function PortfolioManagerPage() {
       });
       if (res.ok) {
         setProjects(projects.filter((p) => p._id !== id));
-        alert("Portfolio project removed.");
+        toast.success("Portfolio project removed.");
       }
     } catch (err) {
       console.error("Failed to delete portfolio project:", err);
@@ -100,27 +101,8 @@ export default function PortfolioManagerPage() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-0)" }}>
-      <Sidebar active="overview" setActive={() => {}} userName="User" userInitial="U" />
-
-      <div style={{ flex: 1, marginLeft: "252px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-        
-        {/* Navigation Header */}
-        <header style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
-          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px" }}>
-            <ChevronLeft size={14} /> Dashboard
-          </Link>
-          <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Briefcase size={13} color="var(--color-brand)" />
-            </div>
-            <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>Portfolio Manager</h1>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, padding: "28px", maxWidth: "1200px", width: "100%", margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "28px", alignItems: "start" }}>
+    <div className="page-enter">
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "28px", alignItems: "start" }}>
             
             {/* Left: Projects list */}
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -250,11 +232,7 @@ export default function PortfolioManagerPage() {
                 </Button>
               </form>
             </div>
-
           </div>
-        </main>
-
-      </div>
-    </div>
+        </div>
   );
 }

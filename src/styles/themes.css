@@ -1,0 +1,75 @@
+[data-theme="dark"] {
+  /* Semantic Backgrounds */
+  --bg-base: var(--color-void);       /* #08090a */
+  --bg-surface: var(--color-carbon);  /* #0f1011 */
+  --bg-elevated: var(--color-obsidian); /* #161718 */
+  --bg-card: var(--color-carbon);     /* #0f1011 */
+
+  /* Structural Surfaces */
+  --surface-0: var(--color-void);
+  --surface-1: var(--color-carbon);
+  --surface-2: var(--color-obsidian);
+  --surface-3: var(--color-graphite);
+
+  /* Semantic Borders */
+  --border: var(--color-graphite);    /* #23252a */
+  --border-default: var(--color-graphite);
+  --border-subtle: var(--color-graphite);
+  --border-strong: var(--color-smoke); /* #383b3f */
+
+  /* Semantic Text Colors */
+  --text-primary: var(--color-paper);   /* #ffffff */
+  --text-secondary: var(--color-mist);  /* #d0d6e0 */
+  --text-muted: var(--color-fog);       /* #8a8f98 */
+  --text-subtle: var(--color-ash);      /* #62666d */
+
+  /* Brand / CTA Color System */
+  --color-brand: var(--color-acid-lime);    /* #e4f222 */
+  --color-brand-hover: var(--color-bone);   /* #e5e5e6 */
+  --color-brand-subtle: rgba(228, 242, 34, 0.04);
+  --color-on-brand: var(--color-void);      /* #08090a */
+
+  /* Compatibility Aliases */
+  --primary: var(--color-brand);
+  --primary-hover: var(--color-brand-hover);
+  --primary-light: var(--color-brand-subtle);
+  --primary-dim: var(--color-brand-subtle);
+}
+
+[data-theme="light"] {
+  /* Semantic Backgrounds (Premium Light mode - no pure white canvas) */
+  --bg-base: #f7f8f9;                   /* Soft grey canvas */
+  --bg-surface: #ffffff;                /* Pure white card backgrounds */
+  --bg-elevated: #edf0f2;               /* Elevated fields */
+  --bg-card: #ffffff;
+
+  /* Structural Surfaces */
+  --surface-0: #f7f8f9;
+  --surface-1: #ffffff;
+  --surface-2: #edf0f2;
+  --surface-3: #e2e4e6;
+
+  /* Semantic Borders */
+  --border: #e2e4e6;                    /* Subtle graphite equivalent */
+  --border-default: #e2e4e6;
+  --border-subtle: #e8eaec;
+  --border-strong: #d2d4d6;             /* Strong smoke equivalent */
+
+  /* Semantic Text Colors */
+  --text-primary: #08090a;              /* Near-black paper text */
+  --text-secondary: #2d3139;            /* Slate grey headings */
+  --text-muted: #62666d;                /* Ash description text */
+  --text-subtle: #8a8f98;               /* Fog tertiary text */
+
+  /* Brand / CTA Color System */
+  --color-brand: var(--color-void);     /* Neutral dark paper button */
+  --color-brand-hover: var(--color-graphite);
+  --color-brand-subtle: rgba(8, 9, 10, 0.04);
+  --color-on-brand: #ffffff;
+
+  /* Compatibility Aliases */
+  --primary: var(--color-brand);
+  --primary-hover: var(--color-brand-hover);
+  --primary-light: var(--color-brand-subtle);
+  --primary-dim: var(--color-brand-subtle);
+}

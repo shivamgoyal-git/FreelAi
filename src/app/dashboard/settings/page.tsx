@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { SettingsTemplate } from "@/components/templates/settings-template";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/select";
+import { SettingsTemplate } from "@/components/templates";
+import { Input, Textarea, Button, Select } from "@/components/ui";
 import { Switch } from "@/components/ui/switch";
 import { Alert } from "@/components/ui/alert";
-import { useTheme, Theme } from "@/components/ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/components/providers/ThemeProvider";
 import AppShell from "@/components/layout/app-shell";
 import { toast } from "sonner";
 import {

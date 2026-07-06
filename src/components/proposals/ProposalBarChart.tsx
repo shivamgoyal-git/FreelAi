@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import type { IProposalIntelligence } from "@/lib/proposal-intelligence";
 
+import { chartTheme } from "@/lib/chart-theme";
+
 interface ProposalBarChartProps {
   intelligence: IProposalIntelligence;
   height?: number;
@@ -32,10 +34,10 @@ const DIM_LABELS: Record<string, string> = {
 };
 
 function scoreColor(score: number): string {
-  if (score >= 85) return "#22863a";
-  if (score >= 70) return "#6366F1";
-  if (score >= 50) return "#B45309";
-  return "#D93025";
+  if (score >= 85) return "var(--color-pulse-green)";
+  if (score >= 70) return "var(--color-iris-violet)";
+  if (score >= 50) return "var(--color-lavender)";
+  return "var(--color-coral-red)";
 }
 
 export function ProposalBarChart({ intelligence, height = 260 }: ProposalBarChartProps) {
@@ -48,21 +50,17 @@ export function ProposalBarChart({ intelligence, height = 260 }: ProposalBarChar
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 80 }}>
-          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
+          <XAxis type="number" domain={[0, 100]} tick={chartTheme.xAxis.tick} axisLine={chartTheme.xAxis.axisLine} tickLine={chartTheme.xAxis.tickLine} />
           <YAxis
             type="category"
             dataKey="name"
-            tick={{ fontSize: 11, fill: "var(--text-secondary)", fontWeight: 600 }}
+            tick={{ fontSize: 11, fill: "var(--text-secondary)", fontWeight: 510 }}
+            axisLine={chartTheme.yAxis.axisLine}
+            tickLine={chartTheme.yAxis.tickLine}
             width={80}
           />
           <Tooltip
-            contentStyle={{
-              background: "var(--surface-2)",
-              border: "0.5px solid var(--border)",
-              borderRadius: "var(--radius)",
-              fontSize: "12px",
-              color: "var(--text-primary)",
-            }}
+            contentStyle={chartTheme.tooltip.contentStyle}
             formatter={(value) => [`${value}/100`, "Score"]}
           />
           <Bar dataKey="score" radius={[0, 4, 4, 0]} maxBarSize={14}>

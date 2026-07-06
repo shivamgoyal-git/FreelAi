@@ -1,0 +1,103 @@
+/* Standard Animations and Motion Transitions (design.md) */
+
+:root {
+  /* Duration and Easing constants */
+  --dur-fast: 100ms;
+  --dur-base: 180ms;
+  --dur-slow: 320ms;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Transitions */
+.transition-all {
+  transition: all var(--dur-base) var(--ease-spring);
+}
+
+.transition-fast {
+  transition: all var(--dur-fast) ease-in-out;
+}
+
+/* Keyframes */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Reusable Animation Classes */
+.page-enter {
+  animation: page-in var(--dur-slow) var(--ease-spring) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--dur-base) ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--dur-slow) var(--ease-spring) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--dur-base) var(--ease-spring) forwards;
+}
+
+.loading-spinner {
+  animation: spin 0.85s linear infinite;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.ai-step-dot {
+  animation: pulse-dot 1s ease-in-out infinite;
+}

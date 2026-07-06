@@ -2,7 +2,8 @@
 
 import React from "react";
 import { Sun, Moon, Laptop } from "lucide-react";
-import { useTheme, Theme } from "../ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/components/providers/ThemeProvider";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();

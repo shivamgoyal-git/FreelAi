@@ -53,7 +53,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { useTheme } from "@/components/ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 import { toast } from "sonner";
 import { OnboardingFlow } from "@/components/features/onboarding/onboarding-flow";
 
@@ -92,34 +92,34 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  design: "#6366f1",
-  development: "#06b6d4",
-  illustration: "#8b5cf6",
-  video: "#ec4899",
-  writing: "#f59e0b",
-  marketing: "#10b981",
-  consulting: "#e8a838",
-  other: "var(--text-muted)",
+  design: "var(--color-iris-violet)",
+  development: "var(--color-signal-teal)",
+  illustration: "var(--color-lavender)",
+  video: "var(--color-coral-red)",
+  writing: "var(--color-mist)",
+  marketing: "var(--color-pulse-green)",
+  consulting: "var(--color-bone)",
+  other: "var(--color-fog)",
 };
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
-  design: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-  development: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
-  illustration: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-  video: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-  writing: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-  marketing: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-  consulting: "linear-gradient(135deg, #e8a838 0%, #d4880a 100%)",
-  other: "linear-gradient(135deg, var(--text-muted) 0%, var(--border-strong) 100%)",
+  design: "linear-gradient(135deg, var(--color-iris-violet) 0%, rgba(99,102,241,0.5) 100%)",
+  development: "linear-gradient(135deg, var(--color-signal-teal) 0%, rgba(2,184,204,0.5) 100%)",
+  illustration: "linear-gradient(135deg, var(--color-lavender) 0%, rgba(139,92,246,0.5) 100%)",
+  video: "linear-gradient(135deg, var(--color-coral-red) 0%, rgba(235,87,87,0.5) 100%)",
+  writing: "linear-gradient(135deg, var(--color-mist) 0%, rgba(208,214,224,0.5) 100%)",
+  marketing: "linear-gradient(135deg, var(--color-pulse-green) 0%, rgba(39,166,68,0.5) 100%)",
+  consulting: "linear-gradient(135deg, var(--color-bone) 0%, rgba(229,229,230,0.5) 100%)",
+  other: "linear-gradient(135deg, var(--color-fog) 0%, rgba(138,143,152,0.5) 100%)",
 };
 
 const STATUS_CFG: Record<string, { label: string; badge: string; color: string }> = {
-  draft:     { label: "Draft",     badge: "badge-info",    color: "var(--info)" },
-  active:    { label: "Active",    badge: "badge-success", color: "var(--success)" },
+  draft: { label: "Draft", badge: "badge-info", color: "var(--info)" },
+  active: { label: "Active", badge: "badge-success", color: "var(--success)" },
   in_review: { label: "In Review", badge: "badge-warning", color: "var(--warning)" },
   completed: { label: "Completed", badge: "badge-success", color: "var(--success)" },
-  on_hold:   { label: "On Hold",   badge: "badge-warning", color: "var(--warning)" },
-  cancelled: { label: "Cancelled", badge: "badge-error",   color: "var(--error)" },
+  on_hold: { label: "On Hold", badge: "badge-warning", color: "var(--warning)" },
+  cancelled: { label: "Cancelled", badge: "badge-error", color: "var(--error)" },
 };
 
 function timeAgo(dateString?: string) {
@@ -376,11 +376,11 @@ export default function DashboardPage() {
     projectFilter === "All"
       ? dbProjects
       : dbProjects.filter((p) => {
-          if (projectFilter === "In Progress") return p.status === "active" || p.status === "in_review" || p.status === "on_hold";
-          if (projectFilter === "Review") return p.status === "in_review";
-          if (projectFilter === "Completed") return p.status === "completed";
-          return true;
-        });
+        if (projectFilter === "In Progress") return p.status === "active" || p.status === "in_review" || p.status === "on_hold";
+        if (projectFilter === "Review") return p.status === "in_review";
+        if (projectFilter === "Completed") return p.status === "completed";
+        return true;
+      });
 
   // Calculate project breakdown metrics for the Pie Chart
   const categoryCounts: Record<string, number> = {};
@@ -399,18 +399,18 @@ export default function DashboardPage() {
     projectBreakdownData.length > 0
       ? projectBreakdownData
       : [
-          { name: "Design", value: 50, color: "#6366f1" },
-          { name: "Development", value: 30, color: "#06b6d4" },
-          { name: "Illustration", value: 20, color: "#8b5cf6" },
-        ];
+        { name: "Design", value: 50, color: "#6366f1" },
+        { name: "Development", value: 30, color: "#06b6d4" },
+        { name: "Illustration", value: 20, color: "#8b5cf6" },
+      ];
 
   const COLOR_MAP: Record<string, string> = {
-    design: "#378ADD",
-    development: "#1D9E75",
-    illustration: "#7F77DD",
-    Design: "#378ADD",
-    Development: "#1D9E75",
-    Illustration: "#7F77DD",
+    design: "var(--color-iris-violet)",
+    development: "var(--color-signal-teal)",
+    illustration: "var(--color-lavender)",
+    Design: "var(--color-iris-violet)",
+    Development: "var(--color-signal-teal)",
+    Illustration: "var(--color-lavender)",
   };
 
   const slicedBreakdownData = finalBreakdownData.slice(0, 3).map((item) => {
@@ -466,602 +466,602 @@ export default function DashboardPage() {
     <div className="page-enter">
       <OnboardingFlow />
       {/* Page Header */}
-          <div
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "28px",
+          flexWrap: "wrap",
+          gap: "16px",
+        }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <h1 className="font-heading" style={{ fontSize: "26px" }}>
+              Welcome back, {userName.split(" ")[0]} ✨
+            </h1>
+          </div>
+          <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+            Here&apos;s an overview of your freelance metrics and recent developments.
+          </p>
+        </div>
+      </div>
+
+      {/* ── PROFILE PROMO CARD ── */}
+      {profileCompleteness !== null && profileCompleteness < 100 && showPromoCard && (
+        <div style={{
+          background: "var(--surface-1)",
+          border: "0.5px solid var(--border-strong)",
+          borderRadius: "var(--radius)",
+          padding: "20px",
+          marginBottom: "24px",
+          position: "relative",
+          boxShadow: "var(--shadow-sm)"
+        }}>
+          <button
+            onClick={() => setShowPromoCard(false)}
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "28px",
-              flexWrap: "wrap",
-              gap: "16px",
+              position: "absolute",
+              top: "14px",
+              right: "14px",
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer"
             }}
           >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                <h1 className="font-heading" style={{ fontSize: "26px" }}>
-                  Welcome back, {userName.split(" ")[0]} ✨
-                </h1>
-              </div>
-              <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
-                Here&apos;s an overview of your freelance metrics and recent developments.
+            <X size={14} />
+          </button>
+          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ flex: 1, minWidth: "260px" }}>
+              <h4 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Sparkles size={14} color="var(--color-brand)" /> Complete your Freelancer Profile
+              </h4>
+              <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "4px", maxWidth: "560px" }}>
+                Configure your professional skills and services to unlock AI-powered proposal generation, automatic reply assistants, and smart pricing tools.
               </p>
+              <div style={{ display: "flex", gap: "16px", marginTop: "12px", fontSize: "11px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                <span>Unlock:</span>
+                <span>✓ AI Proposal Generator</span>
+                <span>✓ AI Client Reply Assistant</span>
+                <span>✓ AI Pricing Assistant</span>
+              </div>
+            </div>
+
+            {/* Progress meter */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "bold" }}>
+                <span style={{ color: "var(--text-secondary)" }}>Onboarding Progress</span>
+                <span style={{ color: "var(--color-brand)" }}>{profileCompleteness}%</span>
+              </div>
+              <div style={{ height: "6px", background: "var(--surface-2)", borderRadius: "3px", overflow: "hidden" }}>
+                <div style={{ width: `${profileCompleteness}%`, height: "100%", background: "var(--color-brand)", borderRadius: "3px", transition: "width 0.4s ease" }} />
+              </div>
+              <Link href="/dashboard/profile/setup" style={{ textDecoration: "none", marginTop: "4px" }}>
+                <Button variant="primary" size="sm" style={{ width: "100%", height: "28px", fontSize: "11px" }}>
+                  Complete Profile
+                </Button>
+              </Link>
             </div>
           </div>
-              
-              {/* ── PROFILE PROMO CARD ── */}
-              {profileCompleteness !== null && profileCompleteness < 100 && showPromoCard && (
-                <div style={{
-                  background: "var(--surface-1)",
-                  border: "0.5px solid var(--border-strong)",
-                  borderRadius: "var(--radius)",
-                  padding: "20px",
-                  marginBottom: "24px",
-                  position: "relative",
-                  boxShadow: "var(--shadow-sm)"
-                }}>
-                  <button
-                    onClick={() => setShowPromoCard(false)}
-                    style={{
-                      position: "absolute",
-                      top: "14px",
-                      right: "14px",
-                      background: "none",
-                      border: "none",
-                      color: "var(--text-muted)",
-                      cursor: "pointer"
-                    }}
-                  >
-                    <X size={14} />
-                  </button>
-                  <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
-                    <div style={{ flex: 1, minWidth: "260px" }}>
-                      <h4 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                        <Sparkles size={14} color="var(--color-brand)" /> Complete your Freelancer Profile
-                      </h4>
-                      <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "4px", maxWidth: "560px" }}>
-                        Configure your professional skills and services to unlock AI-powered proposal generation, automatic reply assistants, and smart pricing tools.
-                      </p>
-                      <div style={{ display: "flex", gap: "16px", marginTop: "12px", fontSize: "11px", color: "var(--text-secondary)", fontWeight: 500 }}>
-                        <span>Unlock:</span>
-                        <span>✓ AI Proposal Generator</span>
-                        <span>✓ AI Client Reply Assistant</span>
-                        <span>✓ AI Pricing Assistant</span>
-                      </div>
-                    </div>
-                    
-                    {/* Progress meter */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "bold" }}>
-                        <span style={{ color: "var(--text-secondary)" }}>Onboarding Progress</span>
-                        <span style={{ color: "var(--color-brand)" }}>{profileCompleteness}%</span>
-                      </div>
-                      <div style={{ height: "6px", background: "var(--surface-2)", borderRadius: "3px", overflow: "hidden" }}>
-                        <div style={{ width: `${profileCompleteness}%`, height: "100%", background: "var(--color-brand)", borderRadius: "3px", transition: "width 0.4s ease" }} />
-                      </div>
-                      <Link href="/dashboard/profile/setup" style={{ textDecoration: "none", marginTop: "4px" }}>
-                        <Button variant="primary" size="sm" style={{ width: "100%", height: "28px", fontSize: "11px" }}>
-                          Complete Profile
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
+        </div>
+      )}
 
-              {loading ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-                    {[1,2,3,4].map(i => (
-                      <div key={i} className="skeleton" style={{ height: "100px", borderRadius: "var(--radius-lg)" }} />
-                    ))}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "16px" }}>
-                    <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
-                    <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
-                  </div>
-                  <div className="skeleton" style={{ height: "360px", borderRadius: "var(--radius-lg)" }} />
-                </div>
-              ) : (
-                <>
-              {/* ── STAT CARDS ── */}
-              <div
-                className="grid-responsive-4"
-                style={{ marginBottom: "24px" }}
-              >
-                {statCards.map((stat) => (
-                  <StatCard
-                    key={stat.id}
-                    label={stat.label}
-                    value={stat.value}
-                    icon={<stat.icon />}
-                    accentColor={stat.iconColor}
-                    change={stat.change}
-                  />
-                ))}
-              </div>
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="skeleton" style={{ height: "100px", borderRadius: "var(--radius-lg)" }} />
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "16px" }}>
+            <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
+            <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
+          </div>
+          <div className="skeleton" style={{ height: "360px", borderRadius: "var(--radius-lg)" }} />
+        </div>
+      ) : (
+        <>
+          {/* ── STAT CARDS ── */}
+          <div
+            className="grid-responsive-4"
+            style={{ marginBottom: "24px" }}
+          >
+            {statCards.map((stat) => (
+              <StatCard
+                key={stat.id}
+                label={stat.label}
+                value={stat.value}
+                icon={<stat.icon />}
+                accentColor={stat.iconColor}
+                change={stat.change}
+              />
+            ))}
+          </div>
 
-              {/* ── CHARTS ROW ── */}
+          {/* ── CHARTS ROW ── */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 300px",
+              gap: "20px",
+              marginBottom: "24px",
+            }}
+          >
+            {/* Earnings Chart */}
+            <div
+              id="earnings-chart"
+              className="glass-card"
+              style={{ padding: "24px", display: "flex", flexDirection: "column" }}
+            >
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 300px",
-                  gap: "20px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   marginBottom: "24px",
                 }}
               >
-                {/* Earnings Chart */}
-                <div
-                  id="earnings-chart"
-                  className="glass-card"
-                  style={{ padding: "24px", display: "flex", flexDirection: "column" }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "24px",
-                    }}
-                  >
-                    <div>
-                      <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "4px" }}>
-                        Earnings Overview
-                      </h3>
-                      <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Monthly revenue visualization</p>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                        Monthly revenue
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, minHeight: "220px" }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" />
-                        <XAxis
-                          dataKey="month"
-                          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={(v) => v === 0 ? "$0" : `$${v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}`}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            background: "var(--surface-2)",
-                            border: "0.5px solid var(--border)",
-                            borderRadius: "8px",
-                            fontSize: "12px",
-                          }}
-                          itemStyle={{ color: "var(--text-primary)" }}
-                          labelStyle={{ color: "var(--text-muted)", fontWeight: 600 }}
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          formatter={(value: any) => ["$" + Number(value || 0).toLocaleString(), "Revenue"]}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="earnings"
-                          stroke="#378ADD"
-                          strokeWidth={1.5}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div>
+                  <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "4px" }}>
+                    Earnings Overview
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Monthly revenue visualization</p>
                 </div>
-
-                {/* Right Column (Pie Chart & AI Widget) */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {/* Pie Chart */}
-                  <div id="project-breakdown" className="glass-card" style={{ padding: "24px" }}>
-                    <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "16px" }}>
-                      Project Mix
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
-                      <PieChart width={120} height={120}>
-                        <Pie
-                          data={slicedBreakdownData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius="65%"
-                          outerRadius="90%"
-                          paddingAngle={3}
-                          dataKey="value"
-                        >
-                          {slicedBreakdownData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {slicedBreakdownData.map((entry) => (
-                          <div
-                            key={entry.name}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
-                              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{entry.name}</span>
-                            </div>
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>{entry.value}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Interactive AI Assistant Widget */}
-                  <div
-                    id="ai-assistant-widget"
-                    style={{
-                      padding: "20px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "14px",
-                      background: "var(--surface-1)",
-                      border: "0.5px solid var(--border)",
-                      borderLeft: "2.5px solid var(--color-brand)",
-                      borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Sparkles size={16} color="var(--primary)" />
-                      <h3 className="font-heading" style={{ fontSize: "15px" }}>Antigravity AI Assistant</h3>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "16px",
-                        borderBottom: "1px solid var(--border)",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => { setAiAction("prompt"); setAnimatedResponse(""); }}
-                        style={{
-                          padding: "6px 0",
-                          background: "transparent",
-                          border: "none",
-                          borderBottom: aiAction === "prompt" ? "2px solid var(--color-brand)" : "2px solid transparent",
-                          color: aiAction === "prompt" ? "var(--text-primary)" : "var(--text-muted)",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        Run Prompt
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setAiAction("proposal"); setAnimatedResponse(""); }}
-                        style={{
-                          padding: "6px 0",
-                          background: "transparent",
-                          border: "none",
-                          borderBottom: aiAction === "proposal" ? "2px solid var(--color-brand)" : "2px solid transparent",
-                          color: aiAction === "proposal" ? "var(--text-primary)" : "var(--text-muted)",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        Generate Proposal
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleAiSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      <textarea
-                        value={aiPrompt}
-                        onChange={(e) => setAiPrompt(e.target.value)}
-                        placeholder={aiAction === "prompt" ? "Ask outreach tips, client strategy, formulas..." : "Enter project details (e.g. Website Redesign, $3500)..."}
-                        rows={2}
-                        required
-                        style={{
-                          width: "100%",
-                          padding: "10px",
-                          background: "var(--bg-elevated)",
-                          border: "0.5px solid var(--border)",
-                          borderRadius: "var(--radius-md)",
-                          fontSize: "13px",
-                          color: "var(--text-primary)",
-                          fontFamily: "inherit",
-                          outline: "none",
-                          resize: "none",
-                          transition: "border-color 0.2s",
-                        }}
-                        onFocus={(e) => (e.target.style.borderColor = "var(--color-brand)")}
-                        onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
-                      />
-                      <Button
-                        type="submit"
-                        disabled={aiLoading}
-                        variant="primary"
-                        size="sm"
-                        style={{ width: "100%", justifyContent: "center" }}
-                        leftIcon={aiLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Zap size={13} />}
-                      >
-                        {aiLoading ? "Consulting AI..." : (aiAction === "prompt" ? "Ask Antigravity" : "Generate Proposal")}
-                      </Button>
-                    </form>
-
-                    {animatedResponse && (
-                      <div
-                        style={{
-                          maxHeight: "180px",
-                          overflowY: "auto",
-                          padding: "10px 12px",
-                          background: "var(--bg-elevated)",
-                          border: "1px solid var(--border-default)",
-                          borderRadius: "var(--radius-md)",
-                          fontSize: "12px",
-                          color: "var(--text-secondary)",
-                          lineHeight: "1.6",
-                          whiteSpace: "pre-wrap",
-                          animation: "fadeIn 0.2s ease",
-                        }}
-                      >
-                        {animatedResponse}
-                      </div>
-                    )}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                    Monthly revenue
+                  </span>
                 </div>
               </div>
+              <div style={{ flex: 1, minHeight: "220px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => v === 0 ? "$0" : `$${v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--surface-2)",
+                        border: "0.5px solid var(--border)",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                      }}
+                      itemStyle={{ color: "var(--text-primary)" }}
+                      labelStyle={{ color: "var(--text-muted)", fontWeight: 510 }}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      formatter={(value: any) => ["$" + Number(value || 0).toLocaleString(), "Revenue"]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="earnings"
+                      stroke="var(--color-signal-teal)"
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-              {/* ── PROJECTS TABLE ── */}
-              <div
-                id="projects-table"
-                className="glass-card"
-                style={{ padding: "24px", marginBottom: "24px" }}
-              >
-                {/* Table Header */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
-                    gap: "12px",
-                  }}
-                >
-                  <div>
-                    <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "4px" }}>
-                      Active Projects
-                    </h3>
-                    <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                      {dbProjects.length === 0 ? "No active projects" : `${dbProjects.length} recent projects`}
-                    </p>
-                  </div>
-
-                  <div className="filter-tabs">
-                    {["All", "In Progress", "Review", "Completed"].map((f) => (
-                      <button
-                        key={f}
-                        id={`filter-${f.toLowerCase().replace(" ", "-")}`}
-                        onClick={() => setProjectFilter(f)}
-                        className={`filter-tab${projectFilter === f ? " active" : ""}`}
+            {/* Right Column (Pie Chart & AI Widget) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* Pie Chart */}
+              <div id="project-breakdown" className="glass-card" style={{ padding: "24px" }}>
+                <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "16px" }}>
+                  Project Mix
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+                  <PieChart width={120} height={120}>
+                    <Pie
+                      data={slicedBreakdownData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="65%"
+                      outerRadius="90%"
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {slicedBreakdownData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {slicedBreakdownData.map((entry) => (
+                      <div
+                        key={entry.name}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
                       >
-                        {f}
-                      </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{entry.name}</span>
+                        </div>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>{entry.value}%</span>
+                      </div>
                     ))}
                   </div>
                 </div>
+              </div>
 
-                {/* Table */}
-                <div style={{ overflowX: "auto" }}>
-                  {filteredProjects.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: "13px" }}>
-                      No projects match this filter.
-                    </div>
-                  ) : (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          {["Project", "Category", "Progress", "Budget", "Due Date", "Status", ""].map((col) => (
-                            <th key={col}>{col}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProjects.map((project, i) => {
-                          const categoryLabel = CATEGORY_LABELS[project.category] || project.category;
-                          const categoryColor = CATEGORY_COLORS[project.category] || "var(--text-muted)";
-                          const gradient = CATEGORY_GRADIENTS[project.category] || CATEGORY_GRADIENTS.other;
-                          const sCfg = STATUS_CFG[project.status] || { label: project.status, badge: "badge-info", color: "var(--info)" };
-
-                          return (
-                            <tr key={project._id}>
-                              {/* Project Name */}
-                              <td style={{ padding: "14px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                  <div
-                                    className="avatar"
-                                    style={{
-                                      width: "36px",
-                                      height: "36px",
-                                      background: gradient,
-                                      fontSize: "13px",
-                                      flexShrink: 0,
-                                      fontWeight: "bold",
-                                    }}
-                                  >
-                                    {project.title.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
-                                      {project.title}
-                                    </p>
-                                    <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>{project.clientName || "Direct Project"}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              {/* Category */}
-                              <td style={{ padding: "14px" }}>
-                                <span
-                                  className="badge"
-                                  style={{
-                                    fontSize: "11px",
-                                    background: `${categoryColor}15`,
-                                    color: categoryColor,
-                                    border: `1px solid ${categoryColor}30`,
-                                  }}
-                                >
-                                  {categoryLabel}
-                                </span>
-                              </td>
-                              {/* Progress */}
-                              <td style={{ padding: "14px", minWidth: "120px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <div className="progress-bar" style={{ flex: 1 }}>
-                                    <div className="progress-fill" style={{ width: `${project.progress}%` }} />
-                                  </div>
-                                  <span style={{ fontSize: "12px", color: "var(--text-muted)", minWidth: "32px" }}>
-                                    {project.progress}%
-                                  </span>
-                                </div>
-                              </td>
-                              {/* Budget */}
-                              <td style={{ padding: "14px" }}>
-                                <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
-                                  ${project.budget.toLocaleString()}
-                                </span>
-                              </td>
-                              {/* Due Date */}
-                              <td style={{ padding: "14px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                  <Calendar size={13} color="var(--text-muted)" />
-                                  <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                                    {project.dueDate ? new Date(project.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
-                                  </span>
-                                </div>
-                              </td>
-                              {/* Status */}
-                              <td style={{ padding: "14px" }}>
-                                <Badge variant={getBadgeVariant(project.status)}>
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    {project.status === "active" && <Clock size={11} />}
-                                    {project.status === "completed" && <CheckCircle size={11} />}
-                                    <span>{sCfg.label}</span>
-                                  </span>
-                                </Badge>
-                              </td>
-                              {/* Actions */}
-                              <td style={{ padding: "14px" }}>
-                                <div style={{ display: "flex", gap: "4px" }}>
-                                  <Link href={`/dashboard/projects/${project._id}`}>
-                                    <Button variant="ghost" size="sm">
-                                      <Eye size={14} />
-                                    </Button>
-                                  </Link>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
+              {/* Interactive AI Assistant Widget */}
+              <div
+                id="ai-assistant-widget"
+                style={{
+                  padding: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  background: "var(--surface-1)",
+                  border: "0.5px solid var(--border)",
+                  borderLeft: "2.5px solid var(--color-brand)",
+                  borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Sparkles size={16} color="var(--primary)" />
+                  <h3 className="font-heading" style={{ fontSize: "15px" }}>Antigravity AI Assistant</h3>
                 </div>
 
-                {/* Table Footer */}
                 <div
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "14px",
-                    paddingTop: "14px",
-                    borderTop: "0.5px solid var(--border)",
+                    gap: "16px",
+                    borderBottom: "1px solid var(--border)",
+                    marginBottom: "4px",
                   }}
                 >
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                    Showing {filteredProjects.length} of {dbProjects.length} projects
-                  </p>
-                  <Link href="/dashboard/projects">
-                    <Button variant="ghost" size="sm" rightIcon={<ChevronRight size={14} />}>
-                      View All
-                    </Button>
-                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => { setAiAction("prompt"); setAnimatedResponse(""); }}
+                    style={{
+                      padding: "6px 0",
+                      background: "transparent",
+                      border: "none",
+                      borderBottom: aiAction === "prompt" ? "2px solid var(--color-brand)" : "2px solid transparent",
+                      color: aiAction === "prompt" ? "var(--text-primary)" : "var(--text-muted)",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    Run Prompt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAiAction("proposal"); setAnimatedResponse(""); }}
+                    style={{
+                      padding: "6px 0",
+                      background: "transparent",
+                      border: "none",
+                      borderBottom: aiAction === "proposal" ? "2px solid var(--color-brand)" : "2px solid transparent",
+                      color: aiAction === "proposal" ? "var(--text-primary)" : "var(--text-muted)",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    Generate Proposal
+                  </button>
                 </div>
+
+                <form onSubmit={handleAiSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder={aiAction === "prompt" ? "Ask outreach tips, client strategy, formulas..." : "Enter project details (e.g. Website Redesign, $3500)..."}
+                    rows={2}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      background: "var(--bg-elevated)",
+                      border: "0.5px solid var(--border)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "13px",
+                      color: "var(--text-primary)",
+                      fontFamily: "inherit",
+                      outline: "none",
+                      resize: "none",
+                      transition: "border-color 0.2s",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--color-brand)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={aiLoading}
+                    variant="primary"
+                    size="sm"
+                    style={{ width: "100%", justifyContent: "center" }}
+                    leftIcon={aiLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Zap size={13} />}
+                  >
+                    {aiLoading ? "Consulting AI..." : (aiAction === "prompt" ? "Ask Antigravity" : "Generate Proposal")}
+                  </Button>
+                </form>
+
+                {animatedResponse && (
+                  <div
+                    style={{
+                      maxHeight: "180px",
+                      overflowY: "auto",
+                      padding: "10px 12px",
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-default)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "12px",
+                      color: "var(--text-secondary)",
+                      lineHeight: "1.6",
+                      whiteSpace: "pre-wrap",
+                      animation: "fadeIn 0.2s ease",
+                    }}
+                  >
+                    {animatedResponse}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── PROJECTS TABLE ── */}
+          <div
+            id="projects-table"
+            className="glass-card"
+            style={{ padding: "24px", marginBottom: "24px" }}
+          >
+            {/* Table Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "20px",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <div>
+                <h3 className="font-heading" style={{ fontSize: "17px", marginBottom: "4px" }}>
+                  Active Projects
+                </h3>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                  {dbProjects.length === 0 ? "No active projects" : `${dbProjects.length} recent projects`}
+                </p>
               </div>
 
-              {/* ── ACTIVITY FEED ── */}
-              <div id="activity-feed" className="glass-card" style={{ padding: "24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                  <h3 className="font-heading" style={{ fontSize: "17px" }}>Recent Activity</h3>
-                </div>
+              <div className="filter-tabs">
+                {["All", "In Progress", "Review", "Completed"].map((f) => (
+                  <button
+                    key={f}
+                    id={`filter-${f.toLowerCase().replace(" ", "-")}`}
+                    onClick={() => setProjectFilter(f)}
+                    className={`filter-tab${projectFilter === f ? " active" : ""}`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                  {activities.length === 0 ? (
-                    <EmptyState
-                      icon={<Bell />}
-                      heading="No activity yet"
-                      description="Recent updates and actions will show up here as you work."
-                    />
-                  ) : (
-                    activities.map((item, i) => {
-                      const cfg = getActivityConfig(item.type);
+            {/* Table */}
+            <div style={{ overflowX: "auto" }}>
+              {filteredProjects.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: "13px" }}>
+                  No projects match this filter.
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {["Project", "Category", "Progress", "Budget", "Due Date", "Status", ""].map((col) => (
+                        <th key={col}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProjects.map((project, i) => {
+                      const categoryLabel = CATEGORY_LABELS[project.category] || project.category;
+                      const categoryColor = CATEGORY_COLORS[project.category] || "var(--text-muted)";
+                      const gradient = CATEGORY_GRADIENTS[project.category] || CATEGORY_GRADIENTS.other;
+                      const sCfg = STATUS_CFG[project.status] || { label: project.status, badge: "badge-info", color: "var(--info)" };
+
                       return (
-                        <div
-                          key={item._id}
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "14px",
-                            paddingBottom: i < activities.length - 1 ? "16px" : 0,
-                            marginBottom: i < activities.length - 1 ? "16px" : 0,
-                            borderBottom: i < activities.length - 1 ? "0.5px solid var(--border)" : "none",
-                          }}
-                        >
-                          {/* Icon */}
-                          <div
-                            style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "50%",
-                              background: cfg.iconBg,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
-                            <cfg.icon size={15} color={cfg.iconColor} />
-                          </div>
-
-                          {/* Content */}
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
-                              {item.title}
-                            </p>
-                            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{item.description}</p>
-                          </div>
-
-                          {/* Time */}
-                          <span style={{ fontSize: "12px", color: "var(--text-subtle)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                            {timeAgo(item.createdAt)}
-                          </span>
-                        </div>
+                        <tr key={project._id}>
+                          {/* Project Name */}
+                          <td style={{ padding: "14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                              <div
+                                className="avatar"
+                                style={{
+                                  width: "36px",
+                                  height: "36px",
+                                  background: gradient,
+                                  fontSize: "13px",
+                                  flexShrink: 0,
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                {project.title.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                                  {project.title}
+                                </p>
+                                <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>{project.clientName || "Direct Project"}</p>
+                              </div>
+                            </div>
+                          </td>
+                          {/* Category */}
+                          <td style={{ padding: "14px" }}>
+                            <span
+                              className="badge"
+                              style={{
+                                fontSize: "11px",
+                                background: `${categoryColor}15`,
+                                color: categoryColor,
+                                border: `1px solid ${categoryColor}30`,
+                              }}
+                            >
+                              {categoryLabel}
+                            </span>
+                          </td>
+                          {/* Progress */}
+                          <td style={{ padding: "14px", minWidth: "120px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div className="progress-bar" style={{ flex: 1 }}>
+                                <div className="progress-fill" style={{ width: `${project.progress}%` }} />
+                              </div>
+                              <span style={{ fontSize: "12px", color: "var(--text-muted)", minWidth: "32px" }}>
+                                {project.progress}%
+                              </span>
+                            </div>
+                          </td>
+                          {/* Budget */}
+                          <td style={{ padding: "14px" }}>
+                            <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                              ${project.budget.toLocaleString()}
+                            </span>
+                          </td>
+                          {/* Due Date */}
+                          <td style={{ padding: "14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Calendar size={13} color="var(--text-muted)" />
+                              <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                                {project.dueDate ? new Date(project.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                              </span>
+                            </div>
+                          </td>
+                          {/* Status */}
+                          <td style={{ padding: "14px" }}>
+                            <Badge variant={getBadgeVariant(project.status)}>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                {project.status === "active" && <Clock size={11} />}
+                                {project.status === "completed" && <CheckCircle size={11} />}
+                                <span>{sCfg.label}</span>
+                              </span>
+                            </Badge>
+                          </td>
+                          {/* Actions */}
+                          <td style={{ padding: "14px" }}>
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              <Link href={`/dashboard/projects/${project._id}`}>
+                                <Button variant="ghost" size="sm">
+                                  <Eye size={14} />
+                                </Button>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
                       );
-                    })
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Table Footer */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: "14px",
+                paddingTop: "14px",
+                borderTop: "0.5px solid var(--border)",
+              }}
+            >
+              <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                Showing {filteredProjects.length} of {dbProjects.length} projects
+              </p>
+              <Link href="/dashboard/projects">
+                <Button variant="ghost" size="sm" rightIcon={<ChevronRight size={14} />}>
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* ── ACTIVITY FEED ── */}
+          <div id="activity-feed" className="glass-card" style={{ padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 className="font-heading" style={{ fontSize: "17px" }}>Recent Activity</h3>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+              {activities.length === 0 ? (
+                <EmptyState
+                  icon={<Bell />}
+                  heading="No activity yet"
+                  description="Recent updates and actions will show up here as you work."
+                />
+              ) : (
+                activities.map((item, i) => {
+                  const cfg = getActivityConfig(item.type);
+                  return (
+                    <div
+                      key={item._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "14px",
+                        paddingBottom: i < activities.length - 1 ? "16px" : 0,
+                        marginBottom: i < activities.length - 1 ? "16px" : 0,
+                        borderBottom: i < activities.length - 1 ? "0.5px solid var(--border)" : "none",
+                      }}
+                    >
+                      {/* Icon */}
+                      <div
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "50%",
+                          background: cfg.iconBg,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <cfg.icon size={15} color={cfg.iconColor} />
+                      </div>
+
+                      {/* Content */}
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+                          {item.title}
+                        </p>
+                        <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{item.description}</p>
+                      </div>
+
+                      {/* Time */}
+                      <span style={{ fontSize: "12px", color: "var(--text-subtle)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        {timeAgo(item.createdAt)}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       <style>{`
         @keyframes spin {
@@ -1098,7 +1098,7 @@ function SettingsView({ theme, toggle }: { theme: "light" | "dark"; toggle: () =
 
       {/* Settings Sections */}
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        
+
         {/* Appearance Settings Card */}
         <div className="glass-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>

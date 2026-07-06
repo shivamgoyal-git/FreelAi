@@ -10,6 +10,8 @@ import {
 } from "recharts";
 import type { IProposalIntelligence } from "@/lib/proposal-intelligence";
 
+import { chartTheme } from "@/lib/chart-theme";
+
 interface ProposalRadarChartProps {
   intelligence: IProposalIntelligence;
   height?: number;
@@ -41,10 +43,10 @@ export function ProposalRadarChart({ intelligence, height = 300 }: ProposalRadar
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-          <PolarGrid stroke="var(--border)" />
+          <PolarGrid stroke={chartTheme.grid.stroke} />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fontSize: 11, fill: "var(--text-muted)", fontWeight: 600 }}
+            tick={{ fontSize: 11, fill: "var(--text-muted)", fontWeight: 510 }}
           />
           <Radar
             name="Score"
@@ -55,13 +57,7 @@ export function ProposalRadarChart({ intelligence, height = 300 }: ProposalRadar
             strokeWidth={2}
           />
           <Tooltip
-            contentStyle={{
-              background: "var(--surface-2)",
-              border: "0.5px solid var(--border)",
-              borderRadius: "var(--radius)",
-              fontSize: "12px",
-              color: "var(--text-primary)",
-            }}
+            contentStyle={chartTheme.tooltip.contentStyle}
             formatter={(value) => [`${value}/100`, "Score"]}
           />
         </RadarChart>

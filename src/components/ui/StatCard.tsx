@@ -14,27 +14,25 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, accentCo
       style={{
         background: "var(--surface-1)",
         border: "0.5px solid var(--border)",
-        borderRadius: "var(--radius-lg)",
-        padding: "18px 20px",
+        borderRadius: "var(--radius-cards)",
+        padding: "var(--spacing-20) var(--spacing-24)",
         display: "flex",
         flexDirection: "column",
-        gap: "14px",
-        transition: "border-color var(--dur-base), box-shadow var(--dur-base)",
+        gap: "var(--spacing-12)",
+        transition: "border-color var(--dur-base)",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = "var(--border-strong)";
-        e.currentTarget.style.boxShadow = "var(--shadow-md)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.boxShadow = "none";
       }}
     >
       <div
         style={{
           width: "36px",
           height: "36px",
-          borderRadius: "var(--radius)",
+          borderRadius: "var(--radius-inputs)",
           background: accentColor ? `${accentColor}18` : "var(--surface-2)",
           display: "flex",
           alignItems: "center",
@@ -49,22 +47,22 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, accentCo
       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
         <p
           style={{
-            fontSize: "22px",
-            fontWeight: 700,
-            letterSpacing: "-0.025em",
+            fontSize: "var(--text-subheading)",
+            fontWeight: 510,
+            letterSpacing: "-0.022em",
             color: "var(--text-primary)",
             lineHeight: "1.2",
             margin: 0,
-            fontFamily: "var(--font-jakarta), var(--font-sans), sans-serif",
+            fontFamily: "var(--font-sans), sans-serif",
           }}
         >
           {value}
         </p>
         <p
           style={{
-            fontSize: "12px",
+            fontSize: "var(--text-caption)",
             color: "var(--text-muted)",
-            fontWeight: 500,
+            fontWeight: 400,
             margin: 0,
             letterSpacing: "0.01em",
           }}
@@ -72,7 +70,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, accentCo
           {label}
         </p>
         {change && (
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0, marginTop: "2px" }}>
+          <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: 0, marginTop: "2px" }}>
             {change}
           </p>
         )}
@@ -80,3 +78,5 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, accentCo
     </div>
   );
 };
+
+export default StatCard;

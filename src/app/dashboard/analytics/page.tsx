@@ -40,6 +40,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { chartTheme } from "@/lib/chart-theme";
 
 interface KPIItem {
   value: number;
@@ -149,7 +150,14 @@ interface ProposalsData {
   };
 }
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+const COLORS = [
+  "var(--color-iris-violet)",
+  "var(--color-signal-teal)",
+  "var(--color-pulse-green)",
+  "var(--color-lavender)",
+  "var(--color-coral-red)",
+  "var(--color-mist)",
+];
 
 export default function AnalyticsPage() {
   useSession();
@@ -639,10 +647,9 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             )}
-
             {/* Time Series Area Chart */}
             {revenue && revenue.chartData && mounted && (
-              <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px" }}>
+              <div style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-cards)", padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                   <div>
                     <h3 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)" }}>Billed vs. Collected Revenue</h3>
@@ -650,12 +657,12 @@ export default function AnalyticsPage() {
                   </div>
                   <div style={{ display: "flex", gap: "16px", fontSize: "11px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <span style={{ width: "8px", height: "8px", background: "#f5a623", borderRadius: "2px" }} />
-                      <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Collected</span>
+                      <span style={{ width: "8px", height: "8px", background: "var(--color-signal-teal)", borderRadius: "2px" }} />
+                      <span style={{ color: "var(--text-secondary)", fontWeight: 510 }}>Collected</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <span style={{ width: "8px", height: "8px", background: "#a855f7", borderRadius: "2px" }} />
-                      <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Billed</span>
+                      <span style={{ width: "8px", height: "8px", background: "var(--color-iris-violet)", borderRadius: "2px" }} />
+                      <span style={{ color: "var(--text-secondary)", fontWeight: 510 }}>Billed</span>
                     </div>
                   </div>
                 </div>
@@ -665,29 +672,20 @@ export default function AnalyticsPage() {
                     <AreaChart data={revenue.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f5a623" stopOpacity={0.15}/>
-                          <stop offset="95%" stopColor="#f5a623" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="var(--color-signal-teal)" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="var(--color-signal-teal)" stopOpacity={0}/>
                         </linearGradient>
                         <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#a855f7" stopOpacity={0.15}/>
-                          <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="var(--color-iris-violet)" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="var(--color-iris-violet)" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          background: "var(--surface-2)",
-                          border: "1px solid var(--border)",
-                          borderRadius: "var(--radius-sm)",
-                          padding: "10px",
-                          fontSize: "11px",
-                        }}
-                        labelStyle={{ fontWeight: "bold", color: "var(--text-primary)", marginBottom: "4px" }}
-                      />
-                      <Area type="monotone" dataKey="revenue" name="Collected" stroke="#f5a623" strokeWidth={1.5} fillOpacity={1} fill="url(#colorCollected)" />
-                      <Area type="monotone" dataKey="billed" name="Billed" stroke="#a855f7" strokeWidth={1.5} fillOpacity={1} fill="url(#colorBilled)" />
+                      <CartesianGrid stroke={chartTheme.grid.stroke} strokeDasharray={chartTheme.grid.strokeDasharray} vertical={false} />
+                      <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={10} tickLine={chartTheme.xAxis.tickLine} axisLine={chartTheme.xAxis.axisLine} />
+                      <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={chartTheme.yAxis.tickLine} axisLine={chartTheme.yAxis.axisLine} />
+                      <Tooltip contentStyle={chartTheme.tooltip.contentStyle} />
+                      <Area type="monotone" dataKey="revenue" name="Collected" stroke="var(--color-signal-teal)" strokeWidth={1.5} fillOpacity={1} fill="url(#colorCollected)" />
+                      <Area type="monotone" dataKey="billed" name="Billed" stroke="var(--color-iris-violet)" strokeWidth={1.5} fillOpacity={1} fill="url(#colorBilled)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -699,7 +697,7 @@ export default function AnalyticsPage() {
               
               {/* Top Clients Bar Chart */}
               {topClients && topClients.topClients && mounted && (
-                <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px" }}>
+                <div style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-cards)", padding: "20px" }}>
                   <h3 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", marginBottom: "4px" }}>Top Clients</h3>
                   <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "20px" }}>Clients sorted by total payments collected.</p>
                   
@@ -711,17 +709,10 @@ export default function AnalyticsPage() {
                     <div style={{ width: "100%", height: "200px" }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={topClients.topClients} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                          <CartesianGrid stroke="var(--border)" horizontal={false} strokeDasharray="3 3" />
-                          <XAxis type="number" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                          <YAxis dataKey="name" type="category" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} width={80} />
-                          <Tooltip
-                            contentStyle={{
-                              background: "var(--surface-2)",
-                              border: "1px solid var(--border)",
-                              borderRadius: "var(--radius-sm)",
-                              fontSize: "11px",
-                            }}
-                          />
+                          <CartesianGrid stroke={chartTheme.grid.stroke} strokeDasharray={chartTheme.grid.strokeDasharray} horizontal={false} />
+                          <XAxis type="number" stroke="var(--text-muted)" fontSize={10} tickLine={chartTheme.xAxis.tickLine} axisLine={chartTheme.xAxis.axisLine} />
+                          <YAxis dataKey="name" type="category" stroke="var(--text-muted)" fontSize={9} tickLine={chartTheme.yAxis.tickLine} axisLine={chartTheme.yAxis.axisLine} width={80} />
+                          <Tooltip contentStyle={chartTheme.tooltip.contentStyle} />
                           <Bar dataKey="revenue" name="Collected Revenue" fill="var(--color-brand)" radius={[0, 4, 4, 0]} barSize={12} />
                         </BarChart>
                       </ResponsiveContainer>

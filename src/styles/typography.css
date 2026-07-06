@@ -1,0 +1,50 @@
+/* Typography Rules (design.md) */
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv01" on, "ss03" on, "zero" on;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  letter-spacing: -0.010em;
+}
+
+body, button, input, select, textarea {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-feature-settings: "cv01" on, "ss03" on, "zero" on;
+}
+
+/* Alternate glyph scales for Linear typographic brand */
+.font-display {
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 510;
+  letter-spacing: -0.022em;
+  line-height: 1.0;
+}
+
+.font-heading {
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 510;
+  letter-spacing: -0.022em;
+  line-height: 1.13;
+}
+
+.font-mono-meta {
+  font-family: var(--font-berkeley-mono), monospace;
+  font-weight: 400;
+  letter-spacing: -0.013em;
+  font-feature-settings: "cv01" on, "ss03" on;
+}
+
+/* Weight caps: Linear system deliberately avoids weights above 590 (bold) */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 510;
+  letter-spacing: -0.022em;
+}
+
+strong, b {
+  font-weight: 590;
+}

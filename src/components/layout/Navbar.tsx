@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Menu, X, Sun, Moon } from "lucide-react";
-import { useTheme } from "@/components/ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/Button";
 
 const navLinks = [
-  { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How It Works" },
+  { href: "#tour", label: "Product Tour" },
+  { href: "#audience", label: "For Freelancers" },
+  { href: "#ai-partner", label: "AI Business Partner" },
+  { href: "#journey", label: "Workflow" },
   { href: "#pricing", label: "Pricing" },
-  { href: "#testimonials", label: "Testimonials" },
 ];
 
 export default function Navbar() {

@@ -1,0 +1,109 @@
+/* Layout Utilities (design.md / Dashboard.md) */
+
+/* Page Container sizes */
+.container-main {
+  max-width: var(--page-max-width, 1200px);
+  margin: 0 auto;
+  padding: 0 var(--spacing-24);
+  width: 100%;
+}
+
+/* Scrollbar customizations */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Grids and layout structures */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-20);
+}
+
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-20);
+}
+
+.grid-responsive-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-20);
+}
+
+/* Alignment Helpers */
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-align-center {
+  display: flex;
+  align-items: center;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Accessibility hidden but readable skip navigation */
+.skip-nav {
+  position: fixed;
+  top: -100px;
+  left: var(--spacing-16);
+  z-index: 9999;
+  padding: var(--spacing-8) var(--spacing-16);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: var(--radius);
+  font-size: var(--text-caption);
+  font-weight: 510;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+
+.skip-nav:focus {
+  top: var(--spacing-16);
+}
+
+/* Responsive Hide Rules */
+@media (max-width: 900px) {
+  .grid-responsive-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-responsive-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .grid-responsive-2 { grid-template-columns: 1fr; }
+  .grid-responsive-3 { grid-template-columns: 1fr; }
+  .grid-responsive-4 { grid-template-columns: 1fr; }
+  .container-main { padding: 0 var(--spacing-16); }
+}

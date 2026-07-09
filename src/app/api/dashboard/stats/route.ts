@@ -4,8 +4,8 @@ import connectDB from "@/lib/mongodb";
 import Client from "@/models/Client";
 import Project from "@/models/Project";
 import Activity from "@/models/Activity";
-
-
+import Invoice from "@/models/Invoice";
+import Proposal from "@/models/Proposal";
 
 export async function GET() {
   const session = await auth();
@@ -19,12 +19,14 @@ export async function GET() {
   try {
     // 1. Fetch total clients
     const totalClients = await Client.countDocuments({ userId });
+    const clients = await Client.find({ userId }).lean();
 
     // 2. Fetch projects for metrics & chart
     const projects = await Project.find({ userId }).lean();
 
     const activeStatuses = ["active", "in_review", "on_hold"];
-    const activeProjects = projects.filter((p) => activeStatuses.includes(p.status)).length;
+    const activeProjectsList = projects.filter((p) => activeStatuses.includes(p.status));
+    const activeProjects = activeProjectsList.length;
 
     let totalRevenue = 0;
     let pendingInvoices = 0;
@@ -36,11 +38,48 @@ export async function GET() {
       }
     });
 
-    // 3. Generate chart data (group earnings by month)
+    // 3. Fetch Invoices for advanced billing metrics
+    const invoices = await Invoice.find({ userId }).lean();
+    let actualPaidRevenue = 0;
+    let pendingInvoicesSum = 0;
+    let overdueInvoicesSum = 0;
+    let overdueInvoicesCount = 0;
+
+    invoices.forEach((inv) => {
+      actualPaidRevenue += inv.amountPaid || 0;
+      if (inv.status === "overdue") {
+        overdueInvoicesSum += inv.remainingAmount || 0;
+        overdueInvoicesCount += 1;
+      } else if (inv.status === "sent" || inv.status === "partially_paid") {
+        pendingInvoicesSum += inv.remainingAmount || 0;
+      }
+    });
+
+    // 4. Fetch Proposals for performance metrics
+    const proposals = await Proposal.find({ userId }).lean();
+    const totalProposals = proposals.length;
+    const wonProposalsCount = proposals.filter((p) => p.status === "won").length;
+    const lostProposalsCount = proposals.filter((p) => p.status === "lost").length;
+    const sentProposalsCount = proposals.filter((p) => p.status === "sent").length;
+    const draftProposalsCount = proposals.filter((p) => p.status === "draft").length;
+
+    let totalScore = 0;
+    let scoredProposalsCount = 0;
+    proposals.forEach((p) => {
+      const activeVersion = p.versions?.[p.activeVersionIndex];
+      const score = activeVersion?.scoreBreakdown?.overall;
+      if (typeof score === "number") {
+        totalScore += score;
+        scoredProposalsCount += 1;
+      }
+    });
+    const averageAiScore = scoredProposalsCount > 0 ? Math.round(totalScore / scoredProposalsCount) : 0;
+    const conversionRate = totalProposals > 0 ? Math.round((wonProposalsCount / totalProposals) * 100) : 0;
+
+    // 5. Generate chart data (group earnings by month)
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const chartData = months.map((m) => ({ month: m, earnings: 0, projects: 0 }));
 
-    // Determine current year (default 2026 based on system time)
     const currentYear = new Date().getFullYear();
 
     projects.forEach((p) => {
@@ -54,10 +93,7 @@ export async function GET() {
       }
     });
 
-    // Return actual calculated chart data
-    const finalChartData = chartData;
-
-    // 4. Fetch activities
+    // 6. Fetch activities
     let activities = await Activity.find({ userId }).sort({ createdAt: -1 }).limit(10).lean();
 
     // Auto-seed activities for new users to show dynamic dashboard capabilities immediately
@@ -93,12 +129,11 @@ export async function GET() {
         },
       ];
 
-      // Bulk write to DB and re-query
       await Activity.insertMany(seedActivities);
       activities = await Activity.find({ userId }).sort({ createdAt: -1 }).limit(10).lean();
     }
 
-    // 5. Get recent 5 active projects to display on the dashboard table
+    // 7. Get recent 5 active projects to display on the dashboard table
     const recentProjects = projects
       .sort((a, b) => {
         const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -107,14 +142,86 @@ export async function GET() {
       })
       .slice(0, 5);
 
+    // 8. Upcoming Deadlines (within the next 14 days)
+    const upcomingDeadlines: any[] = [];
+    let atRiskCount = 0;
+    const now = new Date();
+    const twoWeeksFromNow = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+    activeProjectsList.forEach((p) => {
+      if (p.dueDate) {
+        const due = new Date(p.dueDate);
+        const daysLeft = Math.ceil((due.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+        
+        if (due >= now && due <= twoWeeksFromNow) {
+          upcomingDeadlines.push({
+            projectId: p._id,
+            title: p.title,
+            dueDate: p.dueDate,
+            daysLeft,
+            progress: p.progress,
+            clientName: p.clientName || "Direct Client",
+          });
+        }
+
+        // Project risk evaluation
+        if (daysLeft <= 7 && p.progress < 50) {
+          atRiskCount += 1;
+        } else if (daysLeft <= 14 && p.progress < 20) {
+          atRiskCount += 1;
+        }
+      }
+    });
+    upcomingDeadlines.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+    // 9. Client Intelligence
+    const clientIntelligenceList = clients.map((c) => {
+      const clientProjects = projects.filter((p) => p.clientId?.toString() === c._id.toString());
+      const clientInvoices = invoices.filter((inv) => inv.clientId?.toString() === c._id.toString());
+      
+      const clientRevenue = clientInvoices.reduce((sum, inv) => sum + (inv.amountPaid || 0), 0);
+      const activeCount = clientProjects.filter((p) => activeStatuses.includes(p.status)).length;
+      
+      return {
+        clientId: c._id,
+        name: c.name,
+        company: c.company || "Independent",
+        revenue: clientRevenue,
+        activeProjectsCount: activeCount,
+        relationshipHealth: c.rating && c.rating >= 4 ? "Good" : c.rating && c.rating >= 3 ? "Fair" : c.rating ? "At Risk" : "Good",
+      };
+    });
+    clientIntelligenceList.sort((a, b) => b.revenue - a.revenue);
+    const topClients = clientIntelligenceList.slice(0, 3);
+
     return NextResponse.json({
       stats: {
         totalClients,
         activeProjects,
         totalRevenue,
         pendingInvoices,
+        actualPaidRevenue,
+        pendingInvoicesSum,
+        overdueInvoicesSum,
+        overdueInvoicesCount,
       },
-      chartData: finalChartData,
+      proposalsStats: {
+        total: totalProposals,
+        won: wonProposalsCount,
+        lost: lostProposalsCount,
+        sent: sentProposalsCount,
+        draft: draftProposalsCount,
+        averageAiScore,
+        conversionRate,
+      },
+      projectHealth: {
+        totalActive: activeProjects,
+        atRiskCount,
+        onTrackCount: Math.max(0, activeProjects - atRiskCount),
+      },
+      upcomingDeadlines,
+      topClients,
+      chartData,
       activities,
       recentProjects,
     });

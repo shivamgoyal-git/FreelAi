@@ -1,26 +1,74 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Sparkles, ArrowRight, User, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export function OnboardingFlow() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
+  const [mounted, setMounted] = useState(false);
+
+  const userId = session?.user?.id;
 
   useEffect(() => {
-    // Show onboarding if not completed or dismissed
-    const status = localStorage.getItem("onboarding-completed");
-    if (!status) {
-      setOpen(true);
+    setMounted(true);
+
+    if (!userId) return; // Wait until the user is authenticated
+
+    const storageKey = `onboarding-completed-${userId}`;
+
+    // 1. Fast check local storage for this specific user
+    const localStatus = localStorage.getItem(storageKey);
+    if (localStatus === "done" || localStatus === "dismissed") {
+      return; // Already completed or dismissed in this browser session
     }
-  }, []);
+
+    // 2. Fallback check from DB
+    const checkDbStatus = async () => {
+      try {
+        const res = await fetch("/api/auth/onboarding");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.onboardingCompleted) {
+            localStorage.setItem(storageKey, "done");
+          } else {
+            setOpen(true);
+          }
+        } else {
+          if (!localStatus) setOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch onboarding status:", err);
+        if (!localStatus) setOpen(true);
+      }
+    };
+
+    checkDbStatus();
+  }, [userId]);
+
+  const markOnboardingCompleted = async () => {
+    try {
+      await fetch("/api/auth/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (err) {
+      console.error("Failed to save onboarding completion status:", err);
+    }
+  };
 
   const handleDismiss = () => {
     setOpen(false);
-    localStorage.setItem("onboarding-completed", "dismissed");
+    if (userId) {
+      localStorage.setItem(`onboarding-completed-${userId}`, "dismissed");
+    }
+    markOnboardingCompleted();
   };
 
   const handleNext = () => {
@@ -28,13 +76,16 @@ export function OnboardingFlow() {
       setStep((s) => s + 1);
     } else {
       setOpen(false);
-      localStorage.setItem("onboarding-completed", "done");
+      if (userId) {
+        localStorage.setItem(`onboarding-completed-${userId}`, "done");
+      }
+      markOnboardingCompleted();
     }
   };
 
-  if (!open) return null;
+  if (!mounted || !open) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -148,7 +199,8 @@ export function OnboardingFlow() {
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

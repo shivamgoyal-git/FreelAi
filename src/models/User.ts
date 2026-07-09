@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   image?: string;
   password?: string; // Optional — not set for Google OAuth users
+  onboardingCompleted?: boolean;
   createdAt: Date;
 }
 
@@ -30,6 +31,10 @@ const UserSchema = new Schema<IUser>(
       type: String,
       minlength: [8, "Password must be at least 8 characters"],
       select: false, // Never returned in queries unless explicitly requested
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
     },
   },
   {

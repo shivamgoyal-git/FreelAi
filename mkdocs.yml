@@ -1,0 +1,69 @@
+site_name: FreelAI Documentation
+site_description: Documentation skeleton and infrastructure for FreelAI SaaS platform.
+site_author: FreelAI Team
+
+theme:
+  name: material
+  palette:
+    # Light Mode Configuration
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark Mode Configuration
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.keys
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: README.md
+  - Overview: 01-overview.md
+  - Technical Architecture: 02-tech-stack.md
+  - Database: 04-database.md
+  - Features: 05-features.md
+  - AI System: 06-ai-system.md
+  - Design System: 07-design-system.md
+  - Roadmap: 08-roadmap.md
+  - Prompt Library: 09-prompts.md
+  - Development Guide: 10-development-guide.md
+  - Standards: documentation-standards.md
+  - Templates:
+      - Feature Template: templates/feature-template.md
+      - API Template: templates/api-template.md
+      - Database Template: templates/database-template.md
+      - Component Template: templates/component-template.md
+      - AI Template: templates/ai-template.md
+      - Roadmap Template: templates/roadmap-template.md

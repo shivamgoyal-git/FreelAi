@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, DollarSign, BarChart3, Settings,
-  Zap, Users, Sparkles, ChevronLeft, ChevronRight, Image, User,
+  Users, Sparkles, ChevronLeft, ChevronRight, Image, User,
   X, Menu,
 } from "lucide-react";
 
@@ -96,10 +96,19 @@ export default function AppSidebar({ userName, userInitial, userImage, mobileOpe
       >
         {/* Logo */}
         <div style={{ padding: collapsed ? "16px 10px" : "16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", gap: "10px", flexShrink: 0 }}>
-          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none", overflow: "hidden" }}>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--color-brand)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Zap size={16} color="var(--color-on-brand)" fill="var(--color-on-brand)" />
-            </div>
+          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", overflow: "hidden" }}>
+            <img
+              src="/logo.png"
+              alt="FreelAi Logo"
+              style={{
+                width: "38px",
+                height: "38px",
+                margin: "-3px -5px -3px -3px",
+                borderRadius: "8px",
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
             {!collapsed && (
               <span className="font-heading" style={{ fontSize: "16px", color: "var(--text-primary)", whiteSpace: "nowrap" }}>
                 Freel<span style={{ color: "var(--color-brand)" }}>Ai</span>

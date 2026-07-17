@@ -47,27 +47,23 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
+            gap: "6px",
             textDecoration: "none",
           }}
         >
-          {/* Simple amber square logo */}
-          <div
+          {/* Simple logo image */}
+          <img
+            src="/logo.png"
+            alt="FreelAi Logo"
             style={{
-              width: "30px",
-              height: "30px",
+              width: "38px",
+              height: "38px",
+              margin: "-4px -6px -4px -4px",
               borderRadius: "8px",
-              background: "var(--primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              objectFit: "cover",
               flexShrink: 0,
             }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L13 7L7 13L1 7L7 1Z" fill="var(--text-on-primary)" />
-            </svg>
-          </div>
+          />
           <span
             className="font-heading"
             style={{ fontSize: "18px", color: "var(--text-primary)", letterSpacing: "-0.02em" }}

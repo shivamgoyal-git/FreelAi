@@ -8,7 +8,6 @@ import {
   DollarSign,
   BarChart3,
   Settings,
-  Zap,
   Users,
   Palette,
   Sparkles,
@@ -44,14 +43,19 @@ export default function Sidebar({
     <aside className="sidebar">
       {/* Logo */}
       <div style={{ padding: "18px 16px", borderBottom: "0.5px solid var(--border)" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <div style={{
-            width: "34px", height: "34px", borderRadius: "9px",
-            background: "var(--color-brand)", display: "flex",
-            alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}>
-            <Zap size={17} color="var(--color-on-brand)" fill="var(--color-on-brand)" />
-          </div>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+          <img
+            src="/logo.png"
+            alt="FreelAi Logo"
+            style={{
+              width: "42px",
+              height: "42px",
+              margin: "-4px -6px -4px -4px",
+              borderRadius: "9px",
+              objectFit: "cover",
+              flexShrink: 0,
+            }}
+          />
           <span className="font-heading" style={{ fontSize: "17px", color: "var(--text-primary)" }}>
             Freel<span style={{ color: "var(--color-brand)" }}>Ai</span>
           </span>

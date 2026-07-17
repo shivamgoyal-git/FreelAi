@@ -85,23 +85,19 @@ function LoginContent() {
       >
         <Link
           href="/"
-          style={{ display: "inline-flex", alignItems: "center", gap: "10px", textDecoration: "none", marginBottom: "48px" }}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", marginBottom: "48px" }}
         >
-          <div
+          <img
+            src="/logo.png"
+            alt="FreelAi Logo"
             style={{
-              width: "30px",
-              height: "30px",
+              width: "38px",
+              height: "38px",
+              margin: "-4px -6px -4px -4px",
               borderRadius: "8px",
-              background: "var(--primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              objectFit: "cover",
             }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L13 7L7 13L1 7L7 1Z" fill="var(--text-on-primary)" />
-            </svg>
-          </div>
+          />
           <span className="font-heading" style={{ fontSize: "18px", color: "var(--text-primary)" }}>
             Freel<span style={{ color: "var(--primary)" }}>Ai</span>
           </span>
@@ -166,24 +162,20 @@ function LoginContent() {
           {/* Mobile logo */}
           <Link
             href="/"
-            style={{ display: "inline-flex", alignItems: "center", gap: "10px", textDecoration: "none", marginBottom: "36px" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", marginBottom: "36px" }}
             className="mobile-logo"
           >
-            <div
+            <img
+              src="/logo.png"
+              alt="FreelAi Logo"
               style={{
-                width: "28px",
-                height: "28px",
+                width: "34px",
+                height: "34px",
+                margin: "-3px -5px -3px -3px",
                 borderRadius: "7px",
-                background: "var(--primary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                objectFit: "cover",
               }}
-            >
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1L13 7L7 13L1 7L7 1Z" fill="var(--text-on-primary)" />
-              </svg>
-            </div>
+            />
             <span className="font-heading" style={{ fontSize: "17px", color: "var(--text-primary)" }}>
               Freel<span style={{ color: "var(--primary)" }}>Ai</span>
             </span>

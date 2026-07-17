@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import {
-  Zap,
   Mail,
   Lock,
   Eye,
@@ -147,25 +146,22 @@ export default function SignupPage() {
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "10px",
+            gap: "6px",
             textDecoration: "none",
             marginBottom: "48px",
           }}
         >
-          <div
+          <img
+            src="/logo.png"
+            alt="FreelAi Logo"
             style={{
-              width: "40px",
-              height: "40px",
+              width: "48px",
+              height: "48px",
+              margin: "-4px -6px -4px -4px",
               borderRadius: "12px",
-              background: "var(--surface-2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "0.5px solid var(--border)",
+              objectFit: "cover",
             }}
-          >
-            <Zap size={20} color="var(--primary)" fill="var(--primary)" />
-          </div>
+          />
           <span
             className="font-heading"
             style={{ fontSize: "22px", color: "var(--text-primary)" }}

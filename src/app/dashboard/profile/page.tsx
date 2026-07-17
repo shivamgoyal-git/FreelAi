@@ -306,36 +306,30 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--surface-0)", display: "flex", flexDirection: "column" }}>
-      
-      {/* Header bar */}
-      <header style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-1)" }}>
-        <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px" }}>
-          <ChevronLeft size={14} /> Dashboard
-        </Link>
-        <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <User size={13} color="var(--color-brand)" />
-          </div>
-          <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>Identity & AI Profile</h1>
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={handleSave}
-          disabled={saveLoading}
-          leftIcon={saveLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={13} />}
-        >
-          {saveLoading ? "Saving Profile..." : "Save Changes"}
-        </Button>
-      </header>
+    <div style={{ display: "flex", flexDirection: "column" }}>
 
       {/* Main split dashboard panel */}
-      <main style={{ flex: 1, padding: "24px", maxWidth: "1400px", width: "100%", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 300px", gap: "24px", alignItems: "start" }}>
+      <main style={{ flex: 1, padding: "24px", maxWidth: "1400px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+
+        {/* Page Title + Actions */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em" }}>Identity & AI Profile</h1>
+            <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "2px" }}>Manage your freelancer identity, skills, and AI proposal preferences.</p>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSave}
+            disabled={saveLoading}
+            leftIcon={saveLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={13} />}
+          >
+            {saveLoading ? "Saving Profile..." : "Save Changes"}
+          </Button>
+        </div>
+
+        {/* Content Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "24px", alignItems: "start" }}>
         
         {/* Left configurations area */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -1055,6 +1049,8 @@ export default function ProfilePage() {
           </div>
 
         </aside>
+
+        </div>{/* end Content Grid */}
 
       </main>
 

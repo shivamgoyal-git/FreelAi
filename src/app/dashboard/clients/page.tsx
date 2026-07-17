@@ -1018,72 +1018,26 @@ export default function ClientsPage() {
   const totalEarned = clients.reduce((s, c) => s + c.totalEarned, 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-base)", display: "flex", flexDirection: "column" }}>
-      {/* Top Nav */}
-      <header
-        style={{
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          padding: "0 24px",
-          borderBottom: "0.5px solid var(--border)",
-          background: "var(--surface-1)",
-          position: "sticky",
-          top: 0,
-          zIndex: 20,
-        }}
-      >
-        <Link
-          href="/dashboard"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            color: "var(--text-muted)",
-            textDecoration: "none",
-            fontSize: "13px",
-            transition: "color 0.15s",
-          }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
-        >
-          <ChevronLeft size={14} />
-          Dashboard
-        </Link>
-
-        <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "26px", height: "26px", borderRadius: "7px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Users size={13} color="var(--color-brand)" />
-          </div>
-          <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em", color: "var(--text-primary)" }}>
-            Clients
-          </h1>
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        <button
-          id="add-client-btn"
-          onClick={openAdd}
-          className="btn-redesign btn-redesign-primary btn-redesign-sm"
-        >
-          <Plus size={13} /> Add Client
-        </button>
-      </header>
+    <div style={{ display: "flex", flexDirection: "column" }}>
       <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", width: "100%", margin: "0 auto" }}>
         {/* Page Title + Summary */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
           <div>
-            <h2 className="font-heading" style={{ fontSize: "22px", marginBottom: "4px", letterSpacing: "-0.02em" }}>
+            <h1 className="font-heading" style={{ fontSize: "22px", marginBottom: "4px", letterSpacing: "-0.02em" }}>
               Client Management
-            </h2>
+            </h1>
             <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
               {total} client{total !== 1 ? "s" : ""} in your network
             </p>
           </div>
+
+          <button
+            id="add-client-btn"
+            onClick={openAdd}
+            className="btn-redesign btn-redesign-primary btn-redesign-sm"
+          >
+            <Plus size={13} /> Add Client
+          </button>
 
           {/* Stat pills */}
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>

@@ -27,7 +27,22 @@ export const AppContainer: React.FC<AppContainerProps> = ({
 
   useEffect(() => {
     setSidebarCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
+
+    // Listen for sidebar toggle changes (from the sidebar component)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sidebar-collapsed") {
+        setSidebarCollapsed(e.newValue === "true");
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  const handleSidebarToggle = () => {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    localStorage.setItem("sidebar-collapsed", String(next));
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -54,6 +69,8 @@ export const AppContainer: React.FC<AppContainerProps> = ({
         userImage={userImage}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={handleSidebarToggle}
       />
 
       <div

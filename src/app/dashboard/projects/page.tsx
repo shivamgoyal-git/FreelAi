@@ -1068,37 +1068,12 @@ export default function ProjectsPage() {
   }, [projects, sortBy, sortOrder]);
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--bg-base)", display:"flex", flexDirection:"column" }} className="page-enter">
-      {/* Header Bar */}
-      <header style={{ height:"60px", display:"flex", alignItems:"center", gap:"16px", padding:"0 24px", borderBottom:"0.5px solid var(--border)", background:"var(--surface-1)", position:"sticky", top:0, zIndex:20 }}>
-        <Link href="/dashboard"
-          style={{ display:"flex", alignItems:"center", gap:"6px", color:"var(--text-muted)", textDecoration:"none", fontSize:"13px", transition:"color 0.15s" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
-        >
-          <ChevronLeft size={14}/> Dashboard
-        </Link>
-        <span style={{ color:"var(--border-strong)", fontSize:"12px" }}>/</span>
-        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-          <div style={{ width:"26px", height:"26px", borderRadius:"7px", background:"var(--color-brand-subtle)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <Briefcase size={13} color="var(--color-brand)"/>
-          </div>
-          <h1 className="font-heading" style={{ fontSize:"15px", letterSpacing:"-0.01em" }}>Projects Workspace</h1>
-        </div>
-        <div style={{ flex:1 }}/>
-        <button
-          id="add-project-btn"
-          onClick={openAdd}
-          className="btn-redesign btn-redesign-primary btn-redesign-sm"
-        >
-          <Plus size={13}/> New Project
-        </button>
-      </header>
+    <div style={{ display: "flex", flexDirection: "column" }} className="page-enter">
 
       <main style={{ flex:1, padding:"28px", maxWidth:"1400px", width:"100%", margin:"0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
         
         {/* Title and stats summary */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <div>
             <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em" }}>
               Projects
@@ -1107,6 +1082,13 @@ export default function ProjectsPage() {
               Manage deliverables, track schedules, and analyze budget collection metrics.
             </p>
           </div>
+          <button
+            id="add-project-btn"
+            onClick={openAdd}
+            className="btn-redesign btn-redesign-primary btn-redesign-sm"
+          >
+            <Plus size={13}/> New Project
+          </button>
         </div>
 
         {/* Dynamic AI insights box */}

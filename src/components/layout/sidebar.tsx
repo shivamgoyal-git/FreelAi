@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -42,23 +42,12 @@ interface AppSidebarProps {
   userImage?: string | null;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function AppSidebar({ userName, userInitial, userImage, mobileOpen, onMobileClose }: AppSidebarProps) {
+export default function AppSidebar({ userName, userInitial, userImage, mobileOpen, onMobileClose, collapsed = false, onToggleCollapse }: AppSidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Persist collapse state
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed");
-    if (saved === "true") setCollapsed(true);
-  }, []);
-
-  const toggleCollapse = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem("sidebar-collapsed", String(next));
-  };
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -66,6 +55,14 @@ export default function AppSidebar({ userName, userInitial, userImage, mobileOpe
   };
 
   const width = collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)";
+
+  const handleCloseClick = () => {
+    if (mobileOpen && onMobileClose) {
+      onMobileClose();
+    } else if (onToggleCollapse) {
+      onToggleCollapse();
+    }
+  };
 
   return (
     <>
@@ -77,14 +74,23 @@ export default function AppSidebar({ userName, userInitial, userImage, mobileOpe
         />
       )}
 
-      <aside
+      {/* Wrapper div to hold both the aside and the collapse toggle button */}
+      <div
         style={{
           position: "fixed", top: 0, left: 0, bottom: 0,
-          width, background: "var(--surface-1)",
+          width, zIndex: 50,
+          transition: "width var(--dur-slow) var(--ease-spring)",
+          pointerEvents: "none",
+        }}
+      >
+      <aside
+        style={{
+          position: "absolute", top: 0, left: 0, bottom: 0, right: 0,
+          background: "var(--surface-1)",
           borderRight: "0.5px solid var(--border)",
           display: "flex", flexDirection: "column",
-          zIndex: 50, overflowX: "hidden",
-          transition: "width var(--dur-slow) var(--ease-spring)",
+          overflowX: "hidden",
+          pointerEvents: "auto",
         }}
         className={mobileOpen ? "open" : ""}
       >
@@ -100,9 +106,9 @@ export default function AppSidebar({ userName, userInitial, userImage, mobileOpe
               </span>
             )}
           </Link>
-          {/* Mobile close */}
-          {onMobileClose && !collapsed && (
-            <button onClick={onMobileClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", padding: "4px" }}>
+          {/* Close / collapse button */}
+          {!collapsed && (
+            <button onClick={handleCloseClick} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", padding: "4px" }}>
               <X size={16} />
             </button>
           )}
@@ -171,25 +177,28 @@ export default function AppSidebar({ userName, userInitial, userImage, mobileOpe
           </div>
         </div>
 
-        {/* Collapse toggle (desktop only) */}
-        <button
-          onClick={toggleCollapse}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          style={{
-            position: "absolute", top: "50%", right: "-12px",
-            width: "24px", height: "24px",
-            background: "var(--surface-2)", border: "0.5px solid var(--border)",
-            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", color: "var(--text-muted)", zIndex: 10,
-            transform: "translateY(-50%)",
-            transition: "background var(--dur-fast)",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-3)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-        >
-          {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-        </button>
       </aside>
+
+      {/* Collapse toggle (desktop only) — outside aside so it's not clipped */}
+      <button
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        style={{
+          position: "absolute", top: "50%", right: "-12px",
+          width: "24px", height: "24px",
+          background: "var(--surface-2)", border: "0.5px solid var(--border)",
+          borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", color: "var(--text-muted)", zIndex: 60,
+          transform: "translateY(-50%)",
+          transition: "background var(--dur-fast)",
+          pointerEvents: "auto",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-3)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
+      >
+        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+      </button>
+      </div>
     </>
   );
 }

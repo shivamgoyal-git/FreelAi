@@ -367,74 +367,12 @@ export default function AnalyticsPage() {
         }
       `}</style>
 
-      {/* Top Header Nav */}
-      <header className="no-print" style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
-        <Link href="/dashboard"
-          style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px", transition: "color 0.15s" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
-        >
-          <ChevronLeft size={14} /> Dashboard
-        </Link>
-        <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <BarChart3 size={13} color="var(--color-brand)" />
-          </div>
-          <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>Analytics</h1>
-        </div>
-        <div style={{ flex: 1 }} />
-        
-        {/* Header Actions */}
-        <div style={{ display: "flex", gap: "8px" }}>
-          {!isWorkspaceEmpty && (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleShareReport}
-                leftIcon={<Share2 size={13} />}
-                disabled={loading}
-              >
-                Share
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExportCSV}
-                leftIcon={<Download size={13} />}
-                disabled={loading}
-              >
-                CSV
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handlePrintPDF}
-                leftIcon={<Printer size={13} />}
-                disabled={loading}
-              >
-                PDF
-              </Button>
-            </>
-          )}
-          <Button
-            variant={isWorkspaceEmpty ? "primary" : "secondary"}
-            size="sm"
-            onClick={handleGenerateDemo}
-            disabled={seeding || loading}
-            leftIcon={seeding ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <RefreshCw size={13} />}
-          >
-            {seeding ? "Generating..." : isWorkspaceEmpty ? "Generate Demo Workspace" : "Reset Data"}
-          </Button>
-        </div>
-      </header>
 
       {/* Main Panel Content */}
       <main className="print-full" style={{ flex: 1, padding: "28px", maxWidth: "1200px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
         
-        {/* Page Title & Subtitle */}
-        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+        {/* Page Title & Subtitle + Actions */}
+        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <div>
             <h1 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
               Business Intelligence
@@ -442,6 +380,50 @@ export default function AnalyticsPage() {
             <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "2px" }}>
               Deep-dive metrics tracking revenue, client performance, and conversion trends.
             </p>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+            {!isWorkspaceEmpty && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleShareReport}
+                  leftIcon={<Share2 size={13} />}
+                  disabled={loading}
+                >
+                  Share
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleExportCSV}
+                  leftIcon={<Download size={13} />}
+                  disabled={loading}
+                >
+                  CSV
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handlePrintPDF}
+                  leftIcon={<Printer size={13} />}
+                  disabled={loading}
+                >
+                  PDF
+                </Button>
+              </>
+            )}
+            <Button
+              variant={isWorkspaceEmpty ? "primary" : "secondary"}
+              size="sm"
+              onClick={handleGenerateDemo}
+              disabled={seeding || loading}
+              leftIcon={seeding ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <RefreshCw size={13} />}
+            >
+              {seeding ? "Generating..." : isWorkspaceEmpty ? "Generate Demo Workspace" : "Reset Data"}
+            </Button>
           </div>
 
           {/* Tab Navigation Segmented Selector */}

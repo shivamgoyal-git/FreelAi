@@ -1,13 +1,11 @@
 import React from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Breadcrumb } from "@/components/layout/Breadcrumb";
 
 interface EditorTemplateProps {
   title: string;
   description?: string;
   actions?: React.ReactNode;
-  breadcrumbs?: React.ReactNode;
   formContent: React.ReactNode;
   previewContent?: React.ReactNode;
 }
@@ -16,16 +14,12 @@ export const EditorTemplate: React.FC<EditorTemplateProps> = ({
   title,
   description,
   actions,
-  breadcrumbs,
   formContent,
   previewContent,
 }) => {
   return (
     <PageLayout>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-8)" }}>
-        {breadcrumbs ?? <Breadcrumb />}
-        <PageHeader title={title} description={description} actions={actions} />
-      </div>
+      <PageHeader title={title} description={description} actions={actions} />
 
       <div
         style={{

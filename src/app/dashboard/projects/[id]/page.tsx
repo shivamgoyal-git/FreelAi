@@ -392,39 +392,34 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const remaining   = project.budget - project.paid;
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--bg-base)", display:"flex", flexDirection:"column" }}>
-      {/* Nav */}
-      <header style={{ height:"64px", display:"flex", alignItems:"center", gap:"16px", padding:"0 28px", borderBottom:"0.5px solid var(--border)", background:"var(--surface-1)", position:"sticky", top:0, zIndex:20 }}>
-        <Link href="/dashboard/projects"
-          style={{ display:"flex", alignItems:"center", gap:"6px", color:"var(--text-muted)", textDecoration:"none", fontSize:"13px", transition:"color 0.2s" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color="var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color="var(--text-muted)")}
-        >
-          <ChevronLeft size={15}/> Projects
-        </Link>
-        <span style={{ color:"var(--border-strong)" }}>•</span>
-        <p style={{ fontSize:"14px", fontWeight:600, color:"var(--text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{project.title}</p>
-        <Button
-          id="detail-edit-btn"
-          onClick={() => setEditOpen(true)}
-          variant="secondary"
-          size="sm"
-          leftIcon={<Edit3 size={13}/>}
-        >
-          Edit
-        </Button>
-        <Button
-          id="detail-delete-btn"
-          onClick={() => setDelOpen(true)}
-          variant="danger"
-          size="sm"
-          leftIcon={<Trash2 size={13}/>}
-        >
-          Delete
-        </Button>
-      </header>
+    <div style={{ display:"flex", flexDirection:"column" }}>
 
       <main style={{ flex:1, padding:"28px", maxWidth:"1100px", width:"100%", margin:"0 auto" }}>
+
+        {/* Page Title + Actions */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"16px", marginBottom:"24px" }}>
+          <h1 className="font-heading" style={{ fontSize:"28px", letterSpacing:"-0.02em", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{project.title}</h1>
+          <div style={{ display:"flex", gap:"8px", flexShrink:0 }}>
+            <Button
+              id="detail-edit-btn"
+              onClick={() => setEditOpen(true)}
+              variant="secondary"
+              size="sm"
+              leftIcon={<Edit3 size={13}/>}
+            >
+              Edit
+            </Button>
+            <Button
+              id="detail-delete-btn"
+              onClick={() => setDelOpen(true)}
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 size={13}/>}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
         {/* Hero strip */}
         <div className="glass-card" style={{ padding:"24px 28px", marginBottom:"24px", borderLeft:`4px solid ${CATEGORY_COLORS[project.category]}`, display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"20px", flexWrap:"wrap" }}>
           <div style={{ flex:1, minWidth:0 }}>

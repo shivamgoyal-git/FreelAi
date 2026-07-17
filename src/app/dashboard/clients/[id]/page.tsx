@@ -442,41 +442,34 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const joinedDate = new Date(client.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-base)", display: "flex", flexDirection: "column" }}>
-      {/* Top Nav */}
-      <header style={{ height: "64px", display: "flex", alignItems: "center", gap: "16px", padding: "0 28px", borderBottom: "1px solid var(--border-default)", background: "var(--bg-surface)", position: "sticky", top: 0, zIndex: 20 }}>
-        <Link
-          href="/dashboard/clients"
-          style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px", transition: "color 0.2s" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
-        >
-          <ChevronLeft size={15} /> Clients
-        </Link>
-        <span style={{ color: "var(--border-strong)" }}>•</span>
-        <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{client.name}</p>
-        <div style={{ flex: 1 }} />
-        <Button
-          id="client-detail-edit-btn"
-          onClick={() => setEditOpen(true)}
-          variant="secondary"
-          size="sm"
-          leftIcon={<Edit3 size={13} />}
-        >
-          Edit
-        </Button>
-        <Button
-          id="client-detail-delete-btn"
-          onClick={() => setDeleteOpen(true)}
-          variant="danger"
-          size="sm"
-          leftIcon={<Trash2 size={13} />}
-        >
-          Delete
-        </Button>
-      </header>
+    <div style={{ display: "flex", flexDirection: "column" }}>
 
       <main style={{ flex: 1, padding: "28px", maxWidth: "1100px", width: "100%", margin: "0 auto" }}>
+
+        {/* Page Title + Actions */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+          <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{client.name}</h1>
+          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+            <Button
+              id="client-detail-edit-btn"
+              onClick={() => setEditOpen(true)}
+              variant="secondary"
+              size="sm"
+              leftIcon={<Edit3 size={13} />}
+            >
+              Edit
+            </Button>
+            <Button
+              id="client-detail-delete-btn"
+              onClick={() => setDeleteOpen(true)}
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 size={13} />}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: "24px", alignItems: "start" }}>
           {/* ── LEFT PANEL ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

@@ -216,49 +216,36 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-base)", display: "flex", flexDirection: "column" }}>
-      
-      {/* Top Nav (Hidden in print) */}
-      <header className="no-print" style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
-        <Link href="/dashboard/invoices"
-          style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px", transition: "color 0.15s" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
-        >
-          <ChevronLeft size={14} /> Invoices
-        </Link>
-        <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-        <h1 className="font-heading" style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
-          Invoice Details
-        </h1>
-        <div style={{ flex: 1 }} />
-        
-        {/* Actions */}
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Button onClick={() => window.print()} variant="secondary" size="sm" leftIcon={<Printer size={13} />}>
-            Print / PDF
-          </Button>
-
-          {invoice.status !== "cancelled" && invoice.status !== "paid" && (
-            <Button onClick={() => { setPaymentOpen(true); }} variant="primary" size="sm" leftIcon={<CreditCard size={13} />}>
-              Record Payment
-            </Button>
-          )}
-
-          {invoice.status !== "cancelled" && invoice.status !== "paid" && (
-            <Button onClick={() => setCancelOpen(true)} variant="secondary" size="sm" style={{ color: "var(--text-muted)" }}>
-              Cancel
-            </Button>
-          )}
-
-          <Button onClick={() => setDeleteOpen(true)} variant="ghost" size="sm" style={{ color: "var(--color-danger)" }}>
-            <Trash2 size={13} />
-          </Button>
-        </div>
-      </header>
+    <div style={{ display: "flex", flexDirection: "column" }}>
 
       {/* Main Split Layout */}
       <main style={{ flex: 1, padding: "28px", maxWidth: "1400px", width: "100%", margin: "0 auto" }}>
+
+        {/* Page Title + Actions */}
+        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+          <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em" }}>Invoice Details</h1>
+          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+            <Button onClick={() => window.print()} variant="secondary" size="sm" leftIcon={<Printer size={13} />}>
+              Print / PDF
+            </Button>
+
+            {invoice.status !== "cancelled" && invoice.status !== "paid" && (
+              <Button onClick={() => { setPaymentOpen(true); }} variant="primary" size="sm" leftIcon={<CreditCard size={13} />}>
+                Record Payment
+              </Button>
+            )}
+
+            {invoice.status !== "cancelled" && invoice.status !== "paid" && (
+              <Button onClick={() => setCancelOpen(true)} variant="secondary" size="sm" style={{ color: "var(--text-muted)" }}>
+                Cancel
+              </Button>
+            )}
+
+            <Button onClick={() => setDeleteOpen(true)} variant="ghost" size="sm" style={{ color: "var(--color-danger)" }}>
+              <Trash2 size={13} />
+            </Button>
+          </div>
+        </div>
         
         <div className="print-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "28px", alignItems: "flex-start" }}>
           

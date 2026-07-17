@@ -12,9 +12,21 @@ import {
   Plus,
   X,
   Loader2,
+  User,
+  Layers,
+  Globe,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import ProfileImageUploader from "@/components/shared/ProfileImageUploader";
 
+/* ─────────────────────────────────────────────────────────────────
+   Types
+───────────────────────────────────────────────────────────────── */
 interface IServiceInput {
   name: string;
   description: string;
@@ -24,54 +36,76 @@ interface IServiceInput {
   features: string[];
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Step config (defined inside function to allow JSX)
+───────────────────────────────────────────────────────────────── */
+const STEP_CONFIG = [
+  { n: 1, label: "Basic Info",    desc: "Identity & Location",  icon: "user"    },
+  { n: 2, label: "Professional",  desc: "Skills & Bio",         icon: "layers"  },
+  { n: 3, label: "Services",      desc: "What You Offer",       icon: "package" },
+  { n: 4, label: "Finish",        desc: "All Done!",            icon: "sparkles"},
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   Helpers
+───────────────────────────────────────────────────────────────── */
+function StepIcon({ name, size = 14 }: { name: string; size?: number }) {
+  switch (name) {
+    case "user":     return <User size={size} />;
+    case "layers":   return <Layers size={size} />;
+    case "package":  return <Package size={size} />;
+    case "sparkles": return <Sparkles size={size} />;
+    default:         return <Sparkles size={size} />;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Wizard Component
+───────────────────────────────────────────────────────────────── */
 function OnboardingSetupWizard() {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  
+
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
 
-  const [step, setStep] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [parseLoading, setParseLoading] = useState<boolean>(false);
+  /* ── State ────────────────────────────────────────────────── */
+  const [step, setStep]                   = useState<number>(1);
+  const [loading, setLoading]             = useState<boolean>(false);
+  const [parseLoading, setParseLoading]   = useState<boolean>(false);
   const [loadDraftLoading, setLoadDraftLoading] = useState<boolean>(true);
+  const [showAutofill, setShowAutofill]   = useState<boolean>(false);
 
-  // Resume raw text
+  // Resume autofill text
   const [resumeText, setResumeText] = useState("");
 
-  // Step 1 Form States: Basic Information
-  const [fullName, setFullName] = useState("");
-  const [professionalTitle, setProfessionalTitle] = useState("");
-  const [country, setCountry] = useState("United States");
-  const [timezone, setTimezone] = useState("EST");
+  // Step 1 — Basic Info
+  const [profilePhoto, setProfilePhoto]               = useState("");
+  const [fullName, setFullName]                       = useState("");
+  const [professionalTitle, setProfessionalTitle]     = useState("");
+  const [country, setCountry]                         = useState("United States");
+  const [timezone, setTimezone]                       = useState("EST");
 
-  // Step 2 Form States: Professional Details
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [yearsOfExperience, setYearsOfExperience] = useState<number>(3);
-  const [bio, setBio] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [newSkill, setNewSkill] = useState("");
+  // Step 2 — Professional Details
+  const [errors, setErrors]                           = useState<Record<string, string>>({});
+  const [yearsOfExperience, setYearsOfExperience]     = useState<number>(3);
+  const [bio, setBio]                                 = useState("");
+  const [skills, setSkills]                           = useState<string[]>([]);
+  const [newSkill, setNewSkill]                       = useState("");
 
-  // Step 3 Form States: Services
+  // Step 3 — Services
   const [services, setServices] = useState<IServiceInput[]>([
-    {
-      name: "",
-      description: "",
-      startingPrice: 500,
-      deliveryTime: "1 week",
-      category: "Development",
-      features: [],
-    },
+    { name: "", description: "", startingPrice: 500, deliveryTime: "1 week", category: "Development", features: [] },
   ]);
   const [newFeatureText, setNewFeatureText] = useState<Record<number, string>>({});
 
-  // Pricing default overrides
-  const [hourlyRate, setHourlyRate] = useState<number>(50);
-  const [currency, setCurrency] = useState("USD");
-  const [availability, setAvailability] = useState<"Available" | "Busy" | "Part-Time" | "Vacation">("Available");
-  const [preferredTone, setPreferredTone] = useState("Professional");
+  // Pricing / preferences
+  const [hourlyRate, setHourlyRate]         = useState<number>(50);
+  const [currency, setCurrency]             = useState("USD");
+  const [availability, setAvailability]     = useState<"Available" | "Busy" | "Part-Time" | "Vacation">("Available");
+  const [preferredTone, setPreferredTone]   = useState("Professional");
 
-  // On mount: fetch existing profile to load as draft
+  /* ── Load draft on mount ──────────────────────────────────── */
   useEffect(() => {
     const loadDraft = async () => {
       try {
@@ -80,16 +114,16 @@ function OnboardingSetupWizard() {
           const data = await res.json();
           const p = data.profile;
           if (p) {
+            setProfilePhoto(p.personal?.profilePhoto || "");
             setFullName(p.personal?.fullName || "");
             setProfessionalTitle(p.personal?.professionalTitle || "");
             setCountry(p.personal?.country || "United States");
             setTimezone(p.personal?.timezone || "EST");
 
-
             setYearsOfExperience(p.professional?.yearsOfExperience || 3);
             setBio(p.professional?.bio || "");
             setSkills(p.professional?.skills || []);
-            
+
             if (p.professional?.services && p.professional.services.length > 0) {
               setServices(p.professional.services);
             }
@@ -99,7 +133,7 @@ function OnboardingSetupWizard() {
             setAvailability(p.availability || "Available");
             setPreferredTone(p.preferences?.preferredProposalTone || "Professional");
 
-            // Resume furthest step
+            // Resume furthest completed step
             if (p.professional?.services && p.professional.services.length > 0 && p.professional.services[0].name !== "") {
               setStep(4);
             } else if (p.professional?.skills && p.professional.skills.length > 0) {
@@ -122,13 +156,12 @@ function OnboardingSetupWizard() {
     }
   }, [session]);
 
-  // AI Autofill from Resume text
+  /* ── AI Autofill ──────────────────────────────────────────── */
   const handleAutofill = async () => {
     if (!resumeText.trim()) {
       toast.error("Please paste your resume or CV bio text first.");
       return;
     }
-
     setParseLoading(true);
     try {
       const res = await fetch("/api/profile/parse-resume", {
@@ -140,16 +173,12 @@ function OnboardingSetupWizard() {
       if (res.ok) {
         setFullName(data.fullName || "");
         setProfessionalTitle(data.professionalTitle || "");
-
         setYearsOfExperience(Number(data.yearsOfExperience) || 3);
         setBio(data.bio || "");
-        if (data.skills && data.skills.length > 0) {
-          setSkills(data.skills);
-        }
-        if (data.services && data.services.length > 0) {
-          setServices(data.services);
-        }
-        toast.success("AI successfully parsed details! Proceeding to verify basic details.");
+        if (data.skills && data.skills.length > 0)     setSkills(data.skills);
+        if (data.services && data.services.length > 0) setServices(data.services);
+        toast.success("AI successfully parsed details! Review and continue.");
+        setShowAutofill(false);
       } else {
         toast.error(data.error || "Autofill parser failed");
       }
@@ -161,577 +190,1040 @@ function OnboardingSetupWizard() {
     }
   };
 
-  // Add skill tag
+  /* ── Skills ───────────────────────────────────────────────── */
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
       setSkills([...skills, newSkill.trim()]);
       setNewSkill("");
     }
   };
+  const removeSkill = (sk: string) => setSkills(skills.filter((s) => s !== sk));
 
-  const removeSkill = (sk: string) => {
-    setSkills(skills.filter((s) => s !== sk));
-  };
-
-  // Service list modifiers
+  /* ── Services ─────────────────────────────────────────────── */
   const handleServiceChange = (index: number, key: keyof IServiceInput, value: string | number | string[]) => {
     const updated = [...services];
     updated[index] = { ...updated[index], [key]: value };
     setServices(updated);
   };
-
   const addServiceRow = () => {
-    setServices([
-      ...services,
-      {
-        name: "",
-        description: "",
-        startingPrice: 500,
-        deliveryTime: "1 week",
-        category: "Development",
-        features: [],
-      },
-    ]);
+    setServices([...services, { name: "", description: "", startingPrice: 500, deliveryTime: "1 week", category: "Development", features: [] }]);
   };
-
   const removeServiceRow = (index: number) => {
     if (services.length === 1) return;
     setServices(services.filter((_, idx) => idx !== index));
   };
-
-  // Service features helper
   const addServiceFeature = (index: number) => {
     const text = newFeatureText[index] || "";
     if (text.trim()) {
       const updated = [...services];
-      const currentFeatures = updated[index].features || [];
-      updated[index].features = [...currentFeatures, text.trim()];
+      updated[index].features = [...(updated[index].features || []), text.trim()];
       setServices(updated);
       setNewFeatureText({ ...newFeatureText, [index]: "" });
     }
   };
-
   const removeServiceFeature = (serviceIdx: number, featureIdx: number) => {
     const updated = [...services];
     updated[serviceIdx].features = updated[serviceIdx].features.filter((_, idx) => idx !== featureIdx);
     setServices(updated);
   };
 
-  // Save draft progress after each step completes
+  /* ── Save draft ───────────────────────────────────────────── */
   const saveStepDraft = async (targetStep: number) => {
     setLoading(true);
     try {
       const payload = {
-        personal: {
-          fullName,
-          professionalTitle,
-          country,
-          timezone,
-          languages: ["English"],
-        },
+        personal: { fullName, professionalTitle, profilePhoto, country, timezone, languages: ["English"] },
         professional: {
           yearsOfExperience,
           bio,
           skills,
           services: services.map((s) => ({
             ...s,
-            name: s.name || "General Service",
+            name:        s.name        || "General Service",
             description: s.description || "Consultation and delivery",
           })),
         },
-        pricing: {
-          hourlyRate,
-          currency,
-          pricingModel: "fixed",
-        },
-        brandVoice: {
-          voiceDescriptors: [preferredTone],
-          jargonLevel: "moderate",
-          sentenceStructure: "Direct and Outcome-driven",
-        },
+        pricing:    { hourlyRate, currency, pricingModel: "fixed" },
+        brandVoice: { voiceDescriptors: [preferredTone], jargonLevel: "moderate", sentenceStructure: "Direct and Outcome-driven" },
         availability,
-        preferences: {
-          preferredProposalTone: preferredTone,
-          preferredCurrency: currency,
-          defaultTimeline: "4 weeks",
-          defaultRevisionCount: 3,
-        },
+        preferences: { preferredProposalTone: preferredTone, preferredCurrency: currency, defaultTimeline: "4 weeks", defaultRevisionCount: 3 },
       };
-
-      await fetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
+      await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       setStep(targetStep);
     } catch (err) {
       console.error("Auto-save draft error:", err);
-      // Still proceed to next step even if draft save hits a network issue
       setStep(targetStep);
     } finally {
       setLoading(false);
     }
   };
 
-  // Validation checking per step
+  /* ── Step validation ──────────────────────────────────────── */
   const handleNextStep = async () => {
     const newErrors: Record<string, string> = {};
     if (step === 1) {
-      if (!fullName.trim()) {
-        newErrors.fullName = "Full Name is required.";
-      }
-      if (!professionalTitle.trim()) {
-        newErrors.professionalTitle = "Professional Title is required.";
-      }
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
+      if (!fullName.trim())          newErrors.fullName          = "Full Name is required.";
+      if (!professionalTitle.trim()) newErrors.professionalTitle = "Professional Title is required.";
+      if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
       setErrors({});
       await saveStepDraft(2);
     } else if (step === 2) {
-      if (skills.length === 0) {
-        newErrors.skills = "Please add at least one expert skill.";
-      }
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
+      if (skills.length === 0) newErrors.skills = "Please add at least one expert skill.";
+      if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
       setErrors({});
       await saveStepDraft(3);
     } else if (step === 3) {
-      const hasEmptyService = services.some((s) => !s.name.trim() || !s.description.trim());
-      if (hasEmptyService || services.length === 0) {
-        newErrors.services = "Please complete Name and Description for all service items.";
-      }
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
+      const hasEmpty = services.some((s) => !s.name.trim() || !s.description.trim());
+      if (hasEmpty || services.length === 0) newErrors.services = "Please complete Name and Description for all service items.";
+      if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
       setErrors({});
       await saveStepDraft(4);
     }
   };
 
-  // Redirect back to query destination
-  const handleContinue = () => {
-    router.push(redirectUrl);
-  };
+  const handleContinue = () => router.push(redirectUrl);
 
+  /* ── Loading splash ───────────────────────────────────────── */
   if (loadDraftLoading) {
     return (
-      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Loader2 size={24} color="var(--color-brand)" style={{ animation: "spin 1s linear infinite" }} />
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-0)" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+          <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Sparkles size={24} color="var(--color-brand)" />
+          </div>
+          <Loader2 size={20} color="var(--color-brand)" style={{ animation: "spin 0.85s linear infinite" }} />
+          <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>Loading your profile...</span>
+        </div>
       </div>
     );
   }
 
+  /* ─────────────────────────────────────────────────────────── */
+  /*   Shared style helpers                                      */
+  /* ─────────────────────────────────────────────────────────── */
+  const card: React.CSSProperties = {
+    background:    "var(--surface-1)",
+    border:        "1px solid var(--border)",
+    borderRadius:  "var(--radius-lg)",
+    padding:       "24px",
+    boxShadow:     "var(--shadow-sm)",
+    display:       "flex",
+    flexDirection: "column",
+    gap:           "16px",
+  };
+
+  const ig: React.CSSProperties = { display: "flex", flexDirection: "column", gap: "6px" };
+
+  const helperText: React.CSSProperties = {
+    fontSize: "10.5px",
+    color:    "var(--text-muted)",
+    lineHeight: "1.4",
+  };
+
+  function CardHeader({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+    return (
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", paddingBottom: "16px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{
+          width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0,
+          background: "var(--color-brand-subtle)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {icon}
+        </div>
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2 }}>{title}</div>
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px", lineHeight: 1.4 }}>{description}</div>
+        </div>
+      </div>
+    );
+  }
+
+  const stepPercent = Math.round((step / 4) * 100);
+
+  /* ─────────────────────────────────────────────────────────── */
+  /*   Render                                                    */
+  /* ─────────────────────────────────────────────────────────── */
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--surface-0)", padding: "40px 20px" }}>
-      <div style={{ maxWidth: "680px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
-        
-        {/* Top Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
-          <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Sparkles size={16} color="var(--color-brand)" />
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--surface-0)" }}>
+
+      {/* ══════════════════════════════════════════════════════
+          STICKY HEADER
+      ══════════════════════════════════════════════════════ */}
+      <header style={{
+        position:     "sticky",
+        top:          0,
+        zIndex:       100,
+        background:   "var(--surface-1)",
+        borderBottom: "1px solid var(--border)",
+        boxShadow:    "0 1px 8px rgba(0,0,0,0.06)",
+      }}>
+        <div style={{
+          maxWidth:       "820px",
+          margin:         "0 auto",
+          padding:        "0 24px",
+          height:         "56px",
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "space-between",
+        }}>
+          {/* Brand */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{
+              width: "28px", height: "28px", borderRadius: "7px",
+              background: "var(--color-brand)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <Sparkles size={13} color="var(--color-on-brand)" />
+            </div>
+            <span style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+              FreelAI
+            </span>
+            <span style={{
+              fontSize: "11px", fontWeight: 600, color: "var(--text-muted)",
+              background: "var(--surface-2)", border: "1px solid var(--border)",
+              borderRadius: "99px", padding: "2px 8px",
+            }}>
+              Profile Setup
+            </span>
           </div>
-          <h2 className="font-heading" style={{ fontSize: "18px", letterSpacing: "-0.015em" }}>Freelancer Profile Setup</h2>
-        </div>
 
-        {/* Step Progress indicators */}
-        <div style={{ display: "flex", gap: "8px", background: "var(--surface-2)", padding: "4px", borderRadius: "8px" }}>
-          {[
-            { n: 1, l: "Basic Info" },
-            { n: 2, l: "Professional Details" },
-            { n: 3, l: "Services Offered" },
-            { n: 4, l: "Finish Setup" },
-          ].map((s) => (
-            <div
-              key={s.n}
-              style={{
-                flex: 1,
-                padding: "8px 4px",
-                fontSize: "11px",
-                fontWeight: 600,
-                textAlign: "center",
-                borderRadius: "6px",
-                background: step === s.n ? "var(--surface-1)" : "transparent",
-                color: step === s.n ? "var(--text-primary)" : "var(--text-muted)",
-                boxShadow: step === s.n ? "var(--shadow-sm)" : "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-              }}
-            >
-              <span style={{
-                width: "16px",
-                height: "16px",
-                borderRadius: "50%",
-                background: step > s.n ? "#10b981" : step === s.n ? "var(--color-brand)" : "var(--border-strong)",
-                color: "white",
-                fontSize: "9.5px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                {step > s.n ? <Check size={9} /> : s.n}
+          {/* Step counter + progress bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <span style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--text-muted)" }}>
+              Step {step} of 4
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "72px", height: "4px", background: "var(--border-strong)", borderRadius: "99px", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  width:  `${stepPercent}%`,
+                  background: "var(--color-brand)",
+                  borderRadius: "99px",
+                  transition:  "width 600ms cubic-bezier(0.16,1,0.3,1)",
+                }} />
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-brand)", minWidth: "32px" }}>
+                {stepPercent}%
               </span>
-              <span>{s.l}</span>
             </div>
-          ))}
+          </div>
         </div>
+      </header>
 
-        {/* Wizard step cards */}
-        <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "28px", boxShadow: "var(--shadow-md)" }}>
-          
-          {/* STEP 1: BASIC INFORMATION & RESUME AUTOFILL */}
-          {step === 1 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Basic Information</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Provide your name and professional title.
-                </p>
-              </div>
-
-              {/* Optional Resume parsing helper */}
-              <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "6px", padding: "14px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                  💡 Tip: AI Resume Autofill
-                </span>
-                <textarea
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste resume bio text here to parse and prefill all onboarding fields automatically..."
-                  className="input-field"
-                  style={{ height: "70px", fontSize: "11.5px", resize: "none", marginBottom: "8px", lineHeight: "1.4" }}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleAutofill}
-                  disabled={parseLoading}
-                  leftIcon={parseLoading ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={11} />}
-                >
-                  {parseLoading ? "Parsing CV..." : "Autofill Setup Fields"}
-                </Button>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Full Name *</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Liam Foster"
-                    className="input-field"
-                    style={{ fontSize: "12.5px", borderColor: errors.fullName ? "var(--color-danger)" : "var(--border)" }}
-                  />
-                  {errors.fullName && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.fullName}</span>}
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Professional Title *</label>
-                  <input
-                    type="text"
-                    value={professionalTitle}
-                    onChange={(e) => setProfessionalTitle(e.target.value)}
-                    placeholder="e.g. Senior Copywriter"
-                    className="input-field"
-                    style={{ fontSize: "12.5px", borderColor: errors.professionalTitle ? "var(--color-danger)" : "var(--border)" }}
-                  />
-                  {errors.professionalTitle && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.professionalTitle}</span>}
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Country</label>
-                  <input
-                    type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Timezone</label>
-                  <input
-                    type="text"
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
-                <Button
-                  variant="primary"
-                  onClick={handleNextStep}
-                  disabled={loading}
-                  rightIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowRight size={13} />}
-                >
-                  {loading ? "Saving draft..." : "Next: Professional Details"}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: PROFESSIONAL DETAILS */}
-          {step === 2 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Professional Details</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Specify your professional details and add your skills. At least one skill is required.
-                </p>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Years of Experience</label>
-                  <input
-                    type="number"
-                    value={yearsOfExperience}
-                    onChange={(e) => setYearsOfExperience(Number(e.target.value))}
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Bio Summary</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell clients about your background and primary focus..."
-                  className="input-field"
-                  style={{ height: "80px", fontSize: "12.5px", resize: "none", lineHeight: "1.4" }}
-                />
-              </div>
-
-              {/* Skills Tags input */}
-              <div className="input-group">
-                <label className="input-label">Expert Skills *</label>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
-                    placeholder="e.g. Next.js, Figma, SEO"
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                  <Button variant="secondary" onClick={addSkill} style={{ height: "38px" }}>
-                    <Plus size={13} /> Add
-                  </Button>
-                </div>
-
-                {skills.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-                    {skills.map((sk) => (
-                      <span key={sk} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "var(--surface-2)", border: "1px solid var(--border)", padding: "2px 6px", borderRadius: "4px", fontSize: "11px" }}>
-                        {sk}
-                        <button onClick={() => removeSkill(sk)} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                          <X size={10} />
-                        </button>
+      {/* ══════════════════════════════════════════════════════
+          STEP STEPPER NAV
+      ══════════════════════════════════════════════════════ */}
+      <nav style={{
+        background:   "var(--surface-1)",
+        borderBottom: "1px solid var(--border)",
+        padding:      "18px 24px",
+      }}>
+        <div style={{ maxWidth: "820px", margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            {STEP_CONFIG.map((s, idx) => (
+              <React.Fragment key={s.n}>
+                {/* Step node */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "7px", minWidth: "80px" }}>
+                  {/* Circle */}
+                  <div style={{
+                    width:      "38px",
+                    height:     "38px",
+                    borderRadius: "50%",
+                    background: step > s.n ? "#10b981" : step === s.n ? "var(--color-brand)" : "var(--surface-2)",
+                    border:     `2.5px solid ${step > s.n ? "#10b981" : step === s.n ? "var(--color-brand)" : "var(--border-strong)"}`,
+                    display:    "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 300ms ease",
+                    boxShadow:  step === s.n ? "0 0 0 5px var(--color-brand-subtle)" : "none",
+                    flexShrink: 0,
+                  }}>
+                    {step > s.n ? (
+                      <Check size={15} color="white" strokeWidth={2.5} />
+                    ) : (
+                      <span style={{ color: step === s.n ? "var(--color-on-brand)" : "var(--text-muted)", display: "flex" }}>
+                        <StepIcon name={s.icon} size={14} />
                       </span>
-                    ))}
+                    )}
+                  </div>
+                  {/* Labels */}
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{
+                      fontSize:  "11.5px",
+                      fontWeight: 700,
+                      color:     step >= s.n ? "var(--text-primary)" : "var(--text-muted)",
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1.2,
+                    }}>
+                      {s.label}
+                    </div>
+                    <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>
+                      {s.desc}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connector line */}
+                {idx < STEP_CONFIG.length - 1 && (
+                  <div style={{
+                    flex:       1,
+                    height:     "2.5px",
+                    marginTop:  "17px",
+                    background: step > s.n ? "#10b981" : "var(--border-strong)",
+                    transition: "background 400ms ease",
+                    minWidth:   "16px",
+                  }} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* ══════════════════════════════════════════════════════
+          SCROLLABLE CONTENT
+      ══════════════════════════════════════════════════════ */}
+      <main style={{ flex: 1, padding: "32px 24px 130px" }}>
+        <div style={{ maxWidth: "700px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px" }}>
+
+          {/* Step page heading */}
+          <div key={`hd-${step}`} className="animate-fade-in-up">
+            {step === 1 && (
+              <div>
+                <h1 className="font-heading" style={{ fontSize: "22px", letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: "6px" }}>
+                  Build Your Identity
+                </h1>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                  Your name and professional title will appear on every proposal you send to clients.
+                </p>
+              </div>
+            )}
+            {step === 2 && (
+              <div>
+                <h1 className="font-heading" style={{ fontSize: "22px", letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: "6px" }}>
+                  Showcase Your Expertise
+                </h1>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                  Help AI understand your background to craft personalized, winning proposals on your behalf.
+                </p>
+              </div>
+            )}
+            {step === 3 && (
+              <div>
+                <h1 className="font-heading" style={{ fontSize: "22px", letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: "6px" }}>
+                  Define Your Services
+                </h1>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                  List what you offer to clients. AI uses this to match you with opportunities and personalize your pitches.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ─────────────────────────────────────────────────
+              STEP 1 — BASIC INFO
+          ───────────────────────────────────────────────── */}
+          {step === 1 && (
+            <div key="step-1" className="animate-fade-in-up" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+              {/* AI Autofill Callout */}
+              <div style={{
+                background:   "var(--color-brand-subtle)",
+                border:       "1px solid rgba(228,242,34,0.15)",
+                borderRadius: "var(--radius-lg)",
+                overflow:     "hidden",
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAutofill(!showAutofill)}
+                  style={{
+                    width:          "100%",
+                    padding:        "14px 18px",
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "space-between",
+                    background:     "none",
+                    border:         "none",
+                    cursor:         "pointer",
+                    gap:            "12px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{
+                      width: "32px", height: "32px", borderRadius: "8px",
+                      background: "var(--color-brand)",
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <Zap size={14} color="var(--color-on-brand)" />
+                    </div>
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        AI Resume Autofill
+                      </div>
+                      <div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px" }}>
+                        Paste your CV or LinkedIn bio to instantly fill all fields
+                      </div>
+                    </div>
+                  </div>
+                  {showAutofill
+                    ? <ChevronUp size={15} color="var(--text-muted)" />
+                    : <ChevronDown size={15} color="var(--text-muted)" />
+                  }
+                </button>
+
+                {showAutofill && (
+                  <div style={{ padding: "0 18px 16px" }}>
+                    <div style={{ height: "1px", background: "var(--border)", marginBottom: "14px" }} />
+                    <textarea
+                      value={resumeText}
+                      onChange={(e) => setResumeText(e.target.value)}
+                      placeholder="Paste your resume, CV, or LinkedIn bio text here..."
+                      className="input-field"
+                      style={{ height: "104px", fontSize: "12.5px", resize: "none", lineHeight: "1.5", marginBottom: "10px" }}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleAutofill}
+                      disabled={parseLoading}
+                      leftIcon={parseLoading
+                        ? <Loader2 size={12} style={{ animation: "spin 0.85s linear infinite" }} />
+                        : <Sparkles size={12} />
+                      }
+                    >
+                      {parseLoading ? "Parsing CV..." : "Autofill All Fields"}
+                    </Button>
                   </div>
                 )}
-                {errors.skills && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px" }}>{errors.skills}</span>}
               </div>
 
-              <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
-                <Button variant="secondary" onClick={() => setStep(1)} leftIcon={<ArrowLeft size={13} />}>
-                  Back
-                </Button>
-                <div style={{ flex: 1 }} />
-                <Button
-                  variant="primary"
-                  onClick={handleNextStep}
-                  disabled={loading}
-                  rightIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowRight size={13} />}
-                >
-                  {loading ? "Saving draft..." : "Next: Services"}
-                </Button>
+              {/* Profile Photo Card */}
+              <div style={card}>
+                <CardHeader
+                  icon={<User size={16} color="var(--color-brand)" />}
+                  title="Profile Photo"
+                  description="A professional photo builds trust with clients and personalizes your proposals."
+                />
+                <ProfileImageUploader
+                  currentUrl={profilePhoto}
+                  onUploadComplete={(url) => setProfilePhoto(url)}
+                  onRemove={() => setProfilePhoto("")}
+                />
               </div>
+
+              {/* Personal Details Card */}
+              <div style={card}>
+                <CardHeader
+                  icon={<User size={16} color="var(--color-brand)" />}
+                  title="Personal Details"
+                  description="Your name and title appear on every proposal and client-facing material."
+                />
+
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "14px" }}>
+                  <div style={ig}>
+                    <label className="input-label">
+                      Full Name <span style={{ color: "var(--color-coral-red)" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Liam Foster"
+                      className="input-field"
+                      style={{ fontSize: "13px", borderColor: errors.fullName ? "var(--color-coral-red)" : undefined }}
+                    />
+                    {errors.fullName && (
+                      <span style={{ color: "var(--color-coral-red)", fontSize: "11px", fontWeight: 500 }}>
+                        {errors.fullName}
+                      </span>
+                    )}
+                  </div>
+                  <div style={ig}>
+                    <label className="input-label">
+                      Professional Title <span style={{ color: "var(--color-coral-red)" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={professionalTitle}
+                      onChange={(e) => setProfessionalTitle(e.target.value)}
+                      placeholder="e.g. Senior Copywriter"
+                      className="input-field"
+                      style={{ fontSize: "13px", borderColor: errors.professionalTitle ? "var(--color-coral-red)" : undefined }}
+                    />
+                    {errors.professionalTitle
+                      ? <span style={{ color: "var(--color-coral-red)", fontSize: "11px", fontWeight: 500 }}>{errors.professionalTitle}</span>
+                      : <span style={helperText}>Appears on every proposal you send</span>
+                    }
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div style={ig}>
+                    <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <Globe size={11} style={{ flexShrink: 0 }} /> Country
+                    </label>
+                    <input
+                      type="text"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      placeholder="e.g. United States"
+                      className="input-field"
+                      style={{ fontSize: "13px" }}
+                    />
+                  </div>
+                  <div style={ig}>
+                    <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <Clock size={11} style={{ flexShrink: 0 }} /> Timezone
+                    </label>
+                    <input
+                      type="text"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      placeholder="e.g. EST, GMT+5:30"
+                      className="input-field"
+                      style={{ fontSize: "13px" }}
+                    />
+                    <span style={helperText}>Used to coordinate with clients</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
-          {/* STEP 3: SERVICES CATALOG */}
-          {step === 3 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
-                <h3 className="font-heading" style={{ fontSize: "14.5px", color: "var(--text-primary)" }}>Services Offered</h3>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block" }}>
-                  Create up to 3 services you offer to clients. Details are loaded dynamically by AI.
-                </span>
-                {errors.services && <div style={{ color: "var(--color-danger)", fontSize: "12px", marginTop: "6px", fontWeight: 500 }}>{errors.services}</div>}
+          {/* ─────────────────────────────────────────────────
+              STEP 2 — PROFESSIONAL DETAILS
+          ───────────────────────────────────────────────── */}
+          {step === 2 && (
+            <div key="step-2" className="animate-fade-in-up" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+              {/* Professional Background Card */}
+              <div style={card}>
+                <CardHeader
+                  icon={<Sparkles size={16} color="var(--color-brand)" />}
+                  title="Professional Background"
+                  description="Your experience and bio are used by AI to craft personalized proposals in your voice."
+                />
+
+                <div style={ig}>
+                  <label className="input-label">Years of Experience</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <input
+                      type="number"
+                      min={0}
+                      max={50}
+                      value={yearsOfExperience}
+                      onChange={(e) => setYearsOfExperience(Number(e.target.value))}
+                      className="input-field"
+                      style={{ fontSize: "13px", maxWidth: "140px" }}
+                    />
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>years in the industry</span>
+                  </div>
+                </div>
+
+                <div style={ig}>
+                  <label className="input-label">Bio Summary</label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell clients about your background and what makes you stand out..."
+                    className="input-field"
+                    style={{ height: "96px", fontSize: "13px", resize: "none", lineHeight: "1.55" }}
+                  />
+                  <span style={helperText}>Used as context for AI-generated proposals. Keep it punchy and outcome-focused.</span>
+                </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {services.map((svc, idx) => (
-                  <div key={idx} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px", background: "var(--surface-2)", position: "relative" }}>
+              {/* Skills Card */}
+              <div style={card}>
+                <CardHeader
+                  icon={<Layers size={16} color="var(--color-brand)" />}
+                  title="Expert Skills"
+                  description="Add your core skills — press Enter after each one. At least one is required."
+                />
+
+                <div style={ig}>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      type="text"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
+                      placeholder="e.g. Next.js, Figma, SEO — press Enter to add"
+                      className="input-field"
+                      style={{ fontSize: "13px", borderColor: errors.skills ? "var(--color-coral-red)" : undefined }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addSkill}
+                      style={{
+                        width: "40px", height: "40px", flexShrink: 0,
+                        background:   "var(--surface-2)",
+                        border:       "1px solid var(--border-strong)",
+                        borderRadius: "var(--radius)",
+                        cursor:       "pointer",
+                        display:      "flex", alignItems: "center", justifyContent: "center",
+                        color:        "var(--text-secondary)",
+                        transition:   "all 150ms ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background    = "var(--color-brand)";
+                        e.currentTarget.style.color         = "var(--color-on-brand)";
+                        e.currentTarget.style.borderColor   = "var(--color-brand)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background    = "var(--surface-2)";
+                        e.currentTarget.style.color         = "var(--text-secondary)";
+                        e.currentTarget.style.borderColor   = "var(--border-strong)";
+                      }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+
+                  {skills.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "7px", marginTop: "4px" }}>
+                      {skills.map((sk) => (
+                        <span
+                          key={sk}
+                          style={{
+                            display:      "inline-flex",
+                            alignItems:   "center",
+                            gap:          "6px",
+                            background:   "var(--surface-2)",
+                            border:       "1px solid var(--border-strong)",
+                            padding:      "5px 11px",
+                            borderRadius: "99px",
+                            fontSize:     "12px",
+                            fontWeight:   600,
+                            color:        "var(--text-primary)",
+                          }}
+                        >
+                          {sk}
+                          <button
+                            type="button"
+                            onClick={() => removeSkill(sk)}
+                            style={{
+                              background: "none", border: "none",
+                              color: "var(--text-muted)", cursor: "pointer",
+                              display: "flex", alignItems: "center",
+                              padding: "1px", borderRadius: "50%",
+                              transition: "color 150ms ease",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-coral-red)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      border:       "1.5px dashed var(--border-strong)",
+                      borderRadius: "var(--radius-lg)",
+                      padding:      "22px 20px",
+                      textAlign:    "center",
+                    }}>
+                      <Layers size={20} color="var(--text-muted)" style={{ margin: "0 auto 8px" }} />
+                      <p style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                        Start typing your skills above.<br />
+                        <span style={{ color: "var(--text-subtle)" }}>e.g. "React", "UX Writing", "Figma"</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {errors.skills && (
+                    <span style={{ color: "var(--color-coral-red)", fontSize: "11.5px", fontWeight: 500 }}>
+                      {errors.skills}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────
+              STEP 3 — SERVICES CATALOG
+          ───────────────────────────────────────────────── */}
+          {step === 3 && (
+            <div key="step-3" className="animate-fade-in-up" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+              {errors.services && (
+                <div style={{
+                  display:      "flex",
+                  alignItems:   "center",
+                  gap:          "10px",
+                  background:   "rgba(235,87,87,0.08)",
+                  border:       "1px solid rgba(235,87,87,0.25)",
+                  borderRadius: "var(--radius)",
+                  padding:      "12px 16px",
+                  fontSize:     "13px",
+                  color:        "var(--color-coral-red)",
+                  fontWeight:   500,
+                }}>
+                  {errors.services}
+                </div>
+              )}
+
+              {services.map((svc, idx) => (
+                <div key={idx} style={{ ...card, gap: "14px" }}>
+
+                  {/* Service card header */}
+                  <div style={{
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "space-between",
+                    paddingBottom:  "14px",
+                    borderBottom:   "1px solid var(--border)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{
+                        width: "30px", height: "30px", borderRadius: "8px",
+                        background:  "var(--color-brand-subtle)",
+                        border:      "1px solid rgba(228,242,34,0.15)",
+                        display:     "flex", alignItems: "center", justifyContent: "center",
+                        fontSize:    "12px", fontWeight: 700, color: "var(--color-brand)",
+                      }}>
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text-primary)" }}>
+                          {svc.name || `Service #${idx + 1}`}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "1px" }}>
+                          {svc.category} · {svc.deliveryTime || "Delivery TBD"}
+                        </div>
+                      </div>
+                    </div>
                     {services.length > 1 && (
                       <button
+                        type="button"
                         onClick={() => removeServiceRow(idx)}
-                        style={{ position: "absolute", top: "12px", right: "12px", background: "none", border: "none", color: "var(--error)", cursor: "pointer" }}
+                        style={{
+                          display:      "flex", alignItems: "center", gap: "5px",
+                          background:   "rgba(235,87,87,0.08)",
+                          border:       "1px solid rgba(235,87,87,0.2)",
+                          borderRadius: "var(--radius)",
+                          padding:      "5px 10px",
+                          cursor:       "pointer",
+                          fontSize:     "11.5px", fontWeight: 600, color: "var(--color-coral-red)",
+                          transition:   "background 150ms ease",
+                        }}
                       >
-                        <X size={14} />
+                        <X size={11} /> Remove
                       </button>
                     )}
+                  </div>
 
-                    <span style={{ fontSize: "10px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>
-                      Service Item #{idx + 1}
-                    </span>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  {/* Service fields */}
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+                    <div style={ig}>
+                      <label className="input-label">Service Name *</label>
                       <input
                         type="text"
                         value={svc.name}
                         onChange={(e) => handleServiceChange(idx, "name", e.target.value)}
-                        placeholder="Service Name (e.g. Website Implementation)"
+                        placeholder="e.g. Full-Stack Web Development"
                         className="input-field"
-                        style={{ fontSize: "12.5px" }}
+                        style={{ fontSize: "13px" }}
                       />
+                    </div>
+                    <div style={ig}>
+                      <label className="input-label">Category</label>
                       <select
                         value={svc.category}
                         onChange={(e) => handleServiceChange(idx, "category", e.target.value)}
                         className="input-field"
-                        style={{ fontSize: "12.5px" }}
+                        style={{ fontSize: "13px" }}
                       >
                         {["Development", "Design", "Writing", "Video", "Marketing", "Consulting", "Other"].map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
+                          <option key={c} value={c}>{c}</option>
                         ))}
                       </select>
                     </div>
+                  </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Starting ($)</span>
-                        <input
-                          type="number"
-                          value={svc.startingPrice}
-                          onChange={(e) => handleServiceChange(idx, "startingPrice", Number(e.target.value))}
-                          className="input-field"
-                          style={{ fontSize: "12px", padding: "4px 8px" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Delivery</span>
-                        <input
-                          type="text"
-                          value={svc.deliveryTime}
-                          onChange={(e) => handleServiceChange(idx, "deliveryTime", e.target.value)}
-                          placeholder="e.g. 5 days"
-                          className="input-field"
-                          style={{ fontSize: "12px", padding: "4px 8px" }}
-                        />
-                      </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div style={ig}>
+                      <label className="input-label">Starting Price (USD)</label>
+                      <input
+                        type="number"
+                        value={svc.startingPrice}
+                        onChange={(e) => handleServiceChange(idx, "startingPrice", Number(e.target.value))}
+                        className="input-field"
+                        style={{ fontSize: "13px" }}
+                      />
                     </div>
+                    <div style={ig}>
+                      <label className="input-label">Delivery Time</label>
+                      <input
+                        type="text"
+                        value={svc.deliveryTime}
+                        onChange={(e) => handleServiceChange(idx, "deliveryTime", e.target.value)}
+                        placeholder="e.g. 5 days, 2 weeks"
+                        className="input-field"
+                        style={{ fontSize: "13px" }}
+                      />
+                    </div>
+                  </div>
 
+                  <div style={ig}>
+                    <label className="input-label">Description *</label>
                     <textarea
                       value={svc.description}
                       onChange={(e) => handleServiceChange(idx, "description", e.target.value)}
-                      placeholder="Service deliverables..."
+                      placeholder="What does this service include? What are the outcomes for the client?"
                       className="input-field"
-                      style={{ height: "60px", fontSize: "12.5px", resize: "none", marginBottom: "10px", lineHeight: "1.4" }}
+                      style={{ height: "80px", fontSize: "13px", resize: "none", lineHeight: "1.55" }}
                     />
-
-                    {/* Features repeater */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 600 }}>Deliverables list</span>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <input
-                          type="text"
-                          value={newFeatureText[idx] || ""}
-                          onChange={(e) => setNewFeatureText({ ...newFeatureText, [idx]: e.target.value })}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addServiceFeature(idx); } }}
-                          placeholder="Add feature..."
-                          className="input-field"
-                          style={{ fontSize: "11.5px", height: "26px" }}
-                        />
-                        <Button variant="secondary" size="sm" onClick={() => addServiceFeature(idx)} style={{ height: "26px" }}>
-                          Add
-                        </Button>
-                      </div>
-                      {svc.features && svc.features.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
-                          {svc.features.map((f, fIdx) => (
-                            <span key={fIdx} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "var(--surface-3)", padding: "2px 6px", borderRadius: "3px", fontSize: "10px" }}>
-                              {f}
-                              <button onClick={() => removeServiceFeature(idx, fIdx)} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
-                                <X size={9} />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
+                    <span style={helperText}>AI uses this to match services with client job posts.</span>
                   </div>
-                ))}
 
-                <Button variant="secondary" size="sm" onClick={addServiceRow} leftIcon={<Plus size={12} />}>
-                  Add another Service
-                </Button>
-              </div>
+                  {/* Deliverables */}
+                  <div style={ig}>
+                    <label className="input-label">Deliverables / Features</label>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="text"
+                        value={newFeatureText[idx] || ""}
+                        onChange={(e) => setNewFeatureText({ ...newFeatureText, [idx]: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addServiceFeature(idx); } }}
+                        placeholder="Add deliverable and press Enter..."
+                        className="input-field"
+                        style={{ fontSize: "12.5px" }}
+                      />
+                      <Button variant="secondary" size="sm" onClick={() => addServiceFeature(idx)}>
+                        Add
+                      </Button>
+                    </div>
+                    {svc.features && svc.features.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "4px" }}>
+                        {svc.features.map((f, fIdx) => (
+                          <span
+                            key={fIdx}
+                            style={{
+                              display:      "inline-flex", alignItems: "center", gap: "5px",
+                              background:   "var(--surface-2)",
+                              border:       "1px solid var(--border)",
+                              padding:      "3px 9px",
+                              borderRadius: "4px",
+                              fontSize:     "11.5px", color: "var(--text-secondary)",
+                            }}
+                          >
+                            {f}
+                            <button
+                              type="button"
+                              onClick={() => removeServiceFeature(idx, fIdx)}
+                              style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0, display: "flex" }}
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
 
-              <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "8px" }}>
-                <Button variant="secondary" onClick={() => setStep(2)} leftIcon={<ArrowLeft size={13} />}>
-                  Back
-                </Button>
-                <div style={{ flex: 1 }} />
-                <Button
-                  variant="primary"
-                  onClick={handleNextStep}
-                  disabled={loading}
-                  rightIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowRight size={13} />}
+              {/* Add service button */}
+              {services.length < 3 && (
+                <button
+                  type="button"
+                  onClick={addServiceRow}
+                  style={{
+                    display:        "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                    padding:        "18px",
+                    background:     "var(--surface-1)",
+                    border:         "1.5px dashed var(--border-strong)",
+                    borderRadius:   "var(--radius-lg)",
+                    cursor:         "pointer",
+                    fontSize:       "13px", fontWeight: 600, color: "var(--text-muted)",
+                    transition:     "all 150ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--color-brand)";
+                    e.currentTarget.style.color       = "var(--text-primary)";
+                    e.currentTarget.style.background  = "var(--color-brand-subtle)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-strong)";
+                    e.currentTarget.style.color       = "var(--text-muted)";
+                    e.currentTarget.style.background  = "var(--surface-1)";
+                  }}
                 >
-                  {loading ? "Saving draft..." : "Next: Finish Setup"}
-                </Button>
-              </div>
+                  <Plus size={15} />
+                  Add Another Service
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 400 }}>
+                    ({3 - services.length} remaining)
+                  </span>
+                </button>
+              )}
+
             </div>
           )}
 
-          {/* STEP 4: FINISH */}
+          {/* ─────────────────────────────────────────────────
+              STEP 4 — FINISH / SUCCESS
+          ───────────────────────────────────────────────── */}
           {step === 4 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px", alignItems: "center", textAlign: "center", padding: "20px 0" }}>
-              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(16,185,129,0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #10b981", marginBottom: "8px" }}>
-                <Check size={24} color="#10b981" />
-              </div>
-              
-              <h3 className="font-heading" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Your Freelancer Profile is ready.</h3>
-              <p style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "340px", lineHeight: "1.5" }}>
-                Your professional brand voice, skills, services, and default rates are now saved as your central identity layer. You are ready to generate custom, personalized AI content!
-              </p>
+            <div key="step-4" className="animate-fade-in-up">
+              <div style={{
+                ...card,
+                alignItems:  "center",
+                textAlign:   "center",
+                padding:     "52px 32px",
+                gap:         "20px",
+              }}>
+                {/* Green success ring */}
+                <div style={{
+                  width:          "72px",
+                  height:         "72px",
+                  borderRadius:   "50%",
+                  background:     "rgba(16,185,129,0.1)",
+                  border:         "2.5px solid #10b981",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  marginBottom:   "4px",
+                }}>
+                  <Check size={32} color="#10b981" strokeWidth={2.5} />
+                </div>
 
-              <Button variant="primary" onClick={handleContinue} style={{ width: "200px", marginTop: "12px" }}>
-                Continue
-              </Button>
+                <div>
+                  <h2 className="font-heading" style={{ fontSize: "21px", color: "var(--text-primary)", marginBottom: "10px" }}>
+                    Your Freelancer Profile is Ready! 🎉
+                  </h2>
+                  <p style={{ fontSize: "13.5px", color: "var(--text-muted)", maxWidth: "380px", lineHeight: "1.6", margin: "0 auto" }}>
+                    Your professional brand voice, skills, services, and rates are now saved.
+                    AI-powered proposals and matching are live.
+                  </p>
+                </div>
+
+                {/* Summary chips */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+                  {[
+                    { label: fullName || "Identity Set",                       show: true },
+                    { label: `${skills.length} Skill${skills.length !== 1 ? "s" : ""}`, show: skills.length > 0 },
+                    { label: `${services.filter(s => s.name).length} Service${services.filter(s => s.name).length !== 1 ? "s" : ""}`, show: services.some(s => s.name) },
+                  ].filter(item => item.show).map((item) => (
+                    <div
+                      key={item.label}
+                      style={{
+                        display:    "flex", alignItems: "center", gap: "6px",
+                        background: "rgba(16,185,129,0.1)",
+                        border:     "1px solid rgba(16,185,129,0.3)",
+                        borderRadius: "99px",
+                        padding:    "5px 13px",
+                        fontSize:   "12px", fontWeight: 600, color: "#10b981",
+                      }}
+                    >
+                      <Check size={11} strokeWidth={2.5} />
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  variant="primary"
+                  onClick={handleContinue}
+                  rightIcon={<ArrowRight size={14} />}
+                  style={{ marginTop: "8px", minWidth: "200px" }}
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
             </div>
           )}
 
         </div>
+      </main>
 
-      </div>
+      {/* ══════════════════════════════════════════════════════
+          STICKY FOOTER (hidden on final step)
+      ══════════════════════════════════════════════════════ */}
+      {step < 4 && (
+        <footer style={{
+          position:     "sticky",
+          bottom:       0,
+          background:   "var(--surface-1)",
+          borderTop:    "1px solid var(--border)",
+          padding:      "14px 24px",
+          display:      "flex",
+          alignItems:   "center",
+          gap:          "16px",
+          zIndex:       100,
+          boxShadow:    "0 -2px 20px rgba(0,0,0,0.1)",
+        }}>
+          {/* Left: progress info */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "5px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Setup Progress
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "90px", height: "5px", background: "var(--border-strong)", borderRadius: "99px", overflow: "hidden" }}>
+                <div style={{
+                  height:     "100%",
+                  width:      `${stepPercent}%`,
+                  background: "var(--color-brand)",
+                  borderRadius: "99px",
+                  transition: "width 600ms cubic-bezier(0.16,1,0.3,1)",
+                }} />
+              </div>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>
+                {stepPercent}% Complete
+              </span>
+            </div>
+          </div>
+
+          {/* Right: nav actions */}
+          <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
+            {step > 1 && (
+              <Button
+                variant="secondary"
+                onClick={() => { setErrors({}); setStep(step - 1); }}
+                leftIcon={<ArrowLeft size={13} />}
+              >
+                Back
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              onClick={handleNextStep}
+              disabled={loading}
+              rightIcon={
+                loading
+                  ? <Loader2 size={13} style={{ animation: "spin 0.85s linear infinite" }} />
+                  : <ArrowRight size={13} />
+              }
+            >
+              {loading
+                ? "Saving..."
+                : step === 1 ? "Continue to Skills"
+                : step === 2 ? "Continue to Services"
+                : "Finish Setup"}
+            </Button>
+          </div>
+        </footer>
+      )}
+
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Page export with Suspense boundary
+───────────────────────────────────────────────────────────────── */
 export default function ProfileSetupPage() {
   return (
-    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading onboarding...</div>}>
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader2 size={24} color="var(--color-brand)" style={{ animation: "spin 0.85s linear infinite" }} />
+      </div>
+    }>
       <OnboardingSetupWizard />
     </Suspense>
   );

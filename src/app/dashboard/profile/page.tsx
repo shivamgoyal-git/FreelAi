@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import ProfileCompletion from "@/components/ProfileCompletion";
+import ProfileImageUploader from "@/components/shared/ProfileImageUploader";
 
 interface IServiceItem {
   name: string;
@@ -406,42 +407,44 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div className="input-group">
-                      <label className="input-label">Profile Photo URL</label>
-                      <input type="text" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} className="input-field" style={{ fontSize: "12.5px" }} placeholder="https://..." />
+                  {/* Profile Photo Uploader */}
+                  <div style={{ marginBottom: "12px" }}>
+                    <ProfileImageUploader
+                      currentUrl={profilePhoto}
+                      onUploadComplete={(url) => setProfilePhoto(url)}
+                      onRemove={() => setProfilePhoto("")}
+                    />
+                  </div>
+
+                  {/* Languages Tag manager */}
+                  <div className="input-group">
+                    <label className="input-label">Languages</label>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        type="text"
+                        value={newLanguage}
+                        onChange={(e) => setNewLanguage(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(languages, setLanguages, newLanguage, setNewLanguage); } }}
+                        placeholder="e.g. English, French"
+                        className="input-field"
+                        style={{ fontSize: "12.5px", height: "34px", maxWidth: "320px" }}
+                      />
+                      <Button variant="secondary" size="sm" onClick={() => handleAddTag(languages, setLanguages, newLanguage, setNewLanguage)} style={{ height: "34px" }}>
+                        Add
+                      </Button>
                     </div>
-                    
-                    {/* Languages Tag manager */}
-                    <div className="input-group">
-                      <label className="input-label">Languages</label>
-                      <div style={{ display: "flex", gap: "6px" }}>
-                        <input
-                          type="text"
-                          value={newLanguage}
-                          onChange={(e) => setNewLanguage(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(languages, setLanguages, newLanguage, setNewLanguage); } }}
-                          placeholder="e.g. English, French"
-                          className="input-field"
-                          style={{ fontSize: "12.5px", height: "34px" }}
-                        />
-                        <Button variant="secondary" size="sm" onClick={() => handleAddTag(languages, setLanguages, newLanguage, setNewLanguage)} style={{ height: "34px" }}>
-                          Add
-                        </Button>
+                    {languages.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
+                        {languages.map((l) => (
+                          <span key={l} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "var(--surface-2)", border: "1px solid var(--border)", padding: "2px 6px", borderRadius: "4px", fontSize: "11px" }}>
+                            {l}
+                            <button onClick={() => handleRemoveTag(languages, setLanguages, l)} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
                       </div>
-                      {languages.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-                          {languages.map((l) => (
-                            <span key={l} style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "var(--surface-2)", border: "1px solid var(--border)", padding: "2px 6px", borderRadius: "4px", fontSize: "11px" }}>
-                              {l}
-                              <button onClick={() => handleRemoveTag(languages, setLanguages, l)} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                                <X size={10} />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
 

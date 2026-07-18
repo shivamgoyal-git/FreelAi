@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import Project from "@/models/Project";
+import Client from "@/models/Client";
 import { logActivity } from "@/lib/activity";
 
 // ── GET /api/projects — list with search/filter/sort ──────────
@@ -38,7 +39,22 @@ export async function GET(req: NextRequest) {
     Project.countDocuments(filter),
   ]);
 
-  return NextResponse.json({ projects, total, page, limit });
+  const clientIds = [...new Set(projects.map((p) => p.clientId).filter(Boolean))] as string[];
+  const clients = clientIds.length
+    ? await Client.find({ userId: session.user.id, _id: { $in: clientIds } }).select("name company").lean()
+    : [];
+  const clientMap = new Map(clients.map((c) => [c._id.toString(), c]));
+
+  const populatedProjects = projects.map((p) => {
+    const client = p.clientId ? clientMap.get(p.clientId.toString()) : null;
+    return {
+      ...p,
+      clientName: client ? client.name : p.clientName || "",
+      clientCompany: client ? client.company || "" : "",
+    };
+  });
+
+  return NextResponse.json({ projects: populatedProjects, total, page, limit });
 }
 
 // ── POST /api/projects — create ───────────────────────────────

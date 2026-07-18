@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -75,6 +76,10 @@ function fmtDate(d?: string | Date) {
 
 export default function InvoicesPage() {
   useSession();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -544,7 +549,7 @@ export default function InvoicesPage() {
       </main>
 
       {/* Delete Confirmation Modal */}
-      {deleteTarget && (
+      {mounted && deleteTarget && createPortal(
         <div className="modal-overlay" style={{ zIndex: 200 }} onClick={() => setDeleteTarget(null)}>
           <div className="modal-box" style={{ maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -579,7 +584,8 @@ export default function InvoicesPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

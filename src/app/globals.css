@@ -716,6 +716,10 @@ select.input-redesign {
   padding-right: 30px;
   cursor: pointer;
 }
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
 
 /* ── Modal Overlay ── */
 .modal-overlay {

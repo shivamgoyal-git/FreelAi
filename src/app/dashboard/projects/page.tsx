@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -44,6 +45,9 @@ import type {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import ClientSelector from "@/components/shared/ClientSelector";
+import ClientDrawer from "@/components/shared/ClientDrawer";
+import ClientSummaryCard from "@/components/shared/ClientSummaryCard";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -238,11 +242,37 @@ function ProjectFormModal({
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"basics" | "milestones" | "notes">("basics");
   const [milestoneInput, setMilestoneInput] = useState("");
+  const [clientDrawerOpen, setClientDrawerOpen] = useState(false);
+  const [clientRefreshTrigger, setClientRefreshTrigger] = useState(0);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const isEdit = !!initial?._id;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (open) {
-      setForm(initial ?? EMPTY_FORM);
+      if (initial) {
+        setForm(initial);
+        if (initial.clientId) {
+          fetch(`/api/clients/${initial.clientId}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.client) setSelectedClient(data.client);
+            })
+            .catch((err) => console.error(err));
+        } else {
+          setSelectedClient(null);
+        }
+      } else {
+        setForm({
+          ...EMPTY_FORM,
+          startDate: new Date().toISOString(),
+        });
+        setSelectedClient(null);
+      }
       setTagInput("");
       setMilestoneInput("");
       setError("");
@@ -278,12 +308,16 @@ function ProjectFormModal({
     setSaving(true);
     setError("");
     try {
+      const finalForm = {
+        ...form,
+        startDate: form.startDate || new Date().toISOString(),
+      };
       const url    = isEdit ? `/api/projects/${form._id}` : "/api/projects";
       const method = isEdit ? "PATCH" : "POST";
       const res    = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(finalForm),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
@@ -295,9 +329,9 @@ function ProjectFormModal({
     }
   };
 
-  if (!open) return null;
+  if (!mounted || !open) return null;
 
-  return (
+  return createPortal(
     <div
       className="modal-overlay"
       style={{ zIndex: 200 }}
@@ -349,11 +383,17 @@ function ProjectFormModal({
                   <input id="proj-title" className="input-redesign" value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Brand Identity for Bloom Studio" required />
                 </div>
 
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                  <div className="form-group-redesign">
-                    <label className="label-redesign" htmlFor="proj-client">Client Name</label>
-                    <input id="proj-client" className="input-redesign" value={form.clientName ?? ""} onChange={(e) => set("clientName", e.target.value)} placeholder="Client or company" />
-                  </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", alignItems: "start" }}>
+                  <ClientSelector
+                    selectedClientId={form.clientId}
+                    onSelectClient={(client) => {
+                      set("clientId", client ? client._id : undefined);
+                      set("clientName", client ? client.name : "");
+                      setSelectedClient(client);
+                    }}
+                    onCreateNewClientTrigger={() => setClientDrawerOpen(true)}
+                    refreshTrigger={clientRefreshTrigger}
+                  />
                   <div className="form-group-redesign">
                     <label className="label-redesign" htmlFor="proj-category">Category</label>
                     <select id="proj-category" className="input-redesign" value={form.category} onChange={(e) => set("category", e.target.value as ProjectCategory)} style={{ cursor:"pointer" }}>
@@ -361,6 +401,11 @@ function ProjectFormModal({
                     </select>
                   </div>
                 </div>
+
+                {/* Selected Client Summary & AI Insights */}
+                {form.clientId && selectedClient && (
+                  <ClientSummaryCard clientId={form.clientId} client={selectedClient} />
+                )}
 
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
                   <div className="form-group-redesign">
@@ -392,15 +437,9 @@ function ProjectFormModal({
                   </div>
                 </div>
 
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-                  <div className="form-group-redesign">
-                    <label className="label-redesign" htmlFor="proj-start">Start Date</label>
-                    <input id="proj-start" className="input-redesign" type="date" value={form.startDate ?? ""} onChange={(e) => set("startDate", e.target.value)} />
-                  </div>
-                  <div className="form-group-redesign">
-                    <label className="label-redesign" htmlFor="proj-due">Due Date</label>
-                    <input id="proj-due" className="input-redesign" type="date" value={form.dueDate ?? ""} onChange={(e) => set("dueDate", e.target.value)} />
-                  </div>
+                <div className="form-group-redesign">
+                  <label className="label-redesign" htmlFor="proj-due">Due Date</label>
+                  <input id="proj-due" className="input-redesign" type="date" value={form.dueDate ?? ""} onChange={(e) => set("dueDate", e.target.value)} />
                 </div>
 
                 <div className="form-group-redesign">
@@ -499,7 +538,20 @@ function ProjectFormModal({
           </form>
         </div>
       </div>
-    </div>
+
+      {/* Client Drawer Component */}
+      <ClientDrawer
+        open={clientDrawerOpen}
+        onClose={() => setClientDrawerOpen(false)}
+        onClientCreated={(newClient) => {
+          set("clientId", newClient._id);
+          set("clientName", newClient.name);
+          setSelectedClient(newClient);
+          setClientRefreshTrigger((prev) => prev + 1);
+        }}
+      />
+    </div>,
+    document.body
   );
 }
 
@@ -514,6 +566,10 @@ function DeleteModal({
   onDeleted: (id: string) => void;
 }) {
   const [deleting, setDeleting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleDelete = async () => {
     if (!project) return;
@@ -527,8 +583,8 @@ function DeleteModal({
     }
   };
 
-  if (!project) return null;
-  return (
+  if (!mounted || !project) return null;
+  return createPortal(
     <div className="modal-overlay" style={{ zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-box" style={{ maxWidth:"380px", textAlign:"center" }}>
         <div className="modal-body">
@@ -547,7 +603,8 @@ function DeleteModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

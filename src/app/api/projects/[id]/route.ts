@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import Project from "@/models/Project";
+import Client from "@/models/Client";
 import { logActivity } from "@/lib/activity";
 
 type Params = { params: Promise<{ id: string }> };
@@ -19,7 +20,24 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!project)
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  return NextResponse.json({ project });
+  let clientName = project.clientName || "";
+  let clientCompany = "";
+
+  if (project.clientId) {
+    const client = await Client.findOne({ _id: project.clientId, userId: session.user.id }).select("name company").lean();
+    if (client) {
+      clientName = client.name;
+      clientCompany = client.company || "";
+    }
+  }
+
+  const populatedProject = {
+    ...project,
+    clientName,
+    clientCompany,
+  };
+
+  return NextResponse.json({ project: populatedProject });
 }
 
 // ── PATCH /api/projects/[id] — update ────────────────────────
@@ -75,7 +93,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       );
     }
 
-    return NextResponse.json({ project });
+    let clientName = project.clientName || "";
+    let clientCompany = "";
+
+    if (project.clientId) {
+      const client = await Client.findOne({ _id: project.clientId, userId: session.user.id }).select("name company").lean();
+      if (client) {
+        clientName = client.name;
+        clientCompany = client.company || "";
+      }
+    }
+
+    const populatedProject = {
+      ...project,
+      clientName,
+      clientCompany,
+    };
+
+    return NextResponse.json({ project: populatedProject });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update project";
     return NextResponse.json({ error: msg }, { status: 400 });

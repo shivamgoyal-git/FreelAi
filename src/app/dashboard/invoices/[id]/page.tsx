@@ -2,6 +2,7 @@
 
 import { toast } from "sonner";
 import { useState, useEffect, use, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -75,6 +76,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const { data: session } = useSession();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [activities, setActivities] = useState<IActivity[]>([]);
@@ -514,7 +520,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </main>
 
       {/* Record Payment Dialog */}
-      {paymentOpen && (
+      {mounted && paymentOpen && createPortal(
         <div className="modal-overlay" style={{ zIndex: 200 }} onClick={() => setPaymentOpen(false)}>
           <div className="modal-box" style={{ maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleRecordPayment}>
@@ -564,11 +570,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Cancel Invoice Dialog */}
-      {cancelOpen && (
+      {mounted && cancelOpen && createPortal(
         <div className="modal-overlay" style={{ zIndex: 200 }} onClick={() => setCancelOpen(false)}>
           <div className="modal-box" style={{ maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -603,11 +610,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Invoice Dialog */}
-      {deleteOpen && (
+      {mounted && deleteOpen && createPortal(
         <div className="modal-overlay" style={{ zIndex: 200 }} onClick={() => setDeleteOpen(false)}>
           <div className="modal-box" style={{ maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -642,7 +650,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <style jsx global>{`

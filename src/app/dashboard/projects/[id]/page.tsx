@@ -43,6 +43,7 @@ import type {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import ClientSelector from "@/components/shared/ClientSelector";
+import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 import ClientDrawer from "@/components/shared/ClientDrawer";
 import ClientSummaryCard from "@/components/shared/ClientSummaryCard";
 
@@ -112,6 +113,8 @@ const EMPTY_FORM: ProjectFormData = {
 
 // ─── EDIT MODAL ───────────────────────────────────────────────
 function EditModal({ open, project, onClose, onSaved }: { open:boolean; project:Project|null; onClose:()=>void; onSaved:(p:Project)=>void }) {
+  useBodyScrollLock(open);
+
   const [form, setForm] = useState<ProjectFormData & { _id?: string }>(EMPTY_FORM);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -315,6 +318,8 @@ function EditModal({ open, project, onClose, onSaved }: { open:boolean; project:
 
 // ─── DELETE MODAL ─────────────────────────────────────────────
 function DeleteModal({ project, onClose, onDeleted }: { project:Project|null; onClose:()=>void; onDeleted:()=>void }) {
+  useBodyScrollLock(!!project);
+
   const [deleting, setDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);

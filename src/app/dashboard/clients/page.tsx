@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -31,11 +31,16 @@ import {
   DollarSign,
   Briefcase,
   TrendingUp,
+  SlidersHorizontal,
+  ChevronDown,
+  ArrowUpDown,
+  Check,
 } from "lucide-react";
 import type { Client, ClientStatus, ClientFormData } from "@/types/client";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -140,13 +145,14 @@ function ClientFormModal({
   const [error, setError] = useState("");
   const isEdit = !!initial?._id;
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (open) {
       setForm(initial ?? EMPTY_FORM);
       setTagInput("");
       setError("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial?._id]);
 
   const set = (k: keyof ClientFormData, v: unknown) =>
@@ -375,19 +381,36 @@ function ClientFormModal({
               </select>
             </div>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-rating">Rating (1–5)</label>
-              <input
-                id="client-rating"
-                className="input-redesign"
-                type="number"
-                min={1}
-                max={5}
-                value={form.rating ?? ""}
-                onChange={(e) =>
-                  set("rating", e.target.value ? Number(e.target.value) : null)
-                }
-                placeholder="—"
-              />
+              <label className="label-redesign">Rating (Click to set stars)</label>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center", height: "40px" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => set("rating", form.rating === star ? null : star)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "2px",
+                      color: form.rating && form.rating >= star ? "#f59e0b" : "var(--text-muted)",
+                      transition: "transform var(--dur-fast)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.2)"}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                  >
+                    <Star size={20} fill={form.rating && form.rating >= star ? "#f59e0b" : "transparent"} />
+                  </button>
+                ))}
+                {form.rating && (
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", marginLeft: "8px", fontWeight: 600 }}>
+                    ({form.rating} / 5)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -526,6 +549,8 @@ function DeleteModal({
 }) {
   const [deleting, setDeleting] = useState(false);
 
+  useBodyScrollLock(!!client);
+
   const handleDelete = async () => {
     if (!client) return;
     setDeleting(true);
@@ -646,23 +671,7 @@ function ClientCard({
   }, []);
 
   return (
-    <div
-      className="glass-card"
-      style={{
-        padding: "20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-        transition: "border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease",
-        cursor: "default",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-default)";
-      }}
-    >
+    <div className="client-card">
       {/* Top Row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
         {/* Avatar */}
@@ -681,21 +690,29 @@ function ClientCard({
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: "15px",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              marginBottom: "2px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {client.name}
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "2px" }}>
+            <p
+              style={{
+                fontSize: "15px",
+                fontWeight: 700,
+                color: "var(--text-primary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                margin: 0,
+              }}
+            >
+              {client.name}
+            </p>
+            {client.rating && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", background: "rgba(245,158,11,0.08)", color: "#f59e0b", padding: "1px 6px", borderRadius: "999px", fontSize: "10px", fontWeight: 700 }}>
+                <Star size={9} fill="#f59e0b" style={{ marginTop: "-1px" }} />
+                {client.rating}
+              </span>
+            )}
+          </div>
           {client.company && (
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
               {client.company}
             </p>
           )}
@@ -827,18 +844,12 @@ function ClientCard({
           </div>
         </div>
       </div>
+      
       {/* Contact Details */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <a
           href={`mailto:${client.email}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "7px",
-            fontSize: "12px",
-            color: "var(--text-muted)",
-            textDecoration: "none",
-          }}
+          className="contact-link"
         >
           <Mail size={12} color="var(--text-subtle)" />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -846,18 +857,19 @@ function ClientCard({
           </span>
         </a>
         {client.phone && (
-          <div style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12px", color: "var(--text-muted)" }}>
+          <div className="contact-link">
             <Phone size={12} color="var(--text-subtle)" />
-            {client.phone}
+            <span>{client.phone}</span>
           </div>
         )}
         {client.location && (
-          <div style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12px", color: "var(--text-muted)" }}>
+          <div className="contact-link">
             <MapPin size={12} color="var(--text-subtle)" />
-            {client.location}
+            <span>{client.location}</span>
           </div>
         )}
       </div>
+
       {/* Tags */}
       {client.tags.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
@@ -866,8 +878,8 @@ function ClientCard({
               key={t}
               style={{
                 padding: "2px 8px",
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--border-default)",
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--border)",
                 borderRadius: "var(--radius-full)",
                 fontSize: "11px",
                 color: "var(--text-muted)",
@@ -883,37 +895,31 @@ function ClientCard({
           )}
         </div>
       )}
+
       {/* Stats Row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "8px",
-          paddingTop: "12px",
-          borderTop: "1px solid var(--border-subtle)",
-        }}
-      >
+      <div className="kpi-container">
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+          <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
             {client.totalProjects}
           </p>
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "2px 0 0 0" }}>
             Projects
           </p>
         </div>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--primary)" }}>
+          <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--primary)", margin: 0 }}>
             ${client.totalEarned.toLocaleString()}
           </p>
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "2px 0 0 0" }}>
             Earned
           </p>
         </div>
       </div>
+
       {/* Footer */}
-      <div style={{ display: "flex", gap: "6px" }}>
-        <Link href={`/dashboard/clients/${client._id}`}>
-          <Button variant="secondary" size="sm" leftIcon={<Eye size={12} />} style={{ flex: 1 }}>
+      <div style={{ display: "flex", gap: "6px", marginTop: "auto" }}>
+        <Link href={`/dashboard/clients/${client._id}`} style={{ flex: 1, display: "flex" }}>
+          <Button variant="secondary" size="sm" leftIcon={<Eye size={12} />} style={{ width: "100%" }}>
             View
           </Button>
         </Link>
@@ -938,9 +944,18 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Filter and Sorting state
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [ratingFilter, setRatingFilter] = useState<string>("all");
+  const [earnedFilter, setEarnedFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name-asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Popover toggle states
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
 
   // Modal state
   const [formOpen, setFormOpen] = useState(false);
@@ -952,6 +967,7 @@ export default function ClientsPage() {
     try {
       const params = new URLSearchParams();
       if (search) params.set("q", search);
+      // Backend api handles status filter directly for quick load
       if (statusFilter !== "all") params.set("status", statusFilter);
       const res = await fetch(`/api/clients?${params.toString()}`);
       const data = await res.json();
@@ -1013,122 +1029,497 @@ export default function ClientsPage() {
     setTotal((t) => t - 1);
   };
 
-  // Summary stats
+  // Compute overall stats (based on fetched list)
   const activeCount = clients.filter((c) => c.status === "active").length;
   const totalEarned = clients.reduce((s, c) => s + c.totalEarned, 0);
 
+  // Filter & sort locally for client-side advanced filters
+  const filteredClients = useMemo(() => {
+    return clients
+      .filter((c) => {
+        // 1. Rating Filter
+        if (ratingFilter !== "all") {
+          if (ratingFilter === "unrated") {
+            if (c.rating !== null && c.rating !== undefined) return false;
+          } else {
+            const minStars = parseInt(ratingFilter, 10);
+            if (!c.rating || c.rating < minStars) return false;
+          }
+        }
+        // 2. Minimum Earned Filter
+        if (earnedFilter !== "all") {
+          const minEarned = parseInt(earnedFilter, 10);
+          if (c.totalEarned < minEarned) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "name-asc") {
+          return a.name.localeCompare(b.name);
+        }
+        if (sortBy === "name-desc") {
+          return b.name.localeCompare(a.name);
+        }
+        if (sortBy === "earned-desc") {
+          return b.totalEarned - a.totalEarned;
+        }
+        if (sortBy === "earned-asc") {
+          return a.totalEarned - b.totalEarned;
+        }
+        if (sortBy === "projects-desc") {
+          return b.totalProjects - a.totalProjects;
+        }
+        if (sortBy === "rating-desc") {
+          return (b.rating || 0) - (a.rating || 0);
+        }
+        return 0;
+      });
+  }, [clients, ratingFilter, earnedFilter, sortBy]);
+
+  const SORT_OPTIONS = [
+    { value: "name-asc", label: "Name: A to Z" },
+    { value: "name-desc", label: "Name: Z to A" },
+    { value: "earned-desc", label: "Earnings: High to Low" },
+    { value: "earned-asc", label: "Earnings: Low to High" },
+    { value: "projects-desc", label: "Projects: High to Low" },
+    { value: "rating-desc", label: "Rating: High to Low" },
+  ];
+
+  const currentSortLabel = SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || "Name: A to Z";
+
+  const isFilterActive = statusFilter !== "all" || ratingFilter !== "all" || earnedFilter !== "all";
+  const activeFilterCount = 
+    (statusFilter !== "all" ? 1 : 0) +
+    (ratingFilter !== "all" ? 1 : 0) +
+    (earnedFilter !== "all" ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setStatusFilter("all");
+    setRatingFilter("all");
+    setEarnedFilter("all");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", width: "100%", margin: "0 auto" }}>
-        {/* Page Title + Summary */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
+      <style>{`
+        /* Premium Client Redesign Styles */
+        .client-card {
+          background: var(--surface-1);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-xl);
+          padding: 24px;
+          box-shadow: var(--shadow-sm);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          transition: all var(--dur-base) ease;
+          position: relative;
+        }
+
+        .client-card:hover {
+          transform: translateY(-2px);
+          border-color: var(--color-brand);
+          box-shadow: var(--shadow-md), 0 0 0 1px rgba(99, 102, 241, 0.05);
+        }
+
+        .kpi-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          background: var(--surface-2);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-lg);
+          padding: 12px;
+        }
+
+        .contact-link {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: var(--text-secondary);
+          text-decoration: none;
+          transition: color var(--dur-fast);
+        }
+
+        .contact-link:hover {
+          color: var(--text-primary);
+        }
+
+        .filter-popover-btn {
+          background: var(--surface-2);
+          border: 1px solid var(--border);
+          color: var(--text-primary);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          height: 36px;
+          padding: 0 12px;
+          font-size: 12px;
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: all var(--dur-fast) ease;
+        }
+
+        .filter-popover-btn:hover {
+          border-color: var(--border-strong);
+        }
+
+        .filter-popover-btn.active {
+          background: var(--color-brand-subtle);
+          border-color: var(--color-brand);
+          color: var(--color-brand);
+        }
+
+        .tag-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(99, 102, 241, 0.08);
+          border: 1px solid rgba(99, 102, 241, 0.15);
+          color: var(--text-primary);
+          padding: 3px 8px;
+          border-radius: var(--radius-md);
+          font-size: 11.5px;
+          font-weight: 500;
+        }
+      `}</style>
+
+      <main style={{ flex: 1, padding: "28px", maxWidth: "1400px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }} className="page-enter">
+        
+        {/* Page Title + Actions */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
           <div>
-            <h1 className="font-heading" style={{ fontSize: "22px", marginBottom: "4px", letterSpacing: "-0.02em" }}>
-              Client Management
+            <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em" }}>
+              Clients
             </h1>
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-              {total} client{total !== 1 ? "s" : ""} in your network
+            <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "2px" }}>
+              Manage corporate accounts, review project metrics, and analyze aggregated values.
             </p>
           </div>
 
-          <button
-            id="add-client-btn"
-            onClick={openAdd}
-            className="btn-redesign btn-redesign-primary btn-redesign-sm"
-          >
-            <Plus size={13} /> Add Client
-          </button>
-
-          {/* Stat pills */}
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {[
-              { icon: <Users size={13} />, label: "Total", value: total, color: "var(--color-brand)" },
-              { icon: <CheckCircle size={13} />, label: "Active", value: activeCount, color: "var(--color-success)" },
-              { icon: <DollarSign size={13} />, label: "Earned", value: `$${totalEarned.toLocaleString()}`, color: "var(--color-accent)" },
-            ].map((s) => (
-              <div key={s.label} style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: "10px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
-                <div style={{ width: "28px", height: "28px", borderRadius: "var(--radius)", background: `${s.color}18`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, flexShrink: 0 }}>{s.icon}</div>
-                <div>
-                  <p style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1, letterSpacing: "-0.02em" }}>{s.value}</p>
-                  <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{s.label}</p>
-                </div>
-              </div>
-            ))}
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button
+              id="add-client-btn"
+              onClick={openAdd}
+              className="btn-redesign btn-redesign-primary btn-redesign-sm"
+            >
+              <Plus size={13} /> Add Client
+            </button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
-          {/* Search */}
-          <div className="search-input-wrapper" style={{ flex: "1", minWidth: "180px", maxWidth: "320px" }}>
-            <span className="search-input-icon"><Search size={13} /></span>
-            <input
-              id="client-search"
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, company..."
-              className="search-input"
-            />
-          </div>
+        {/* KPI stats section */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+          {[
+            { icon: <Users size={15} />, label: "Total Network", value: total, color: "var(--color-brand)" },
+            { icon: <CheckCircle size={15} />, label: "Active Accounts", value: activeCount, color: "var(--color-success)" },
+            { icon: <DollarSign size={15} />, label: "Settled Value", value: `$${totalEarned.toLocaleString()}`, color: "var(--color-brand)" },
+          ].map((s) => (
+            <div 
+              key={s.label} 
+              style={{ 
+                padding: "16px 20px", 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "14px", 
+                background: "var(--surface-1)", 
+                border: "0.5px solid var(--border)", 
+                borderRadius: "var(--radius-lg)",
+                boxShadow: "var(--shadow-sm)",
+                transition: "transform var(--dur-base)",
+                cursor: "default"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-1px)"}
+              onMouseLeave={(e) => e.currentTarget.style.transform = "none"}
+            >
+              <div style={{ width: "34px", height: "34px", borderRadius: "var(--radius)", background: `${s.color}12`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, flexShrink: 0 }}>{s.icon}</div>
+              <div>
+                <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>{s.value}</p>
+                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{s.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
 
-          {/* Status filter */}
-          <div className="filter-tabs">
-            {["all", "active", "inactive", "prospect", "archived"].map((s) => (
+        {/* Advanced Filters Block */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", padding: "10px 14px", border: "1px solid var(--border)", background: "var(--surface-1)", borderRadius: "var(--radius-lg)" }}>
+            
+            {/* Search */}
+            <div className="search-input-wrapper" style={{ flex: "1", minWidth: "160px", maxWidth: "260px" }}>
+              <span className="search-input-icon"><Search size={13} /></span>
+              <input
+                id="client-search"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search clients..."
+                className="search-input"
+              />
+            </div>
+
+            {/* Collapsible Filters popover */}
+            <div style={{ position: "relative" }}>
               <button
-                key={s}
-                id={`filter-status-${s}`}
-                onClick={() => setStatusFilter(s)}
-                className={`filter-tab${statusFilter === s ? " active" : ""}`}
+                onClick={() => {
+                  setFiltersOpen(!filtersOpen);
+                  setSortOpen(false);
+                }}
+                className={`filter-popover-btn${isFilterActive ? " active" : ""}`}
               >
-                {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ flex: 1 }} />
-
-          {/* View toggle */}
-          <div className="filter-tabs">
-            {(["grid", "list"] as const).map((m) => (
-              <button
-                key={m}
-                id={`view-${m}`}
-                onClick={() => setViewMode(m)}
-                className={`filter-tab${viewMode === m ? " active" : ""}`}
-              >
-                {m === "grid" ? (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <rect x="0" y="0" width="7" height="7" rx="1.5" />
-                    <rect x="9" y="0" width="7" height="7" rx="1.5" />
-                    <rect x="0" y="9" width="7" height="7" rx="1.5" />
-                    <rect x="9" y="9" width="7" height="7" rx="1.5" />
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <rect x="0" y="1" width="16" height="2.5" rx="1.25" />
-                    <rect x="0" y="6.75" width="16" height="2.5" rx="1.25" />
-                    <rect x="0" y="12.5" width="16" height="2.5" rx="1.25" />
-                  </svg>
+                <SlidersHorizontal size={13} />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span style={{
+                    background: "var(--color-brand)",
+                    color: "white",
+                    borderRadius: "10px",
+                    padding: "1px 6px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                  }}>
+                    {activeFilterCount}
+                  </span>
                 )}
               </button>
-            ))}
+
+              {filtersOpen && (
+                <>
+                  <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setFiltersOpen(false)} />
+                  <div
+                    className="dropdown-menu"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: "6px",
+                      zIndex: 10,
+                      width: "280px",
+                      padding: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "14px",
+                      boxShadow: "var(--shadow-xl)",
+                      background: "var(--surface-1)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-lg)"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Filter Network</h4>
+                      {isFilterActive && (
+                        <button 
+                          onClick={clearAllFilters}
+                          style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Status filter selection */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Account Status</label>
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="input-redesign"
+                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)", cursor: "pointer" }}
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="prospect">Prospect</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
+
+                    {/* Rating filter selection */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Rating Score</label>
+                      <select
+                        value={ratingFilter}
+                        onChange={(e) => setRatingFilter(e.target.value)}
+                        className="input-redesign"
+                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)", cursor: "pointer" }}
+                      >
+                        <option value="all">All Ratings</option>
+                        <option value="5">5 Stars</option>
+                        <option value="4">4+ Stars</option>
+                        <option value="3">3+ Stars</option>
+                        <option value="unrated">Unrated Only</option>
+                      </select>
+                    </div>
+
+                    {/* Minimum Earned filter selection */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Total Earnings</label>
+                      <select
+                        value={earnedFilter}
+                        onChange={(e) => setEarnedFilter(e.target.value)}
+                        className="input-redesign"
+                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)", cursor: "pointer" }}
+                      >
+                        <option value="all">Any Amount</option>
+                        <option value="1000">Over $1,000</option>
+                        <option value="5000">Over $5,000</option>
+                        <option value="10000">Over $10,000</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Collapsible Sort popover */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => {
+                  setSortOpen(!sortOpen);
+                  setFiltersOpen(false);
+                }}
+                className="filter-popover-btn"
+              >
+                <ArrowUpDown size={13} />
+                <span>Sort: {currentSortLabel}</span>
+                <ChevronDown size={12} style={{ opacity: 0.7 }} />
+              </button>
+
+              {sortOpen && (
+                <>
+                  <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setSortOpen(false)} />
+                  <div
+                    className="dropdown-menu"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: "6px",
+                      zIndex: 10,
+                      width: "220px",
+                      padding: "6px 0",
+                      boxShadow: "var(--shadow-xl)",
+                      background: "var(--surface-1)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-md)"
+                    }}
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          setSortBy(opt.value);
+                          setSortOpen(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 16px",
+                          fontSize: "12.5px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          color: sortBy === opt.value ? "var(--color-brand)" : "var(--text-secondary)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span>{opt.label}</span>
+                        {sortBy === opt.value && <Check size={12} color="var(--color-brand)" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ flex: 1 }} />
+
+            {/* View toggle tabs */}
+            <div className="filter-tabs" style={{ background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", height: "36px", display: "flex", alignItems: "center" }}>
+              {(["grid", "list"] as const).map((m) => (
+                <button
+                  key={m}
+                  id={`view-${m}`}
+                  onClick={() => setViewMode(m)}
+                  className={`filter-tab${viewMode === m ? " active" : ""}`}
+                  style={{
+                    padding: "6px 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                    background: viewMode === m ? "var(--surface-1)" : "transparent",
+                    color: viewMode === m ? "var(--text-primary)" : "var(--text-muted)",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: "pointer",
+                    transition: "all var(--dur-fast)",
+                    boxShadow: viewMode === m ? "var(--shadow-xs)" : "none"
+                  }}
+                >
+                  {m === "grid" ? (
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <rect x="0" y="0" width="7" height="7" rx="1.5" />
+                      <rect x="9" y="0" width="7" height="7" rx="1.5" />
+                      <rect x="0" y="9" width="7" height="7" rx="1.5" />
+                      <rect x="9" y="9" width="7" height="7" rx="1.5" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <rect x="0" y="1" width="16" height="2.5" rx="1.25" />
+                      <rect x="0" y="6.75" width="16" height="2.5" rx="1.25" />
+                      <rect x="0" y="12.5" width="16" height="2.5" rx="1.25" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Active Filter Chips */}
+          {isFilterActive && (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600 }}>Active Filters:</span>
+              {statusFilter !== "all" && (
+                <span className="tag-badge">
+                  Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                  <button onClick={() => setStatusFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "0 0 0 4px" }}><X size={10} /></button>
+                </span>
+              )}
+              {ratingFilter !== "all" && (
+                <span className="tag-badge">
+                  Rating: {ratingFilter === "unrated" ? "Unrated" : `${ratingFilter}+ Stars`}
+                  <button onClick={() => setRatingFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "0 0 0 4px" }}><X size={10} /></button>
+                </span>
+              )}
+              {earnedFilter !== "all" && (
+                <span className="tag-badge">
+                  Earned: &gt;${parseInt(earnedFilter, 10).toLocaleString()}
+                  <button onClick={() => setEarnedFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "0 0 0 4px" }}><X size={10} /></button>
+                </span>
+              )}
+              <button onClick={clearAllFilters} style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11.5px", cursor: "pointer", fontWeight: 600, marginLeft: "4px" }}>
+                Clear All
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Content */}
+        {/* Content list/grid rendering */}
         {loading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
             {[1,2,3,4,5,6].map(i => (
               <div key={i} className="skeleton" style={{ height: "200px", borderRadius: "var(--radius-lg)" }} />
             ))}
           </div>
-        ) : clients.length === 0 ? (
+        ) : filteredClients.length === 0 ? (
           <EmptyState
             icon={<UserX />}
-            heading={search || statusFilter !== "all" ? "No clients match your search" : "No clients yet"}
-            description={search || statusFilter !== "all" ? "Try adjusting your filters" : "Add your first client to get started"}
-            actionLabel={!search && statusFilter === "all" ? "Add Client" : undefined}
+            heading={search || isFilterActive ? "No clients match your filters" : "No clients yet"}
+            description={search || isFilterActive ? "Try adjusting your search query or filters" : "Add your first client to start managing projects"}
+            actionLabel={!search && !isFilterActive ? "Add Client" : undefined}
             onActionClick={openAdd}
           />
         ) : viewMode === "grid" ? (
@@ -1139,7 +1530,7 @@ export default function ClientsPage() {
               gap: "20px",
             }}
           >
-            {clients.map((c) => (
+            {filteredClients.map((c) => (
               <ClientCard
                 key={c._id}
                 client={c}
@@ -1160,14 +1551,14 @@ export default function ClientsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map((c, i) => {
+                  {filteredClients.map((c, i) => {
                     const cfg = STATUS_CONFIG[c.status];
                     return (
                       <tr
                         key={c._id}
                         style={{
                           borderBottom:
-                            i < clients.length - 1
+                            i < filteredClients.length - 1
                               ? "1px solid var(--border-subtle)"
                               : "none",
                           transition: "background 0.15s",
@@ -1195,10 +1586,10 @@ export default function ClientsPage() {
                               {getInitials(c.name)}
                             </div>
                             <div>
-                              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
                                 {c.name}
                               </p>
-                              <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>{c.email}</p>
+                              <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>{c.email}</p>
                             </div>
                           </div>
                         </td>
@@ -1225,8 +1616,8 @@ export default function ClientsPage() {
                                 key={t}
                                 style={{
                                   padding: "2px 7px",
-                                  background: "var(--bg-elevated)",
-                                  border: "1px solid var(--border-default)",
+                                  background: "rgba(255,255,255,0.03)",
+                                  border: "1px solid var(--border)",
                                   borderRadius: "var(--radius-full)",
                                   fontSize: "11px",
                                   color: "var(--text-muted)",
@@ -1299,6 +1690,7 @@ export default function ClientsPage() {
           </div>
         )}
       </main>
+
       {/* Modals */}
       <ClientFormModal
         open={formOpen}
@@ -1311,6 +1703,7 @@ export default function ClientsPage() {
         onClose={() => setDeleteTarget(null)}
         onDeleted={handleDeleted}
       />
+
       {/* Spin keyframe */}
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -33,6 +33,9 @@ import {
   ChevronDown,
   TrendingUp,
   Sparkles,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Check,
 } from "lucide-react";
 import type {
   Project,
@@ -48,6 +51,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import ClientSelector from "@/components/shared/ClientSelector";
 import ClientDrawer from "@/components/shared/ClientDrawer";
 import ClientSummaryCard from "@/components/shared/ClientSummaryCard";
+import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -97,6 +101,19 @@ const CATEGORY_LABELS: Record<ProjectCategory, string> = {
   consulting:  "Consulting",
   other:       "Other",
 };
+
+const SORT_OPTIONS = [
+  { label: "Newest Created", field: "createdAt", order: "desc" },
+  { label: "Oldest Created", field: "createdAt", order: "asc" },
+  { label: "Due Date: Soonest", field: "dueDate", order: "asc" },
+  { label: "Due Date: Latest", field: "dueDate", order: "desc" },
+  { label: "Budget: High to Low", field: "budget", order: "desc" },
+  { label: "Budget: Low to High", field: "budget", order: "asc" },
+  { label: "Progress: High to Low", field: "progress", order: "desc" },
+  { label: "Progress: Low to High", field: "progress", order: "asc" },
+  { label: "Title: A to Z", field: "title", order: "asc" },
+  { label: "Title: Z to A", field: "title", order: "desc" },
+];
 
 const CATEGORY_COLORS: Record<ProjectCategory, string> = {
   design:      "var(--color-iris-violet)",
@@ -236,6 +253,8 @@ function ProjectFormModal({
   initial: (ProjectFormData & { _id?: string }) | null;
   onSaved: (p: Project) => void;
 }) {
+  useBodyScrollLock(open);
+
   const [form, setForm] = useState<ProjectFormData & { _id?: string }>(EMPTY_FORM);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -565,6 +584,8 @@ function DeleteModal({
   onClose: () => void;
   onDeleted: (id: string) => void;
 }) {
+  useBodyScrollLock(!!project);
+
   const [deleting, setDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -1040,6 +1061,21 @@ export default function ProjectsPage() {
   const [sortOrder,setSortOrder] = useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = useState<"grid"|"list">("grid");
 
+  // Custom filter dropdown states
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
+  const isFilterActive = statusF !== "all" || categoryF !== "all" || priorityF !== "all";
+  const activeFilterCount = (statusF !== "all" ? 1 : 0) + (categoryF !== "all" ? 1 : 0) + (priorityF !== "all" ? 1 : 0);
+
+  const clearFilters = () => {
+    setStatusF("all");
+    setCategoryF("all");
+    setPriorityF("all");
+  };
+
+  const currentSortLabel = SORT_OPTIONS.find(opt => opt.field === sortBy && opt.order === sortOrder)?.label || "Newest Created";
+
   const [formOpen,    setFormOpen]    = useState(false);
   const [editTarget,  setEditTarget]  = useState<(ProjectFormData & { _id?: string }) | null>(null);
   const [deleteTarget,setDeleteTarget]= useState<Project | null>(null);
@@ -1197,92 +1233,332 @@ export default function ProjectsPage() {
           ))}
         </div>
 
-        {/* Filters and search block */}
-        <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap", padding: "12px 16px", border: "1px solid var(--border)", background: "var(--surface-1)", borderRadius: "var(--radius-lg)" }}>
-          {/* Search */}
-          <div className="search-input-wrapper" style={{ flex:1, minWidth:"180px", maxWidth:"280px" }}>
-            <span className="search-input-icon"><Search size={13}/></span>
-            <input id="proj-search" type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects..." className="search-input"/>
-          </div>
+        {/* Clean, simplified Filters block */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", padding: "10px 14px", border: "1px solid var(--border)", background: "var(--surface-1)", borderRadius: "var(--radius-lg)" }}>
+            
+            {/* Search Input */}
+            <div className="search-input-wrapper" style={{ flex: 1, minWidth: "160px", maxWidth: "260px" }}>
+              <span className="search-input-icon"><Search size={13} /></span>
+              <input 
+                id="proj-search" 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search projects..." 
+                className="search-input" 
+              />
+            </div>
 
-          {/* Status filter */}
-          <div className="filter-tabs">
-            {["all", ...Object.keys(STATUS_CFG)].map((s) => (
-              <button key={s} id={`status-filter-${s}`} onClick={() => setStatusF(s)}
-                className={`filter-tab${statusF===s ? " active" : ""}`}>
-                {s === "all" ? "All" : STATUS_CFG[s as ProjectStatus].label}
+            {/* Filter Toggle Button */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => {
+                  setFiltersOpen(!filtersOpen);
+                  setSortOpen(false);
+                }}
+                className="btn-redesign btn-redesign-sm"
+                style={{
+                  background: isFilterActive ? "var(--color-brand-subtle)" : "var(--surface-2)",
+                  borderColor: isFilterActive ? "var(--color-brand)" : "var(--border)",
+                  color: isFilterActive ? "var(--color-brand)" : "var(--text-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  height: "36px",
+                  padding: "0 12px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                <SlidersHorizontal size={13} />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span style={{
+                    background: "var(--color-brand)",
+                    color: "white",
+                    borderRadius: "10px",
+                    padding: "1px 6px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                  }}>
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
-            ))}
-          </div>
 
-          {/* Category filter dropdown */}
-          <select
-            id="category-filter"
-            value={categoryF}
-            onChange={(e) => setCategoryF(e.target.value)}
-            className="input-redesign"
-            style={{ width: "auto", height: "36px", cursor: "pointer", fontSize: "12px" }}
-          >
-            <option value="all">All Categories</option>
-            {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
+              {filtersOpen && (
+                <>
+                  <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setFiltersOpen(false)} />
+                  <div
+                    className="dropdown-menu"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: "6px",
+                      zIndex: 10,
+                      width: "280px",
+                      padding: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "14px",
+                      boxShadow: "var(--shadow-xl)",
+                      background: "var(--surface-1)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Active Filters</h4>
+                      {isFilterActive && (
+                        <button 
+                          onClick={clearFilters}
+                          style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
+                        >
+                          Reset All
+                        </button>
+                      )}
+                    </div>
 
-          {/* Priority filter dropdown */}
-          <select id="priority-filter" value={priorityF} onChange={(e) => setPriorityF(e.target.value)}
-            className="input-redesign" style={{ width:"auto", height:"36px", cursor:"pointer", fontSize:"12px" }}>
-            <option value="all">All Priorities</option>
-            {Object.entries(PRIORITY_CFG).map(([v,c]) => (
-              <option key={v} value={v}>{c.label}</option>
-            ))}
-          </select>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Status</label>
+                      <select
+                        value={statusF}
+                        onChange={(e) => setStatusF(e.target.value)}
+                        className="input-redesign"
+                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)" }}
+                      >
+                        <option value="all">All Statuses</option>
+                        {Object.entries(STATUS_CFG).map(([v, c]) => (
+                          <option key={v} value={v}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
 
-          {/* Sorting controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="input-redesign"
-              style={{ width: "auto", height: "36px", cursor: "pointer", fontSize: "12px" }}
-            >
-              <option value="createdAt">Date Created</option>
-              <option value="dueDate">Due Date</option>
-              <option value="budget">Budget</option>
-              <option value="progress">Progress</option>
-              <option value="title">Project Title</option>
-            </select>
-            <button
-              onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
-              style={{
-                height: "36px",
-                padding: "0 10px",
-                background: "var(--surface-2)",
-                border: "1.5px solid var(--border)",
-                borderRadius: "var(--radius-md)",
-                fontSize: "12px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                color: "var(--text-secondary)",
-              }}
-            >
-              {sortOrder === "asc" ? "ASC" : "DESC"}
-            </button>
-          </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Category</label>
+                      <select
+                        value={categoryF}
+                        onChange={(e) => setCategoryF(e.target.value)}
+                        className="input-redesign"
+                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)" }}
+                      >
+                        <option value="all">All Categories</option>
+                        {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                    </div>
 
-          <div style={{ flex:1 }}/>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Priority</label>
+                      <select
+                        value={priorityF}
+                        onChange={(e) => setPriorityF(e.target.value)}
+                        className="input-redesign"
+                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)" }}
+                      >
+                        <option value="all">All Priorities</option>
+                        {Object.entries(PRIORITY_CFG).map(([v, c]) => (
+                          <option key={v} value={v}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
-          {/* View Mode Grid/List toggle */}
-          <div className="filter-tabs" style={{ flexShrink: 0 }}>
-            {(["grid","list"] as const).map((m) => (
-              <button key={m} id={`view-${m}`} onClick={() => setViewMode(m)}
-                className={`filter-tab${viewMode===m ? " active" : ""}`}>
-                {m === "grid" ? <LayoutGrid size={14}/> : <List size={14}/>}
+            {/* Sort Toggle Button */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => {
+                  setSortOpen(!sortOpen);
+                  setFiltersOpen(false);
+                }}
+                className="btn-redesign btn-redesign-sm"
+                style={{
+                  background: "var(--surface-2)",
+                  borderColor: "var(--border)",
+                  color: "var(--text-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  height: "36px",
+                  padding: "0 12px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                <ArrowUpDown size={13} />
+                <span>Sort: {currentSortLabel}</span>
+                <ChevronDown size={12} style={{ opacity: 0.7 }} />
               </button>
-            ))}
+
+              {sortOpen && (
+                <>
+                  <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setSortOpen(false)} />
+                  <div
+                    className="dropdown-menu"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: "6px",
+                      zIndex: 10,
+                      width: "220px",
+                      maxHeight: "300px",
+                      overflowY: "auto",
+                      boxShadow: "var(--shadow-xl)",
+                      background: "var(--surface-1)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    {SORT_OPTIONS.map((opt) => {
+                      const isActive = sortBy === opt.field && sortOrder === opt.order;
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => {
+                            setSortBy(opt.field as any);
+                            setSortOrder(opt.order as any);
+                            setSortOpen(false);
+                          }}
+                          className={`dropdown-item${isActive ? " active" : ""}`}
+                          style={{
+                            fontSize: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                          }}
+                        >
+                          <span>{opt.label}</span>
+                          {isActive && <Check size={12} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ flex: 1 }} />
+
+            {/* View Mode Grid/List toggle */}
+            <div className="filter-tabs" style={{ flexShrink: 0, height: "36px", padding: "2px", display: "flex", alignItems: "center" }}>
+              {(["grid", "list"] as const).map((m) => (
+                <button
+                  key={m}
+                  id={`view-${m}`}
+                  onClick={() => setViewMode(m)}
+                  className={`filter-tab${viewMode === m ? " active" : ""}`}
+                  style={{
+                    height: "30px",
+                    padding: "0 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {m === "grid" ? <LayoutGrid size={14} /> : <List size={14} />}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Active Filter Chips Row */}
+          {isFilterActive && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", padding: "2px 4px" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Active filters:</span>
+              
+              {statusF !== "all" && (
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  color: "var(--text-secondary)",
+                }}>
+                  <span>Status: <strong>{STATUS_CFG[statusF as ProjectStatus]?.label}</strong></span>
+                  <button 
+                    type="button"
+                    onClick={() => setStatusF("all")}
+                    style={{ border: "none", background: "none", cursor: "pointer", display: "flex", padding: 0, color: "var(--text-muted)" }}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {categoryF !== "all" && (
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  color: "var(--text-secondary)",
+                }}>
+                  <span>Category: <strong>{CATEGORY_LABELS[categoryF as ProjectCategory]}</strong></span>
+                  <button 
+                    type="button"
+                    onClick={() => setCategoryF("all")}
+                    style={{ border: "none", background: "none", cursor: "pointer", display: "flex", padding: 0, color: "var(--text-muted)" }}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {priorityF !== "all" && (
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  color: "var(--text-secondary)",
+                }}>
+                  <span>Priority: <strong>{PRIORITY_CFG[priorityF as ProjectPriority]?.label}</strong></span>
+                  <button 
+                    type="button"
+                    onClick={() => setPriorityF("all")}
+                    style={{ border: "none", background: "none", cursor: "pointer", display: "flex", padding: 0, color: "var(--text-muted)" }}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                style={{
+                  border: "none",
+                  background: "none",
+                  color: "var(--color-brand)",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  padding: "4px 8px",
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content list block */}

@@ -31,6 +31,7 @@ import {
 import type { Client, ClientStatus, ClientFormData } from "@/types/client";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -130,6 +131,8 @@ function EditModal({
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (open && client) {
@@ -268,8 +271,36 @@ function EditModal({
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="edit-rating">Rating (1–5)</label>
-              <input id="edit-rating" className="input-redesign" type="number" min={1} max={5} value={form.rating ?? ""} onChange={(e) => set("rating", e.target.value ? Number(e.target.value) : null)} placeholder="—" />
+              <label className="label-redesign">Rating (Click to set stars)</label>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center", height: "40px" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => set("rating", form.rating === star ? null : star)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "2px",
+                      color: form.rating && form.rating >= star ? "#f59e0b" : "var(--text-muted)",
+                      transition: "transform var(--dur-fast)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.2)"}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                  >
+                    <Star size={20} fill={form.rating && form.rating >= star ? "#f59e0b" : "transparent"} />
+                  </button>
+                ))}
+                {form.rating && (
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", marginLeft: "8px", fontWeight: 600 }}>
+                    ({form.rating} / 5)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -323,6 +354,8 @@ function DeleteModal({
   onDeleted: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
+
+  useBodyScrollLock(!!client);
 
   const handleDelete = async () => {
     if (!client) return;

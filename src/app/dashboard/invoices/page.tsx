@@ -29,6 +29,7 @@ import type { Client } from "@/types/client";
 import type { Project } from "@/types/project";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 
 // Helper for status badge styling
 const getBadgeVariant = (status: InvoiceStatus): "active" | "pending" | "inactive" => {
@@ -116,6 +117,8 @@ export default function InvoicesPage() {
   const [deleting, setDeleting] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useBodyScrollLock(!!deleteTarget);
 
   // Fetch Stats
   const fetchStats = useCallback(async () => {

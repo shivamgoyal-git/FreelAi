@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Loader2, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 
 interface Client {
   _id: string;
@@ -20,6 +21,8 @@ interface ClientDrawerProps {
 }
 
 export default function ClientDrawer({ open, onClose, onClientCreated }: { open: boolean; onClose: () => void; onClientCreated: (c: Client) => void }) {
+  useBodyScrollLock(open);
+
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");

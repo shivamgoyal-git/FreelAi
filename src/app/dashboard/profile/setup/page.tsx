@@ -829,7 +829,7 @@ function OnboardingSetupWizard() {
                       <Layers size={20} color="var(--text-muted)" style={{ margin: "0 auto 8px" }} />
                       <p style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.5 }}>
                         Start typing your skills above.<br />
-                        <span style={{ color: "var(--text-subtle)" }}>e.g. "React", "UX Writing", "Figma"</span>
+                        <span style={{ color: "var(--text-subtle)" }}>e.g. &quot;React&quot;, &quot;UX Writing&quot;, &quot;Figma&quot;</span>
                       </p>
                     </div>
                   )}

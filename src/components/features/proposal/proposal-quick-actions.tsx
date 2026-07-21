@@ -97,7 +97,7 @@ export function ProposalQuickActions({ proposalText, proposalId, proposalTitle, 
       <DeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        itemName={proposalTitle}
+        itemName={proposalTitle || "Proposal"}
         onDelete={handleDelete}
         loading={deleting}
       />

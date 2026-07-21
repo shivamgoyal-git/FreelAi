@@ -1,1674 +1,1073 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Sparkles,
   ArrowRight,
   TrendingUp,
-  Clock,
-  Zap,
-  Users,
-  Shield,
-  Briefcase,
   DollarSign,
-  ChevronRight,
-  Menu,
-  X,
+  ChevronDown,
+  Terminal,
+  Code2,
+  Check,
+  Play,
+  RotateCcw,
+  Layers,
+  Users,
+  CheckCircle2,
+  XCircle,
+  ShieldCheck,
   FileText,
-  Lock,
-  Cpu,
-  RefreshCw,
-  Plus,
-  Trash,
+  Search,
   CheckCircle,
-  HelpCircle,
-  BarChart3,
-  Calendar,
-  AlertTriangle,
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { motion, AnimatePresence, useInView, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { chartTheme } from "@/lib/chart-theme";
 
-// ── MOCK DATA FOR INTERACTIVE PREVIEWS ─────────────────────────
+// ── SPRING PHYSICS TOKENS (Emil Kowalski Standards) ───────────
+const SPRING_TACTILE = { type: "spring" as const, stiffness: 450, damping: 25 };
+const SPRING_CARD = { type: "spring" as const, stiffness: 380, damping: 26 };
+const EASE_STANDARD: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const mockRevenueData = [
-  { month: "Jan", Collected: 3200, Billed: 4000 },
-  { month: "Feb", Collected: 4100, Billed: 4800 },
-  { month: "Mar", Collected: 5600, Billed: 6000 },
-  { month: "Apr", Collected: 7200, Billed: 7500 },
-  { month: "May", Collected: 8900, Billed: 9200 },
-  { month: "Jun", Collected: 11000, Billed: 11200 },
-];
-
-const mockClients = [
-  { name: "Acme Corp", industry: "SaaS Tech", status: "Active", health: "Healthy", value: "$12,500" },
-  { name: "Design Studio V", industry: "Branding", status: "Pending", health: "Warning", value: "$4,200" },
-  { name: "Global Retail Co", industry: "E-Commerce", status: "Active", health: "At Risk", value: "$8,900" },
-];
-
-const mockProjects = [
-  { name: "Mobile App Design", client: "Acme Corp", progress: 85, status: "In Progress", dueDate: "Jul 15" },
-  { name: "Webflow Development", client: "Design Studio V", progress: 40, status: "In Progress", dueDate: "Aug 02" },
-  { name: "Brand Guidelines", client: "Global Retail Co", progress: 100, status: "Completed", dueDate: "Jun 28" },
-];
-
-const mockProposalOutlines = [
-  { section: "Executive Summary", score: 95, feedback: "Highly personalized hook. Excellent client-problem alignment." },
-  { section: "Scope & Timeline", score: 88, feedback: "Clear phases. Suggest adding 1 buffer week for QA." },
-  { section: "Pricing & Investment", score: 92, feedback: "Transparent pricing structure. Value metrics clearly highlighted." },
-];
-
-const mockInvoiceTimeline = [
-  { stage: "Draft Created", date: "Jun 20", status: "completed" },
-  { stage: "AI Compliance Review", date: "Jun 21", status: "completed" },
-  { stage: "Sent to Client", date: "Jun 22", status: "completed" },
-  { stage: "Payment Collected", date: "Jun 28", status: "active" },
-];
-
-// ── AUDIENCE TARGET DATA ────────────────────────────────────────
-
-const audienceData = {
+// ── AUDIENCE DATA ──────────────────────────────────────────────
+const audienceData: Record<string, { badge: string; title: string; desc: string; metrics: string[]; highlight: string }> = {
   developers: {
-    badge: "For Engineers & Solopreneurs",
-    title: "Scope, code, and deploy your business rules.",
-    desc: "AI helps you write detailed technical spec scopes, track complex project milestones, auto-generate billing for sprint reviews, and manage retainer contracts with zero admin stress.",
-    metrics: ["15h saved weekly on scope documents", "0 missed retainer payments", "100% compliant contracts"],
-    highlight: "Devs using FreelAI report spending 90% more time coding instead of tracking billing sheets."
+    badge: "Engineers & Solopreneurs",
+    title: "Spend 90% more time building, zero hours on billing paperwork.",
+    desc: "Auto-generate technical scope specs, milestone timelines, and sprint invoices directly from client briefs. No manual spreadsheet tracking.",
+    metrics: ["15 hours saved per proposal", "Automated retainer invoices", "100% accurate time & scope tracking"],
+    highlight: "I used to spend half my Sunday writing proposal docs. Now I generate tech scopes in 2 minutes and close $10k+ contracts on Monday.",
   },
   designers: {
-    badge: "For Creatives & Directors",
-    title: "Present stunning portfolios and pitch with power.",
-    desc: "Seamlessly map visual assets to client proposals. Leverage AI to draft clean, high-scoring creative pitches and automatically trigger visual review feedback loops.",
-    metrics: ["40% increase in pitch win rates", "Instant visual scope templates", "Clean client sign-off panels"],
-    highlight: "Designers use the portfolio integration to match their visual cases directly to job pitches."
+    badge: "Designers & Creative Directors",
+    title: "Present high-converting proposals that mirror your design standards.",
+    desc: "Map visual portfolio projects directly to client RFPs. Create crisp, structured pitches with clear revision limits and upfront deposit terms.",
+    metrics: ["40% higher proposal win rate", "Clean client sign-off terms", "Zero unpaid revision rounds"],
+    highlight: "Clients respect clear scope boundaries. FreelAI gives my design agency the polish of a $100k firm.",
   },
   editors: {
-    badge: "For Video Editors & Animators",
-    title: "Track revisions, render deadlines, and collect fees.",
-    desc: "Stop chasing clients for feedback on version drafts. Set up clear payment milestones tied directly to review sign-offs and auto-generate deposit invoices.",
-    metrics: ["No unpaid revisions", "30% faster milestone approvals", "100% upfront deposits secured"],
-    highlight: "Video editors use the escrow invoicing system to lock in fees before releasing final drafts."
+    badge: "Video Editors & Animators",
+    title: "Lock in deposits and revision limits before rendering frames.",
+    desc: "Eliminate endless client revision requests. Link payment milestones directly to draft reviews and export client-ready contract terms.",
+    metrics: ["100% upfront deposits secured", "Defined revision milestones", "Automated overdue reminders"],
+    highlight: "No more sending final renders while waiting for payment. Every project milestone is backed by Stripe deposits.",
   },
   writers: {
-    badge: "For Copywriters & Content Strategists",
-    title: "Turn copywriting briefs into professional proposals.",
-    desc: "Leverage AI to draft custom outlines, set strategic milestone timelines, and monitor client communications with proactive follow-up recommendations.",
-    metrics: ["Draft proposals in 10 minutes", "94% outreach response rates", "Structured content schedules"],
-    highlight: "Writers use the AI Partner to analyze client feedback and suggest professional email follow-ups."
+    badge: "Copywriters & Content Strategists",
+    title: "Convert raw client briefs into high-ticket content strategy proposals.",
+    desc: "Format deliverables, research schedules, and content calendars into structured 3-tier options clients can choose from immediately.",
+    metrics: ["Draft proposals in under 3 minutes", "94% client response rate", "Automated retainer renewals"],
+    highlight: "Telling clients 'Basic vs Premium' tripled my average deal size. The 3-tier proposal generator paid for itself on day one.",
   },
   consultants: {
-    badge: "For Strategic Consultants & Advisors",
-    title: "Track consulting hours and advisory retainers.",
-    desc: "Manage multiple high-value clients, track hourly advisory allocations, and automatically trigger smart billing reports at the end of the month.",
-    metrics: ["100% accurate time logs", "Automated recurring retainers", "Sleek financial summaries"],
-    highlight: "Advisors use the earnings dashboard to track overall collections and active advisor retainer allocations."
+    badge: "Advisors & Strategic Consultants",
+    title: "Structure advisory retainers and collect recurring fees on time.",
+    desc: "Track hourly advisory allocations, send monthly retainer billing summaries, and maintain transparent client relationship metrics.",
+    metrics: ["Automated monthly retainers", "Full pipeline visibility", "Professional client reporting"],
+    highlight: "My advisory clients receive professional, itemized retainer summaries automatically every month.",
   },
   agencies: {
-    badge: "For Boutique Agencies & Studio Teams",
-    title: "Scale operations, manage teams, and invoice clients.",
-    desc: "Organize client communication feeds, track contractor work packages, and distribute centralized invoicing summaries to external stakeholders.",
-    metrics: ["Centralized multi-client CRM", "Automatic contractor margins tracking", "$1.2M+ invoicing capacity"],
-    highlight: "Boutique agencies leverage the full dashboard suite as their primary client operations cockpit."
-  }
+    badge: "Boutique Agencies & Studios",
+    title: "Scale client operations without adding administrative headcount.",
+    desc: "Manage multi-client project feeds, centralize team invoicing, and track overall settled revenue in a single high-precision cockpit.",
+    metrics: ["Centralized client CRM", "Multi-seat team workspace", "$1M+ annual invoicing capacity"],
+    highlight: "FreelAI is the central nervous system for our boutique agency. It handles proposals, CRM, and billing flawlessly.",
+  },
 };
 
-export default function RedesignedLandingPage() {
-  const [activeTourTab, setActiveTourTab] = useState<"dashboard" | "clients" | "projects" | "proposals" | "invoices" | "analytics">("dashboard");
-  const [activeAudience, setActiveAudience] = useState<"developers" | "designers" | "editors" | "writers" | "consultants" | "agencies">("developers");
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annually">("annually");
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+// ── PROMPT PRESETS FOR LIVE HERO SIMULATOR ─────────────────────
+const PROMPT_PRESETS = [
+  {
+    id: "saas",
+    label: "Next.js SaaS Brief",
+    title: "Proposal for Aether Capital",
+    scope: "Full-Stack Next.js 15 App Architecture & Stripe Integration",
+    deliverables: [
+      "Deliverable 1: Design System & Component Audit",
+      "Deliverable 2: Stripe Billing Webhooks & Auth Flow",
+      "Deliverable 3: 8-Week Milestone Execution & QA",
+    ],
+    investment: "$12,000 USD (Fixed Fee)",
+    score: "96%",
+  },
+  {
+    id: "mobile",
+    label: "Mobile App Audit",
+    title: "Proposal for Horizon Health",
+    scope: "iOS / Android React Native UX & Performance Audit",
+    deliverables: [
+      "Deliverable 1: Native Gesture & Frame Rate Optimization",
+      "Deliverable 2: Offline Data Sync & Storage Architecture",
+      "Deliverable 3: App Store Deployment & QA Checklist",
+    ],
+    investment: "$8,500 USD (Fixed Fee)",
+    score: "94%",
+  },
+  {
+    id: "retainer",
+    label: "Advisory Retainer",
+    title: "Proposal for Zenith Studio",
+    scope: "Senior Fractional CTO & Technical Advisory Retainer",
+    deliverables: [
+      "Deliverable 1: Weekly Architecture & Code Reviews",
+      "Deliverable 2: Emergency Production Outage Escort",
+      "Deliverable 3: Monthly Developer Hiring Assessments",
+    ],
+    investment: "$5,000 USD / month (Retainer)",
+    score: "98%",
+  },
+];
 
-  // Simulated AI actions for the interactive Partner pane
-  const [aiActions, setAiActions] = useState([
-    {
-      id: 1,
-      title: "Invoice #INV-2026-08 is ready for Acme Corp",
-      desc: "Milestone 'Mobile App Design Draft' was marked completed yesterday. Click below to send the $2,500 invoice.",
-      actionLabel: "Send Invoice",
-      type: "invoice",
-      completed: false
-    },
-    {
-      id: 2,
-      title: "Follow-up suggested with Design Studio V",
-      desc: "Proposal sent 4 days ago has been viewed 3 times. Recommend checking in with our optimized follow-up script.",
-      actionLabel: "View Draft Script",
-      type: "follow-up",
-      completed: false
-    },
-    {
-      id: 3,
-      title: "New high-match project opportunity found",
-      desc: "Found an Upwork posting for 'SaaS Branding Redesign' matching your skills with a 92% confidence score.",
-      actionLabel: "Generate Proposal Outline",
-      type: "match",
-      completed: false
+// ── HERO LIVE PROPOSAL SIMULATOR ───────────────────────────────
+function HeroLiveProposalSimulator() {
+  const shouldReduceMotion = useReducedMotion();
+  const [selectedPreset, setSelectedPreset] = useState(PROMPT_PRESETS[0]);
+  const [activeTab, setActiveTab] = useState<"md" | "json" | "tiers">("md");
+  const [displayedScope, setDisplayedScope] = useState(selectedPreset.scope);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const handleSelectPreset = (preset: typeof PROMPT_PRESETS[0]) => {
+    if (preset.id === selectedPreset.id) return;
+    setSelectedPreset(preset);
+
+    if (shouldReduceMotion) {
+      setDisplayedScope(preset.scope);
+      return;
     }
-  ]);
 
-  const handleRunAiAction = (id: number) => {
-    setAiActions((prev) =>
-      prev.map((act) => (act.id === id ? { ...act, completed: true } : act))
-    );
+    setIsTyping(true);
+    setDisplayedScope("");
+
+    let idx = 0;
+    const interval = setInterval(() => {
+      if (idx < preset.scope.length) {
+        setDisplayedScope(preset.scope.slice(0, idx + 1));
+        idx++;
+      } else {
+        clearInterval(interval);
+        setIsTyping(false);
+      }
+    }, 16);
   };
 
   return (
-    <div style={{ background: "var(--bg-base)", minHeight: "100vh" }}>
-      <Navbar />
+    <motion.div
+      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.45, ease: EASE_STANDARD, delay: 0.15 }}
+      style={{
+        background: "var(--surface-1)",
+        border: "0.5px solid var(--border-strong)",
+        borderRadius: "var(--radius-cards)",
+        padding: "20px",
+        boxShadow: "var(--shadow-xl)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "14px",
+      }}
+    >
+      {/* Preset Prompt Pills */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", overflowX: "auto", paddingBottom: "4px" }}>
+        <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontFamily: "var(--font-berkeley-mono), monospace", flexShrink: 0 }}>
+          Sample RFP:
+        </span>
+        {PROMPT_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            onClick={() => handleSelectPreset(preset)}
+            style={{
+              padding: "3px 9px",
+              fontSize: "11px",
+              fontFamily: "var(--font-berkeley-mono), monospace",
+              fontWeight: selectedPreset.id === preset.id ? 590 : 400,
+              borderRadius: "var(--radius-pills)",
+              border: selectedPreset.id === preset.id ? "0.5px solid var(--color-brand)" : "0.5px solid var(--border)",
+              background: selectedPreset.id === preset.id ? "var(--surface-2)" : "transparent",
+              color: selectedPreset.id === preset.id ? "var(--color-brand)" : "var(--text-muted)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "all var(--dur-fast)",
+            }}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
 
-      {/* ── HERO SECTION ────────────────────────────────────────── */}
-      <section
+      {/* Terminal Bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "0.5px solid var(--border)", paddingBottom: "10px", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "6px" }}>
+          {[
+            { id: "md", label: "proposal.md", icon: Terminal },
+            { id: "json", label: "analysis.json", icon: Code2 },
+            { id: "tiers", label: "tiers.md", icon: Layers },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "3px 8px",
+                borderRadius: "var(--radius-buttons)",
+                border: "none",
+                background: activeTab === tab.id ? "var(--surface-2)" : "transparent",
+                color: activeTab === tab.id ? "var(--color-brand)" : "var(--text-muted)",
+                fontSize: "11px",
+                fontFamily: "var(--font-berkeley-mono), monospace",
+                fontWeight: 590,
+                cursor: "pointer",
+                transition: "all var(--dur-fast)",
+              }}
+            >
+              <tab.icon size={11} />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <span style={{ fontSize: "10px", fontWeight: 590, padding: "2px 6px", borderRadius: "var(--radius-pills)", background: "rgba(39,166,68,0.12)", color: "var(--color-pulse-green)" }}>
+          ✦ {selectedPreset.score} Match Score
+        </span>
+      </div>
+
+      {/* Terminal Code Screen */}
+      <div
         style={{
-          position: "relative",
-          paddingTop: "140px",
-          paddingBottom: "80px",
-          overflow: "hidden",
+          fontFamily: "var(--font-berkeley-mono), monospace",
+          fontSize: "11.5px",
+          lineHeight: 1.6,
+          color: "var(--text-secondary)",
+          background: "var(--bg-base)",
+          padding: "14px",
+          borderRadius: "var(--radius-inputs)",
+          border: "0.5px solid var(--border)",
+          minHeight: "190px",
         }}
       >
-        {/* Subtle grid background */}
+        <AnimatePresence mode="wait">
+          {activeTab === "md" && (
+            <motion.div key={selectedPreset.id + "-md"} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <p style={{ color: "var(--color-brand)", margin: "0 0 6px 0" }}># {selectedPreset.title}</p>
+              <p style={{ margin: "0 0 8px 0", color: "var(--text-muted)" }}>
+                &gt; Scope: {isTyping ? displayedScope : selectedPreset.scope}
+                {isTyping && <span style={{ animation: "pulse 0.8s infinite" }}>|</span>}
+              </p>
+              <div style={{ borderLeft: "2px solid var(--color-brand)", paddingLeft: "10px", margin: "8px 0" }}>
+                {selectedPreset.deliverables.map((d, i) => (
+                  <p key={i} style={{ margin: 0, color: "var(--text-primary)" }}>• {d}</p>
+                ))}
+              </div>
+              <p style={{ color: "var(--color-pulse-green)", margin: "8px 0 0 0" }}>
+                Est. Contract Investment: {selectedPreset.investment}
+              </p>
+            </motion.div>
+          )}
+
+          {activeTab === "json" && (
+            <motion.div key={selectedPreset.id + "-json"} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <pre style={{ margin: 0, color: "var(--color-brand)" }}>
+{`{\n  "client": "${selectedPreset.title.replace("Proposal for ", "")}",\n  "matchScore": ${Number(selectedPreset.score.replace("%", "")) / 100},\n  "confidenceLevel": "High",\n  "recommendedRate": "${selectedPreset.investment}",\n  "status": "Ready for Client Export"\n}`}
+              </pre>
+            </motion.div>
+          )}
+
+          {activeTab === "tiers" && (
+            <motion.div key={selectedPreset.id + "-tiers"} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <p style={{ margin: "0 0 6px 0", color: "var(--text-muted)" }}>// 3-Tier Pricing Breakdown</p>
+              <p style={{ margin: 0, color: "var(--text-primary)" }}>Tier 1 (Basic Scope): Core MVP &amp; Audit</p>
+              <p style={{ margin: "4px 0", color: "var(--color-brand)" }}>Tier 2 (Standard Scope): {selectedPreset.investment} [Recommended]</p>
+              <p style={{ margin: 0, color: "var(--color-pulse-green)" }}>Tier 3 (Premium Scope): Full Architecture &amp; Priority SLA</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--text-muted)" }}>
+        <span>✓ Profile Skills Matched</span>
+        <span>✓ Past Case Studies Linked</span>
+        <span style={{ color: "var(--color-brand)" }}>Ready to Export .md</span>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── MOUSE-REACTIVE SPOTLIGHT BENTO CARD ─────────────────────
+function SpotlightBentoCard({
+  icon: Icon,
+  title,
+  body,
+  badgeText,
+  badgeColor,
+  iconColor,
+  iconBg,
+  wide = false,
+}: {
+  icon: any;
+  title: string;
+  body: string;
+  badgeText: string;
+  badgeColor: string;
+  iconColor: string;
+  iconBg: string;
+  wide?: boolean;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      whileHover={{ y: -4, borderColor: "var(--border-strong)" }}
+      transition={SPRING_CARD}
+      style={{
+        position: "relative",
+        background: "var(--surface-1)",
+        border: "0.5px solid var(--border)",
+        borderRadius: "var(--radius-cards)",
+        padding: "28px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: "20px",
+        overflow: "hidden",
+      }}
+    >
+      {isHovered && (
         <div
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-            maskImage: "radial-gradient(ellipse 60% 50% at 50% 10%, black 40%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse 60% 50% at 50% 10%, black 40%, transparent 100%)",
             pointerEvents: "none",
+            background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(228,242,34,0.06), transparent 80%)`,
           }}
         />
+      )}
 
-        <div className="container-main" style={{ position: "relative", zIndex: 10, textAlign: "center" }}>
-          <div className="animate-fade-in" style={{ marginBottom: "24px" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--spacing-8)",
-                padding: "var(--spacing-4) var(--spacing-12)",
-                background: "var(--surface-2)",
-                border: "0.5px solid var(--border)",
-                borderRadius: "var(--radius-pills)",
-                fontSize: "var(--text-caption)",
-                fontWeight: 510,
-                color: "var(--text-primary)",
-              }}
-            >
-              <Sparkles size={12} style={{ color: "var(--color-acid-lime)" }} />
-              Free to start · No credit card required
-            </span>
-          </div>
-
-          <h1
-            className="font-display animate-fade-in-up"
-            style={{
-              fontSize: "clamp(34px, 5.5vw, 64px)",
-              lineHeight: 1.05,
-              fontWeight: 510,
-              maxWidth: "820px",
-              margin: "0 auto var(--spacing-24) auto",
-              color: "var(--text-primary)",
-            }}
-          >
-            Focus on your craft. <br />
-            Let AI run your business.
-          </h1>
-
-          <p
-            className="animate-fade-in-up"
-            style={{
-              fontSize: "var(--text-body-lg)",
-              lineHeight: 1.5,
-              color: "var(--text-muted)",
-              maxWidth: "600px",
-              margin: "0 auto var(--spacing-40) auto",
-            }}
-          >
-            The single workspace that turns proposal writing, project tracking, invoicing, and client follow-ups into automated flow.
-          </p>
-
-          <div
-            className="animate-fade-in-up"
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "var(--spacing-16)",
-              flexWrap: "wrap",
-              marginBottom: "var(--spacing-64)",
-            }}
-          >
-            <Link href="/signup">
-              <Button variant="primary" size="lg" rightIcon={<ArrowRight size={15} />}>
-                Start Your Business Free
-              </Button>
-            </Link>
-            <a href="#tour">
-              <Button variant="secondary" size="lg">
-                View Interactive Tour
-              </Button>
-            </a>
-          </div>
-
-          {/* Credibility Metrics Grid */}
-          <div
-            className="animate-fade-in-up"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "var(--spacing-24)",
-              maxWidth: "800px",
-              margin: "0 auto",
-              borderTop: "0.5px solid var(--border)",
-              paddingTop: "var(--spacing-36)",
-            }}
-          >
-            <div>
-              <h3 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", margin: 0 }}>
-                12 hours
-              </h3>
-              <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
-                Saved weekly on admin
-              </p>
-            </div>
-            <div>
-              <h3 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", margin: 0 }}>
-                94%
-              </h3>
-              <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
-                Proposal win rate
-              </p>
-            </div>
-            <div>
-              <h3 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", margin: 0 }}>
-                +$2.4K
-              </h3>
-              <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
-                Avg. monthly revenue growth
-              </p>
-            </div>
-          </div>
+      <div>
+        <div style={{ width: "36px", height: "36px", borderRadius: "var(--radius-inputs)", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor, marginBottom: "16px" }}>
+          <Icon size={18} />
         </div>
-      </section>
+        <h3 className="font-heading" style={{ fontSize: "20px", fontWeight: 590, color: "var(--text-primary)", margin: 0 }}>
+          {title}
+        </h3>
+        <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "6px", lineHeight: 1.6, maxWidth: wide ? "480px" : "100%" }}>
+          {body}
+        </p>
+      </div>
 
-      {/* ── INTERACTIVE PRODUCT PREVIEW TOUR ─────────────────────── */}
-      <section
-        id="tour"
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-          background: "rgba(255,255,255,0.01)",
-        }}
-      >
-        <div className="container-main">
-          <div style={{ textAlign: "center", marginBottom: "var(--spacing-40)" }}>
-            <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-              The Cockpit of Your Business
-            </h2>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "500px", margin: "0 auto" }}>
-              Explore the real application interface. Toggle tabs below to see how FreelAI integrates your entire business operations.
-            </p>
-          </div>
+      <div style={{ padding: "12px 16px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Metric Indicator</span>
+        <span style={{ fontSize: "13px", fontWeight: 590, color: badgeColor, fontVariantNumeric: "tabular-nums" }}>{badgeText}</span>
+      </div>
+    </motion.div>
+  );
+}
 
-          {/* Switcher Tab Headers */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              gap: "var(--spacing-8)",
-              background: "var(--surface-1)",
-              border: "0.5px solid var(--border)",
-              borderRadius: "var(--radius-inputs)",
-              padding: "var(--spacing-8)",
-              maxWidth: "800px",
-              margin: "0 auto var(--spacing-36) auto",
-            }}
-          >
-            {[
-              { id: "dashboard", label: "Dashboard" },
-              { id: "clients", label: "Client CRM" },
-              { id: "projects", label: "Projects" },
-              { id: "proposals", label: "AI Proposals" },
-              { id: "invoices", label: "Smart Invoices" },
-              { id: "analytics", label: "Analytics" },
-            ].map((tab) => {
-              const active = tab.id === activeTourTab;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTourTab(tab.id as any)}
-                  style={{
-                    padding: "var(--spacing-8) var(--spacing-16)",
-                    background: active ? "var(--surface-2)" : "transparent",
-                    color: active ? "var(--text-primary)" : "var(--text-muted)",
-                    border: "none",
-                    borderRadius: "var(--radius)",
-                    fontSize: "var(--text-caption)",
-                    fontWeight: 510,
-                    cursor: "pointer",
-                    transition: "all var(--dur-fast)",
-                  }}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+// ── STICKY SCROLL STORYTELLING FEATURE SHOWCASE ───────────────
+function StickyScrollFeatureShowcase() {
+  const [activeStep, setActiveStep] = useState(0);
 
-          {/* Tour View Frame */}
-          <div
-            className="glass-card"
-            style={{
-              maxWidth: "1000px",
-              margin: "0 auto",
-              minHeight: "440px",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* Mock OS Frame Header */}
-            <div
+  const steps = [
+    {
+      num: "01",
+      title: "Paste Raw Client Brief or RFP",
+      desc: "Drop any client email, Upwork description, or project scope brief into FreelAI.",
+      code: "> Intake: Client RFP parsed\n> Deliverables identified: 3\n> Target Budget: $12,000 USD",
+    },
+    {
+      num: "02",
+      title: "Match GitHub & Portfolio Case Studies",
+      desc: "The AI queries your linked portfolio to build proof items and verify tech stack alignment.",
+      code: "✦ Matching GitHub Repos:\n  - github.com/user/aether-design-system (98% match)\n  - github.com/user/stripe-webhooks-sdk (94% match)",
+    },
+    {
+      num: "03",
+      title: "Export Client-Ready 3-Tier Document",
+      desc: "Export Markdown (.md) or print formatted PDFs with integrated Stripe deposit checkout links.",
+      code: "# Final Scope Exported\n✓ Tier 1 (Basic Scope): $6,000\n✓ Tier 2 (Standard Scope): $12,000\n✓ Tier 3 (Premium Scope): $18,000\nStatus: 100% Upfront Deposit Enabled",
+    },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "36px", alignItems: "start" }} className="grid-responsive-2">
+      {/* Left Column: Interactive Story Step Selector */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <span style={{ fontSize: "11px", fontWeight: 590, color: "var(--color-brand)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Interactive Workflow Engine
+        </span>
+        <h3 className="font-heading" style={{ fontSize: "28px", fontWeight: 590, color: "var(--text-primary)", margin: 0 }}>
+          How FreelAI scopes high-value deals in seconds.
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+          {steps.map((s, idx) => (
+            <button
+              key={s.num}
+              onClick={() => setActiveStep(idx)}
               style={{
-                height: "36px",
-                background: "var(--surface-2)",
-                borderBottom: "0.5px solid var(--border)",
+                padding: "16px 20px",
+                borderRadius: "var(--radius-cards)",
+                border: activeStep === idx ? "0.5px solid var(--color-brand)" : "0.5px solid var(--border)",
+                background: activeStep === idx ? "var(--surface-2)" : "var(--surface-1)",
+                textAlign: "left",
+                cursor: "pointer",
                 display: "flex",
-                alignItems: "center",
-                padding: "0 var(--spacing-16)",
-                gap: "var(--spacing-8)",
+                gap: "14px",
+                alignItems: "flex-start",
+                transition: "all var(--dur-fast)",
               }}
             >
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ff5f56" }} />
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ffbd2e" }} />
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#27c93f" }} />
-              <span
-                className="font-mono-meta"
-                style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "var(--spacing-16)" }}
-              >
-                app.freelai.com/dashboard/{activeTourTab}
+              <span style={{ fontSize: "12px", fontFamily: "var(--font-berkeley-mono), monospace", color: activeStep === idx ? "var(--color-brand)" : "var(--text-muted)", fontWeight: 590 }}>
+                {s.num}
               </span>
-            </div>
-
-            {/* Mock Screen Content Panel */}
-            <div style={{ padding: "var(--spacing-28)", flex: 1, background: "var(--surface-0)", display: "flex", flexDirection: "column" }}>
-              
-              {/* TAB 1: DASHBOARD */}
-              {activeTourTab === "dashboard" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-20)", width: "100%" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--spacing-8)" }}>
-                    <div>
-                      <h4 className="font-heading" style={{ fontSize: "var(--text-body-sm)", color: "var(--text-primary)", margin: 0 }}>
-                        Welcome back, Shivam
-                      </h4>
-                      <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
-                        Here is your proactive briefing report.
-                      </p>
-                    </div>
-                    <Badge variant="active">Healthy</Badge>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--spacing-16)" }} className="grid-responsive-3">
-                    <div style={{ padding: "var(--spacing-16)", background: "var(--surface-1)", borderRadius: "var(--radius-cards)", border: "0.5px solid var(--border)" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Collected Revenue</span>
-                      <h3 style={{ fontSize: "20px", color: "var(--text-primary)", margin: "4px 0" }}>$14,280</h3>
-                      <span style={{ fontSize: "11px", color: "var(--color-pulse-green)" }}>+18% this month</span>
-                    </div>
-                    <div style={{ padding: "var(--spacing-16)", background: "var(--surface-1)", borderRadius: "var(--radius-cards)", border: "0.5px solid var(--border)" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Active Projects</span>
-                      <h3 style={{ fontSize: "20px", color: "var(--text-primary)", margin: "4px 0" }}>4 Active</h3>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>2 proposals pending</span>
-                    </div>
-                    <div style={{ padding: "var(--spacing-16)", background: "var(--surface-1)", borderRadius: "var(--radius-cards)", border: "0.5px solid var(--border)" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Outstanding Invoiced</span>
-                      <h3 style={{ fontSize: "20px", color: "var(--text-primary)", margin: "4px 0" }}>$3,500</h3>
-                      <span style={{ fontSize: "11px", color: "var(--color-coral-red)" }}>1 invoice overdue</span>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: "var(--spacing-16)",
-                      background: "rgba(99, 102, 241, 0.04)",
-                      border: "0.5px solid rgba(99, 102, 241, 0.2)",
-                      borderLeft: "3px solid var(--color-iris-violet)",
-                      borderRadius: "var(--radius-cards)",
-                      display: "flex",
-                      gap: "var(--spacing-12)",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <Sparkles size={16} color="var(--color-iris-violet)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                    <div>
-                      <h4 className="font-heading" style={{ fontSize: "var(--text-caption)", color: "var(--text-primary)", margin: 0 }}>
-                        AI Partner Recommendation
-                      </h4>
-                      <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: "4px 0 0 0", lineHeight: 1.4 }}>
-                        Proposal to Design Studio V has been viewed. Send check-in follow-up. Also, Milestone 3 of App Design project is 85% complete; ready to request feedback.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: CLIENTS */}
-              {activeTourTab === "clients" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-16)" }}>
-                  <div className="flex-between">
-                    <h4 className="font-heading" style={{ fontSize: "var(--text-body-sm)", color: "var(--text-primary)", margin: 0 }}>
-                      Clients Directory
-                    </h4>
-                    <Button variant="primary" size="sm" leftIcon={<Plus size={13} />}>Add Client</Button>
-                  </div>
-
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="data-table">
-                      <thead>
-                        <tr style={{ background: "var(--surface-1)" }}>
-                          <th style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>Client Name</th>
-                          <th style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>Industry</th>
-                          <th style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>Status</th>
-                          <th style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>Health</th>
-                          <th style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>Total Value</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {mockClients.map((client, idx) => (
-                          <tr key={idx} style={{ borderBottom: "0.5px solid var(--border)" }}>
-                            <td style={{ padding: "var(--spacing-12) var(--spacing-16)", fontWeight: 510, color: "var(--text-primary)" }}>{client.name}</td>
-                            <td style={{ padding: "var(--spacing-12) var(--spacing-16)", color: "var(--text-secondary)" }}>{client.industry}</td>
-                            <td style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>
-                              <Badge variant={client.status === "Active" ? "active" : "pending"}>{client.status}</Badge>
-                            </td>
-                            <td style={{ padding: "var(--spacing-12) var(--spacing-16)" }}>
-                              <span
-                                style={{
-                                  color: client.health === "Healthy" ? "var(--color-pulse-green)" : client.health === "Warning" ? "var(--color-iris-violet)" : "var(--color-coral-red)",
-                                  fontWeight: 510,
-                                  fontSize: "var(--text-caption)",
-                                }}
-                              >
-                                {client.health}
-                              </span>
-                            </td>
-                            <td style={{ padding: "var(--spacing-12) var(--spacing-16)", fontWeight: 510, color: "var(--text-primary)" }}>{client.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: PROJECTS */}
-              {activeTourTab === "projects" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-16)" }}>
-                  <div className="flex-between">
-                    <h4 className="font-heading" style={{ fontSize: "var(--text-body-sm)", color: "var(--text-primary)", margin: 0 }}>
-                      Active Projects
-                    </h4>
-                    <Button variant="primary" size="sm" leftIcon={<Plus size={13} />}>Create Project</Button>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--spacing-16)" }} className="grid-responsive-3">
-                    {mockProjects.map((project, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          background: "var(--surface-1)",
-                          border: "0.5px solid var(--border)",
-                          borderRadius: "var(--radius-cards)",
-                          padding: "var(--spacing-16)",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "var(--spacing-12)",
-                        }}
-                      >
-                        <div>
-                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{project.client}</span>
-                          <h4 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", margin: "2px 0 0 0" }}>
-                            {project.name}
-                          </h4>
-                        </div>
-                        <div>
-                          <div className="flex-between" style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>
-                            <span>Progress</span>
-                            <span>{project.progress}%</span>
-                          </div>
-                          <div style={{ height: "4px", background: "var(--surface-3)", borderRadius: "2px", overflow: "hidden" }}>
-                            <div style={{ width: `${project.progress}%`, height: "100%", background: "var(--color-brand)", borderRadius: "2px" }} />
-                          </div>
-                        </div>
-                        <div className="flex-between" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                          <span>Due {project.dueDate}</span>
-                          <Badge variant={project.status === "Completed" ? "active" : "pending"}>{project.status}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 4: PROPOSALS */}
-              {activeTourTab === "proposals" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "var(--spacing-20)" }} className="grid-responsive-2">
-                  {/* Left Column: Draft Output */}
-                  <div
-                    style={{
-                      background: "var(--surface-1)",
-                      border: "0.5px solid var(--border)",
-                      borderRadius: "var(--radius-cards)",
-                      padding: "var(--spacing-20)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--spacing-12)",
-                    }}
-                  >
-                    <div className="flex-between">
-                      <span className="font-mono-meta" style={{ fontSize: "11px", color: "var(--text-muted)" }}>PROPOSAL_OUTLINE.MD</span>
-                      <Badge variant="active">92% Win Match</Badge>
-                    </div>
-                    <div style={{ borderTop: "0.5px solid var(--border)", paddingTop: "var(--spacing-12)" }}>
-                      <h4 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", margin: "0 0 var(--spacing-8) 0" }}>
-                        Project: Mobile App Redesign
-                      </h4>
-                      <p style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", lineHeight: 1.5, margin: 0 }}>
-                        <strong>1. Solution Outline:</strong> Restructuring navigation to reduce task friction by 30%. Build high-fidelity prototype flows in Figma, followed by detailed components review sessions...
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right Column: AI Scoring */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-12)" }}>
-                    <div
-                      style={{
-                        background: "var(--surface-1)",
-                        border: "0.5px solid var(--border)",
-                        borderRadius: "var(--radius-cards)",
-                        padding: "var(--spacing-16)",
-                      }}
-                    >
-                      <h4 className="font-heading" style={{ fontSize: "var(--text-caption)", color: "var(--text-primary)", margin: "0 0 var(--spacing-12) 0" }}>
-                        AI Score Analysis
-                      </h4>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-8)" }}>
-                        {mockProposalOutlines.map((item, idx) => (
-                          <div key={idx} style={{ fontSize: "11px", borderBottom: "0.5px solid var(--border)", paddingBottom: "var(--spacing-8)" }}>
-                            <div className="flex-between">
-                              <span style={{ fontWeight: 510, color: "var(--text-secondary)" }}>{item.section}</span>
-                              <span style={{ color: "var(--color-pulse-green)" }}>{item.score}%</span>
-                            </div>
-                            <p style={{ color: "var(--text-muted)", margin: "2px 0 0 0" }}>{item.feedback}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 5: INVOICES */}
-              {activeTourTab === "invoices" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.7fr", gap: "var(--spacing-20)" }} className="grid-responsive-2">
-                  <div
-                    style={{
-                      background: "var(--surface-1)",
-                      border: "0.5px solid var(--border)",
-                      borderRadius: "var(--radius-cards)",
-                      padding: "var(--spacing-24)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--spacing-20)",
-                    }}
-                  >
-                    <div className="flex-between" style={{ borderBottom: "0.5px solid var(--border)", paddingBottom: "var(--spacing-12)" }}>
-                      <div>
-                        <h4 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)", margin: 0 }}>Invoice #INV-2026-08</h4>
-                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Issued Jun 22, 2026</span>
-                      </div>
-                      <Badge variant="active">Collected</Badge>
-                    </div>
-
-                    <div className="flex-between" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      <div>
-                        <strong>Billed To:</strong>
-                        <p style={{ margin: "2px 0 0 0" }}>Acme Corp</p>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <strong>Amount Due:</strong>
-                        <p style={{ margin: "2px 0 0 0", fontSize: "15px", color: "var(--text-primary)", fontWeight: 510 }}>$2,500.00</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "var(--surface-1)",
-                      border: "0.5px solid var(--border)",
-                      borderRadius: "var(--radius-cards)",
-                      padding: "var(--spacing-16)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--spacing-12)",
-                    }}
-                  >
-                    <h4 className="font-heading" style={{ fontSize: "var(--text-caption)", color: "var(--text-primary)", margin: 0 }}>
-                      Invoice Timeline
-                    </h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-12)", position: "relative" }}>
-                      {mockInvoiceTimeline.map((item, idx) => (
-                        <div key={idx} style={{ display: "flex", gap: "var(--spacing-12)", alignItems: "flex-start" }}>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                            <div
-                              style={{
-                                width: "12px",
-                                height: "12px",
-                                borderRadius: "50%",
-                                background: item.status === "completed" ? "var(--color-pulse-green)" : "var(--color-brand)",
-                                border: "2px solid var(--surface-1)",
-                              }}
-                            />
-                            {idx < mockInvoiceTimeline.length - 1 && (
-                              <div style={{ width: "2px", height: "24px", background: "var(--border)" }} />
-                            )}
-                          </div>
-                          <div>
-                            <p style={{ fontSize: "12px", margin: 0, fontWeight: 510, color: "var(--text-primary)" }}>{item.stage}</p>
-                            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{item.date}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 6: ANALYTICS */}
-              {activeTourTab === "analytics" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-16)", width: "100%" }}>
-                  <div className="flex-between">
-                    <h4 className="font-heading" style={{ fontSize: "var(--text-body-sm)", color: "var(--text-primary)", margin: 0 }}>
-                      Earnings Analytics
-                    </h4>
-                    <div style={{ display: "flex", gap: "var(--spacing-12)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px" }}>
-                        <span style={{ width: "8px", height: "8px", background: "var(--color-signal-teal)", borderRadius: "2px" }} />
-                        <span style={{ color: "var(--text-secondary)" }}>Collected</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px" }}>
-                        <span style={{ width: "8px", height: "8px", background: "var(--color-iris-violet)", borderRadius: "2px" }} />
-                        <span style={{ color: "var(--text-secondary)" }}>Billed</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ width: "100%", height: "260px" }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={mockRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-signal-teal)" stopOpacity={0.15}/>
-                            <stop offset="95%" stopColor="var(--color-signal-teal)" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-iris-violet)" stopOpacity={0.15}/>
-                            <stop offset="95%" stopColor="var(--color-iris-violet)" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid stroke={chartTheme.grid.stroke} strokeDasharray={chartTheme.grid.strokeDasharray} vertical={false} />
-                        <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={chartTheme.tooltip.contentStyle} />
-                        <Area type="monotone" dataKey="Collected" stroke="var(--color-signal-teal)" strokeWidth={1.5} fillOpacity={1} fill="url(#colorCollected)" />
-                        <Area type="monotone" dataKey="Billed" stroke="var(--color-iris-violet)" strokeWidth={1.5} fillOpacity={1} fill="url(#colorBilled)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── WHO IS FREELAI FOR? ─────────────────────────────────── */}
-      <section
-        id="audience"
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-        }}
-      >
-        <div className="container-main">
-          <div style={{ textAlign: "center", marginBottom: "var(--spacing-40)" }}>
-            <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-              Tailored to Your Freelance Workflow
-            </h2>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "500px", margin: "0 auto" }}>
-              Whether you are coding software, designing interfaces, or running an agency, FreelAI fits your scope.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "220px 1fr",
-              gap: "var(--spacing-40)",
-              alignItems: "flex-start",
-            }}
-            className="grid-responsive-2"
-          >
-            {/* Left Column: Switcher buttons */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-8)" }}>
-              {[
-                { id: "developers", label: "Developers" },
-                { id: "designers", label: "Designers" },
-                { id: "editors", label: "Video Editors" },
-                { id: "writers", label: "Writers" },
-                { id: "consultants", label: "Consultants" },
-                { id: "agencies", label: "Agencies" },
-              ].map((role) => {
-                const active = role.id === activeAudience;
-                return (
-                  <button
-                    key={role.id}
-                    onClick={() => setActiveAudience(role.id as any)}
-                    className={`sidebar-nav-item${active ? " active" : ""}`}
-                    style={{
-                      textAlign: "left",
-                      padding: "0 var(--spacing-16)",
-                      height: "40px",
-                      borderRadius: "var(--radius-inputs)",
-                      background: active ? "var(--surface-2)" : "transparent",
-                      color: active ? "var(--text-primary)" : "var(--text-muted)",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: 510,
-                      transition: "all var(--dur-fast)",
-                    }}
-                  >
-                    {role.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Right Column: Content card */}
-            <div
-              className="glass-card"
-              style={{
-                padding: "var(--spacing-32)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--spacing-20)",
-                minHeight: "300px",
-                justifyContent: "space-between",
-              }}
-            >
               <div>
-                <Badge variant="active" style={{ marginBottom: "var(--spacing-16)" }}>
-                  {audienceData[activeAudience].badge}
-                </Badge>
-                <h3 className="font-heading" style={{ fontSize: "var(--text-body-lg)", color: "var(--text-primary)", margin: "0 0 var(--spacing-12) 0" }}>
-                  {audienceData[activeAudience].title}
-                </h3>
-                <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>
-                  {audienceData[activeAudience].desc}
+                <h4 style={{ fontSize: "14.5px", fontWeight: 510, color: activeStep === idx ? "var(--text-primary)" : "var(--text-secondary)", margin: 0 }}>
+                  {s.title}
+                </h4>
+                <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "4px 0 0 0", lineHeight: 1.5 }}>
+                  {s.desc}
                 </p>
               </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "var(--spacing-16)",
-                  borderTop: "0.5px solid var(--border)",
-                  paddingTop: "var(--spacing-24)",
-                  marginTop: "var(--spacing-24)",
-                }}
-                className="grid-responsive-3"
-              >
-                {audienceData[activeAudience].metrics.map((metric, i) => (
-                  <div key={i}>
-                    <CheckCircle size={14} color="var(--color-pulse-green)" style={{ marginBottom: "var(--spacing-4)" }} />
-                    <p style={{ fontSize: "var(--text-caption)", color: "var(--text-primary)", fontWeight: 510, margin: 0 }}>
-                      {metric}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* ── AI BUSINESS PARTNER SECTION ──────────────────────────── */}
-      <section
-        id="ai-partner"
+      {/* Right Column: Sticky Code Display Terminal */}
+      <div
         style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-          background: "rgba(255,255,255,0.01)",
+          position: "sticky",
+          top: "90px",
+          background: "var(--surface-1)",
+          border: "0.5px solid var(--border-strong)",
+          borderRadius: "var(--radius-cards)",
+          padding: "24px",
+          boxShadow: "var(--shadow-xl)",
+          minHeight: "280px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
         }}
       >
-        <div className="container-main">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "45fr 55fr",
-              gap: "60px",
-              alignItems: "center",
-            }}
-            className="grid-responsive-2"
-          >
-            {/* Left: Info */}
-            <div>
-              <div style={{ marginBottom: "20px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "var(--spacing-6)",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "var(--color-iris-violet)",
-                  }}
-                >
-                  <Cpu size={12} />
-                  Proactive Intelligence
-                </span>
-              </div>
-
-              <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-16)" }}>
-                Meet Your AI Business Partner
-              </h2>
-
-              <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "var(--spacing-24)" }}>
-                FreelAI doesn&apos;t wait for prompts. It actively analyzes your sales pipeline, milestone statuses, and client communications to feed critical recommendations directly to your dashboard.
-              </p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-16)" }}>
-                <div style={{ display: "flex", gap: "var(--spacing-12)" }}>
-                  <TrendingUp size={16} color="var(--color-pulse-green)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                  <div>
-                    <h4 style={{ fontSize: "14px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>Predictive Client Health</h4>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>Analyzes feedback cycles to warn you of risk elements before payments are delayed.</p>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "var(--spacing-12)" }}>
-                  <FileText size={16} color="var(--color-signal-teal)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                  <div>
-                    <h4 style={{ fontSize: "14px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>Automated Milestone Trigger</h4>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>Auto-compiles invoices when scopes are completed, reducing collections friction.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Interactive UI Pane */}
-            <div
-              className="glass-card"
-              style={{
-                padding: "var(--spacing-24)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--spacing-16)",
-              }}
-            >
-              <div className="flex-between" style={{ borderBottom: "0.5px solid var(--border)", paddingBottom: "var(--spacing-12)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-8)" }}>
-                  <Sparkles size={14} color="var(--color-iris-violet)" />
-                  <span style={{ fontSize: "var(--text-caption)", fontWeight: 510, color: "var(--text-primary)" }}>Active Recommendations</span>
-                </div>
-                <span className="font-mono-meta" style={{ fontSize: "10px", color: "var(--text-muted)" }}>UPDATED JUST NOW</span>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-12)" }}>
-                {aiActions.map((act) => (
-                  <div
-                    key={act.id}
-                    style={{
-                      padding: "var(--spacing-16)",
-                      background: act.completed ? "rgba(39, 166, 68, 0.02)" : "var(--surface-2)",
-                      border: act.completed ? "1px dashed var(--color-pulse-green)" : "1px solid var(--border)",
-                      borderRadius: "var(--radius)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--spacing-12)",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <div>
-                      <h4 style={{ fontSize: "13px", fontWeight: 510, color: act.completed ? "var(--text-muted)" : "var(--text-primary)", margin: 0 }}>
-                        {act.title}
-                      </h4>
-                      <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "4px 0 0 0", lineHeight: 1.4 }}>
-                        {act.desc}
-                      </p>
-                    </div>
-
-                    {!act.completed ? (
-                      <Button
-                        variant={act.type === "match" ? "primary" : "secondary"}
-                        size="sm"
-                        style={{ width: "fit-content" }}
-                        onClick={() => handleRunAiAction(act.id)}
-                      >
-                        {act.actionLabel}
-                      </Button>
-                    ) : (
-                      <span style={{ fontSize: "11px", color: "var(--color-pulse-green)", fontWeight: 510, display: "flex", alignItems: "center", gap: "4px" }}>
-                        <CheckCircle size={12} /> Action Executed
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS SECTION ────────────────────────────────── */}
-      <section
-        id="journey"
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-        }}
-      >
-        <div className="container-main" style={{ textAlign: "center" }}>
-          <div style={{ marginBottom: "var(--spacing-16)" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--spacing-6)",
-                fontSize: "11px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--color-brand)",
-              }}
-            >
-              <Zap size={11} />
-              Simple Workflow
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "0.5px solid var(--border)", paddingBottom: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Terminal size={14} color="var(--color-brand)" />
+            <span style={{ fontSize: "12px", fontFamily: "var(--font-berkeley-mono), monospace", color: "var(--text-primary)", fontWeight: 590 }}>
+              step-{steps[activeStep].num}-preview.log
             </span>
           </div>
+          <span style={{ fontSize: "11px", color: "var(--color-brand)", fontFamily: "var(--font-berkeley-mono), monospace" }}>
+            Step {activeStep + 1} of 3
+          </span>
+        </div>
 
-          <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-            Up and running in 3 steps
-          </h2>
-          <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "460px", margin: "0 auto var(--spacing-56) auto" }}>
-            No complicated sheets or databases. FreelAI builds your operational core in minutes.
-          </p>
-
-          <div
+        <AnimatePresence mode="wait">
+          <motion.pre
+            key={activeStep}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "var(--spacing-24)",
-              maxWidth: "900px",
-              margin: "0 auto",
+              fontFamily: "var(--font-berkeley-mono), monospace",
+              fontSize: "12px",
+              lineHeight: 1.6,
+              color: "var(--color-pulse-green)",
+              background: "var(--bg-base)",
+              padding: "16px",
+              borderRadius: "var(--radius-inputs)",
+              border: "0.5px solid var(--border)",
+              margin: 0,
+              whiteSpace: "pre-wrap",
             }}
-            className="grid-responsive-3"
+          >
+            {steps[activeStep].code}
+          </motion.pre>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// ── INTERACTIVE BEFORE VS AFTER COMPARISON TOGGLE ──────────
+function InteractiveBeforeAfter() {
+  const [mode, setMode] = useState<"after" | "before">("after");
+
+  return (
+    <div
+      style={{
+        background: "var(--surface-1)",
+        border: "0.5px solid var(--border)",
+        borderRadius: "var(--radius-cards)",
+        padding: "32px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+        <div>
+          <span style={{ fontSize: "11px", fontWeight: 590, color: "var(--color-brand)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Operational Impact Audit
+          </span>
+          <h3 className="font-heading" style={{ fontSize: "24px", fontWeight: 590, color: "var(--text-primary)", margin: "4px 0 0 0" }}>
+            {mode === "after" ? "With FreelAI Precision Operating System" : "Traditional Freelancing Chaos"}
+          </h3>
+        </div>
+
+        <div style={{ display: "flex", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-pills)", padding: "3px" }}>
+          <button
+            onClick={() => setMode("before")}
+            style={{
+              padding: "6px 14px",
+              fontSize: "12px",
+              fontWeight: mode === "before" ? 590 : 400,
+              borderRadius: "var(--radius-pills)",
+              border: "none",
+              background: mode === "before" ? "rgba(235,87,87,0.15)" : "transparent",
+              color: mode === "before" ? "var(--color-coral-red)" : "var(--text-muted)",
+              cursor: "pointer",
+              transition: "all var(--dur-fast)",
+            }}
+          >
+            Before FreelAI
+          </button>
+          <button
+            onClick={() => setMode("after")}
+            style={{
+              padding: "6px 14px",
+              fontSize: "12px",
+              fontWeight: mode === "after" ? 590 : 400,
+              borderRadius: "var(--radius-pills)",
+              border: "none",
+              background: mode === "after" ? "var(--surface-2)" : "transparent",
+              color: mode === "after" ? "var(--color-brand)" : "var(--text-muted)",
+              cursor: "pointer",
+              transition: "all var(--dur-fast)",
+            }}
+          >
+            With FreelAI ✦
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {mode === "after" ? (
+          <motion.div
+            key="after"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}
           >
             {[
-              {
-                step: "01",
-                title: "Import Profile",
-                desc: "Upload your resume or past proposals. The AI parser instantly builds your portfolio catalog, rate structures, and skills context."
-              },
-              {
-                step: "02",
-                title: "Propose & Win",
-                desc: "Paste any client brief. AI reviews matching data and drafts high-impact proposals with timeline phases and optimized price brackets."
-              },
-              {
-                step: "03",
-                title: "Deliver & Get Paid",
-                desc: "Coordinate milestones. AI monitors progress, prompts client approvals, and routes payments instantly through escrow locks."
-              }
-            ].map((item) => (
-              <div
-                key={item.step}
-                className="glass-card animate-fade-in-up"
-                style={{
-                  padding: "var(--spacing-24)",
-                  textAlign: "left",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "var(--spacing-12)",
-                }}
-              >
-                <span style={{ fontSize: "var(--text-caption)", fontWeight: 510, color: "var(--color-brand)" }}>
-                  {item.step}
-                </span>
-                <h4 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)", margin: 0 }}>
-                  {item.title}
-                </h4>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
-                  {item.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TRANSFORMATION MATRIX (WITHOUT VS WITH) ──────────────── */}
-      <section
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-          background: "rgba(255,255,255,0.01)",
-        }}
-      >
-        <div className="container-main">
-          <div style={{ textAlign: "center", marginBottom: "var(--spacing-56)" }}>
-            <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-              The Transformation Matrix
-            </h2>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "480px", margin: "0 auto" }}>
-              How running your business on FreelAI compares to traditional, admin-heavy freelance operations.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "var(--spacing-24)",
-              maxWidth: "800px",
-              margin: "0 auto",
-            }}
-            className="grid-responsive-2"
-          >
-            {/* Column 1: Without */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-16)" }}>
-              <h3 className="font-heading" style={{ fontSize: "15px", color: "var(--text-muted)", marginBottom: "var(--spacing-8)" }}>
-                Without FreelAI
-              </h3>
-              {[
-                "Drafting proposals manually from scratch for every client brief.",
-                "Scattering client data across spreadsheets, emails, and chat folders.",
-                "Chasing clients for payment milestones and draft review sign-offs.",
-                "Spending weekend hours reconciling invoices and bank statements."
-              ].map((text, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "var(--spacing-16)",
-                    background: "var(--surface-1)",
-                    border: "0.5px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    fontSize: "var(--text-caption)",
-                    color: "var(--text-secondary)",
-                    display: "flex",
-                    gap: "var(--spacing-12)",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <AlertTriangle size={14} color="var(--color-coral-red)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                  <span>{text}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Column 2: With */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-16)" }}>
-              <h3 className="font-heading" style={{ fontSize: "15px", color: "var(--color-pulse-green)", marginBottom: "var(--spacing-8)" }}>
-                With FreelAI
-              </h3>
-              {[
-                "AI auto-generates proposals based on your historical win records.",
-                "Client CRM compiles communication, documents, and logs into one feed.",
-                "AI monitors milestone deliverables and prompts automatic payment transfers.",
-                "centralized business intelligence reports collections and tax logs."
-              ].map((text, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "var(--spacing-16)",
-                    background: "var(--surface-1)",
-                    border: "0.5px solid var(--color-pulse-green)33",
-                    borderRadius: "var(--radius)",
-                    fontSize: "var(--text-caption)",
-                    color: "var(--text-primary)",
-                    display: "flex",
-                    gap: "var(--spacing-12)",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <CheckCircle size={14} color="var(--color-pulse-green)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                  <span>{text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── OUTCOME-FOCUSED SOCIAL PROOF ─────────────────────────── */}
-      <section
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-        }}
-      >
-        <div className="container-main">
-          <div style={{ textAlign: "center", marginBottom: "var(--spacing-56)" }}>
-            <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-              Outcome-Driven Results
-            </h2>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "480px", margin: "0 auto" }}>
-              Verified freelancers scale their revenues and reclaim design hours.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "var(--spacing-24)",
-            }}
-            className="grid-responsive-3"
-          >
-            {[
-              {
-                metric: "Saved 15 hours/week",
-                desc: "“Before FreelAI, I spent Sundays building spreadsheets and drafting pitch scopes. Now the AI business partner drafts retainer contracts and syncs client milestones.”",
-                author: "Sarah K.",
-                role: "Product Designer"
-              },
-              {
-                metric: "+40% Win Rate",
-                desc: "“The proposal generator analyzed my past design contracts and suggested optimal price brackets. I won my last three pitches in record time.”",
-                author: "David M.",
-                role: "Full-Stack Developer"
-              },
-              {
-                metric: "0 Overdue Invoices",
-                desc: "“Payment escrow has been a game-changer. Clients lock in deposit milestones upfront, and automatic reminders chase final collections.”",
-                author: "Elena R.",
-                role: "3D Motion Animator"
-              }
+              { title: "3-Tier Scope Architecture", desc: "Clients choose between Basic, Standard, and Premium tiers.", icon: CheckCircle2, color: "var(--color-pulse-green)" },
+              { title: "100% Upfront Stripe Deposits", desc: "Automated deposit collection before any work begins.", icon: CheckCircle2, color: "var(--color-pulse-green)" },
+              { title: "Zero Overdue Balance Reminders", desc: "Polite automated dunning follows up on invoices.", icon: CheckCircle2, color: "var(--color-pulse-green)" },
+              { title: "94.8% Proposal Match Score", desc: "Past portfolio case studies automatically linked into pitches.", icon: CheckCircle2, color: "var(--color-pulse-green)" },
             ].map((item, i) => (
-              <div
-                key={i}
-                className="glass-card"
-                style={{
-                  padding: "var(--spacing-28)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: "var(--spacing-20)",
-                }}
-              >
-                <div>
-                  <h4 style={{ fontSize: "18px", color: "var(--color-brand)", fontWeight: 510, margin: "0 0 var(--spacing-12) 0" }}>
-                    {item.metric}
-                  </h4>
-                  <p style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
-                    {item.desc}
-                  </p>
+              <div key={i} style={{ padding: "16px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <item.icon size={16} color={item.color} />
+                  <span style={{ fontSize: "13px", fontWeight: 590, color: "var(--text-primary)" }}>{item.title}</span>
                 </div>
-                <div style={{ borderTop: "0.5px solid var(--border)", paddingTop: "var(--spacing-12)", display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "var(--text-caption)", fontWeight: 510, color: "var(--text-primary)" }}>{item.author}</span>
-                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{item.role}</span>
-                </div>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECURITY & PRIVATE AI FOUNDATION ────────────────────── */}
-      <section
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-          background: "rgba(255,255,255,0.01)",
-        }}
-      >
-        <div className="container-main">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "60px",
-              alignItems: "center",
-            }}
-            className="grid-responsive-2"
+          </motion.div>
+        ) : (
+          <motion.div
+            key="before"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}
           >
+            {[
+              { title: "Messy Unstructured PDFs", desc: "Vague project descriptions leads to severe scope creep.", icon: XCircle, color: "var(--color-coral-red)" },
+              { title: "Unpaid Sprints & Late Payments", desc: "Chasing clients after 45+ days for settled invoices.", icon: XCircle, color: "var(--color-coral-red)" },
+              { title: "Manual Sunday Docs Paperwork", desc: "Spending 15+ hours weekly writing custom scopes.", icon: XCircle, color: "var(--color-coral-red)" },
+              { title: "Undercharging Senior Expertise", desc: "No market data to price proposals at true value.", icon: XCircle, color: "var(--color-coral-red)" },
+            ].map((item, i) => (
+              <div key={i} style={{ padding: "16px", background: "var(--bg-base)", border: "0.5px solid rgba(235,87,87,0.2)", borderRadius: "var(--radius-inputs)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <item.icon size={16} color={item.color} />
+                  <span style={{ fontSize: "13px", fontWeight: 590, color: "var(--text-primary)" }}>{item.title}</span>
+                </div>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── CONVERSATIONAL CHAT TESTIMONIAL CARDS ───────────────────
+function ConversationalTestimonials() {
+  const testimonials = [
+    {
+      author: "Alex Rivera",
+      role: "Senior Full-Stack Engineer",
+      avatar: "AR",
+      quote: "Telling clients 'Basic vs Premium' tripled my average deal size. The proposal generator paid for itself on day one.",
+      handle: "@arivera_dev",
+    },
+    {
+      author: "Elena Rostova",
+      role: "Design Systems Architect",
+      avatar: "ER",
+      quote: "Clients respect clear scope boundaries. FreelAI gives my boutique design agency the polish of a $100k studio.",
+      handle: "@elena_ui",
+    },
+    {
+      author: "Marcus Chen",
+      role: "Fractional CTO & Advisor",
+      avatar: "MC",
+      quote: "No more sending renders while waiting for payment. Every milestone is backed by automated Stripe deposits.",
+      handle: "@mchen_tech",
+    },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+      {testimonials.map((t, idx) => (
+        <motion.div
+          key={idx}
+          whileHover={{ y: -3 }}
+          transition={SPRING_TACTILE}
+          style={{
+            padding: "20px",
+            background: "var(--surface-1)",
+            border: "0.5px solid var(--border)",
+            borderRadius: "var(--radius-cards)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 590, color: "var(--color-brand)" }}>
+              {t.avatar}
+            </div>
             <div>
-              <div style={{ marginBottom: "20px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "var(--spacing-6)",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "var(--color-pulse-green)",
-                  }}
-                >
-                  <Lock size={12} />
-                  Enterprise Trust
-                </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 590, color: "var(--text-primary)" }}>{t.author}</span>
+                <ShieldCheck size={13} color="var(--color-brand)" />
               </div>
-
-              <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-16)" }}>
-                Your Business. Private by Design.
-              </h2>
-
-              <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "var(--spacing-24)" }}>
-                We believe your client data, proposals, and financials are your competitive advantage. FreelAI enforces absolute data separation.
-              </p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-12)", fontSize: "13px", color: "var(--text-secondary)" }}>
-                <div style={{ display: "flex", gap: "var(--spacing-8)", alignItems: "center" }}>
-                  <CheckCircle size={14} color="var(--color-pulse-green)" />
-                  <span>Your proposal contents are never used to train global models.</span>
-                </div>
-                <div style={{ display: "flex", gap: "var(--spacing-8)", alignItems: "center" }}>
-                  <CheckCircle size={14} color="var(--color-pulse-green)" />
-                  <span>Secure bank-grade credentials with NextAuth authentication.</span>
-                </div>
-                <div style={{ display: "flex", gap: "var(--spacing-8)", alignItems: "center" }}>
-                  <CheckCircle size={14} color="var(--color-pulse-green)" />
-                  <span>Ready for syncing Stripe, QuickBooks, and calendars.</span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="glass-card"
-              style={{
-                padding: "var(--spacing-32)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--spacing-20)",
-              }}
-            >
-              <h4 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)", margin: 0 }}>
-                Integrations Pipeline
-              </h4>
-              <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", margin: 0 }}>
-                FreelAI securely syncs with your business stack (coming soon):
-              </p>
-
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--spacing-12)" }}>
-                {["Stripe", "QuickBooks", "Google Calendar", "Slack", "Figma", "Upwork"].map((stack) => (
-                  <span
-                    key={stack}
-                    className="font-mono-meta"
-                    style={{
-                      padding: "var(--spacing-6) var(--spacing-12)",
-                      background: "var(--surface-2)",
-                      border: "0.5px solid var(--border)",
-                      borderRadius: "var(--radius)",
-                      fontSize: "11px",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {stack}
-                  </span>
-                ))}
-              </div>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{t.role}</span>
             </div>
           </div>
-        </div>
-      </section>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: 0, fontStyle: "italic" }}>
+            "{t.quote}"
+          </p>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
-      {/* ── PRICING SECTION ─────────────────────────────────────── */}
-      <section
-        id="pricing"
+// ── LANDING PAGE MAIN COMPONENT ────────────────────────────────
+export default function LandingPage() {
+  const shouldReduceMotion = useReducedMotion();
+  const [activeAudience, setActiveAudience] = useState("developers");
+
+  const { scrollYProgress } = useScroll();
+  const heroRotateX = useTransform(scrollYProgress, [0, 0.2], [8, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.2], [0.97, 1.0]);
+
+  const activeAudienceContent = audienceData[activeAudience] || audienceData.developers;
+
+  const heroContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.05,
+      },
+    },
+  };
+
+  const heroItemVariants = {
+    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 14 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: EASE_STANDARD },
+    },
+  };
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-base)",
+        minHeight: "100vh",
+        color: "var(--text-primary)",
+        fontFamily: "var(--font-inter-variable), sans-serif",
+        position: "relative",
+        overflowX: "hidden",
+      }}
+    >
+      {/* Scroll Progress Bar at top of screen */}
+      <motion.div
         style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "2px",
+          background: "var(--color-brand)",
+          scaleX: scrollYProgress,
+          transformOrigin: "0% 0%",
+          zIndex: 100,
         }}
-      >
-        <div className="container-main">
-          <div style={{ textAlign: "center", marginBottom: "var(--spacing-48)" }}>
-            <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-              Sleek, Transparent Plans
-            </h2>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "480px", margin: "0 auto var(--spacing-28) auto" }}>
-              Choose the plan that matches your freelance scale. Free to start, upgrade anytime.
-            </p>
+      />
 
-            {/* Toggle Billing */}
-            <div
-              style={{
-                display: "inline-flex",
-                background: "var(--surface-1)",
-                border: "0.5px solid var(--border)",
-                borderRadius: "var(--radius-inputs)",
-                padding: "3px",
-              }}
-            >
-              <button
-                onClick={() => setBillingPeriod("monthly")}
-                style={{
-                  padding: "var(--spacing-6) var(--spacing-16)",
-                  background: billingPeriod === "monthly" ? "var(--surface-3)" : "transparent",
-                  color: billingPeriod === "monthly" ? "var(--text-primary)" : "var(--text-muted)",
-                  border: "none",
-                  borderRadius: "var(--radius)",
-                  fontSize: "var(--text-caption)",
-                  fontWeight: 510,
-                  cursor: "pointer",
-                }}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingPeriod("annually")}
-                style={{
-                  padding: "var(--spacing-6) var(--spacing-16)",
-                  background: billingPeriod === "annually" ? "var(--surface-3)" : "transparent",
-                  color: billingPeriod === "annually" ? "var(--text-primary)" : "var(--text-muted)",
-                  border: "none",
-                  borderRadius: "var(--radius)",
-                  fontSize: "var(--text-caption)",
-                  fontWeight: 510,
-                  cursor: "pointer",
-                }}
-              >
-                Yearly (Save 20%)
-              </button>
-            </div>
-          </div>
+      {/* Subtle Ambient Background Light */}
+      <motion.div
+        animate={shouldReduceMotion ? {} : { y: [0, -12, 0], opacity: [0.25, 0.45, 0.25] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          top: "-120px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "600px",
+          height: "400px",
+          background: "radial-gradient(circle, rgba(228,242,34,0.06) 0%, transparent 70%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "var(--spacing-24)",
-              maxWidth: "960px",
-              margin: "0 auto",
-            }}
-            className="grid-responsive-3"
+      <Navbar />
+
+      {/* ── 1. HERO SECTION WITH 3D PERSPECTIVE SCROLL TILT ── */}
+      <section style={{ padding: "80px 24px 40px", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "40px", alignItems: "center" }} className="grid-responsive-2">
+          {/* Left Hero Staggered Copy */}
+          <motion.div
+            variants={heroContainerVariants}
+            initial="hidden"
+            animate="visible"
+            style={{ display: "flex", flexDirection: "column", gap: "20px" }}
           >
-            {/* Starter Plan */}
-            <div
-              className="glass-card"
-              style={{
-                padding: "var(--spacing-28)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "420px",
-              }}
-            >
-              <div>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 510 }}>STARTER</span>
-                <h3 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", margin: "4px 0" }}>
-                  Free
-                </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "var(--spacing-20)" }}>
-                  Perfect for starting solopreneurs.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-8)", fontSize: "12px", color: "var(--text-secondary)" }}>
-                  <span>✓ 3 proposal generation drafts / mo</span>
-                  <span>✓ Client CRM (up to 5 clients)</span>
-                  <span>✓ Basic invoicing tools</span>
-                </div>
-              </div>
-              <Link href="/signup">
-                <Button variant="secondary" style={{ width: "100%", justifyContent: "center", marginTop: "var(--spacing-24)" }}>
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-
-            {/* Pro Plan */}
-            <div
-              className="glass-card"
-              style={{
-                padding: "var(--spacing-28)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "420px",
-                border: "2px solid var(--color-brand)",
-                position: "relative",
-              }}
-            >
-              <div
+            <motion.div variants={heroItemVariants} style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <span
                 style={{
-                  position: "absolute",
-                  top: "-10px",
-                  right: "24px",
-                  background: "var(--color-brand)",
-                  color: "var(--color-on-brand)",
-                  fontSize: "9px",
-                  fontWeight: 700,
+                  fontSize: "11px",
+                  fontWeight: 590,
+                  fontFamily: "var(--font-berkeley-mono), monospace",
                   padding: "2px 8px",
                   borderRadius: "var(--radius-pills)",
-                  textTransform: "uppercase",
+                  background: "var(--surface-2)",
+                  border: "0.5px solid var(--border)",
+                  color: "var(--color-brand)",
                 }}
               >
-                RECOMMENDED
-              </div>
-              <div>
-                <span style={{ fontSize: "11px", color: "var(--color-brand)", fontWeight: 510 }}>PRO PROFESSIONAL</span>
-                <h3 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", margin: "4px 0" }}>
-                  {billingPeriod === "annually" ? "$19" : "$24"}
-                  <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 400 }}> / month</span>
-                </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "var(--spacing-20)" }}>
-                  For serious freelancers building pipelines.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-8)", fontSize: "12px", color: "var(--text-secondary)" }}>
-                  <span>✓ Unlimited AI proposal drafts</span>
-                  <span>✓ Unlimited clients & projects</span>
-                  <span>✓ Proactive AI recommendation actions</span>
-                  <span>✓ central financial analytics</span>
-                </div>
-              </div>
-              <Link href="/signup">
-                <Button variant="primary" style={{ width: "100%", justifyContent: "center", marginTop: "var(--spacing-24)" }}>
-                  Go Pro Now
-                </Button>
-              </Link>
-            </div>
+                FREELAI 2.0 • 100% FREE FREELANCE SYSTEM
+              </span>
+            </motion.div>
 
-            {/* Agency Plan */}
-            <div
-              className="glass-card"
+            <motion.h1
+              variants={heroItemVariants}
+              className="font-heading"
               style={{
-                padding: "var(--spacing-28)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "420px",
+                fontSize: "46px",
+                fontWeight: 590,
+                lineHeight: 1.06,
+                letterSpacing: "-0.022em",
+                color: "var(--text-primary)",
+                margin: 0,
               }}
             >
-              <div>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 510 }}>AGENCY</span>
-                <h3 className="font-heading" style={{ fontSize: "28px", color: "var(--text-primary)", margin: "4px 0" }}>
-                  {billingPeriod === "annually" ? "$49" : "$59"}
-                  <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 400 }}> / month</span>
-                </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "var(--spacing-20)" }}>
-                  For boutique agencies and studios.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-8)", fontSize: "12px", color: "var(--text-secondary)" }}>
-                  <span>✓ Unlimited proposal & contract sets</span>
-                  <span>✓ Multi-contractor margin tracking</span>
-                  <span>✓ Custom branding for client feeds</span>
-                  <span>✓ Dedicated account managers</span>
-                </div>
-              </div>
+              Stop losing client deals <br />
+              <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>to sloppy proposals.</span>
+            </motion.h1>
+
+            <motion.p variants={heroItemVariants} style={{ fontSize: "15.5px", lineHeight: 1.6, color: "var(--text-secondary)", margin: 0, maxWidth: "520px" }}>
+              Turn raw job posts into structured, client-ready proposals in minutes. Scope deliverables, match portfolio proof, and manage client contracts 100% free.
+            </motion.p>
+
+            <motion.div variants={heroItemVariants} style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", paddingTop: "8px" }}>
               <Link href="/signup">
-                <Button variant="secondary" style={{ width: "100%", justifyContent: "center", marginTop: "var(--spacing-24)" }}>
-                  Contact Sales
+                <Button variant="primary" size="lg" rightIcon={<ArrowRight size={15} />}>
+                  Get Started Free
                 </Button>
               </Link>
-            </div>
-          </div>
+              <Link href="/dashboard">
+                <Button variant="outline" size="lg">
+                  Explore Live Demo
+                </Button>
+              </Link>
+            </motion.div>
+          </motion.div>
+
+          {/* Right Hero Column: Scroll 3D Tilt Terminal Simulator */}
+          <motion.div style={{ perspective: 1000, rotateX: shouldReduceMotion ? 0 : heroRotateX, scale: heroScale }}>
+            <HeroLiveProposalSimulator />
+          </motion.div>
         </div>
       </section>
 
-      {/* ── FAQ SECTION ─────────────────────────────────────────── */}
-      <section
-        style={{
-          padding: "var(--spacing-80) 0",
-          borderTop: "0.5px solid var(--border)",
-          background: "rgba(255,255,255,0.01)",
-        }}
-      >
-        <div className="container-main">
-          <div style={{ textAlign: "center", marginBottom: "var(--spacing-56)" }}>
-            <h2 className="font-heading" style={{ fontSize: "var(--text-heading-sm)", marginBottom: "var(--spacing-12)" }}>
-              Frequently Answered
-            </h2>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-muted)", maxWidth: "480px", margin: "0 auto" }}>
-              Everything you need to know about setting up your freelance cockpit on FreelAI.
-            </p>
-          </div>
+      {/* ── 2. STICKY SCROLL STORYTELLING SHOWCASE ── */}
+      <section style={{ padding: "60px 24px", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <StickyScrollFeatureShowcase />
+      </section>
 
-          <div style={{ maxWidth: "680px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--spacing-12)" }}>
-            {[
-              {
-                q: "Is FreelAI another freelancer marketplace?",
-                a: "No. We do not charge marketplace commissions or control your relationship with clients. FreelAI is a private operations command center designed to organize and scale your existing business."
-              },
-              {
-                q: "How does the AI Proposal Engine draft outlines?",
-                a: "By pasting a job brief or project description, the AI analyzes your previous contract scopes, rate preferences, and matches key competencies to draft structured project proposal drafts."
-              },
-              {
-                q: "Is my business data secure?",
-                a: "Yes. All client records, proposal contents, and earnings logs are strictly separated and stored in isolated database vaults. We never use your proprietary business documents to train global AI models."
-              },
-              {
-                q: "Can I try FreelAI with demo data?",
-                a: "Absolutely. When you sign up, you can generate a demo workspace with one click to explore high-fidelity mock charts, client logs, and invoices before connecting your active projects."
-              }
-            ].map((faq, i) => {
-              const open = activeFaq === i;
-              return (
+      {/* ── 3. BEFORE VS AFTER INTERACTIVE COMPARISON ── */}
+      <section style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <InteractiveBeforeAfter />
+      </section>
+
+      {/* ── 4. SPOTLIGHT BENTO GRID ── */}
+      <motion.section
+        id="features"
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.4, ease: EASE_STANDARD }}
+        style={{ padding: "60px 24px", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}
+      >
+        <div style={{ marginBottom: "32px", textAlign: "center" }}>
+          <h2 className="font-heading" style={{ fontSize: "32px", fontWeight: 590, letterSpacing: "-0.012em", color: "var(--text-primary)", margin: 0 }}>
+            Built for how senior freelancers operate.
+          </h2>
+          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "6px" }}>
+            No bloated agency software. Just high-precision tools to win deals, protect scopes, and get paid on time.
+          </p>
+        </div>
+
+        {/* Asymmetric Bento Cards Grid with Mouse-Reactive Spotlight */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: "20px", marginBottom: "20px" }} className="grid-responsive-2">
+          <SpotlightBentoCard
+            icon={Sparkles}
+            title="AI Proposal Engine"
+            body="Paste any RFP or Upwork brief. FreelAI extracts core requirements, maps your past portfolio proof, and builds a 3-tiered scope breakdown (Basic, Standard, Premium) that wins high-value deals."
+            badgeText="94.8% Confidence"
+            badgeColor="var(--color-pulse-green)"
+            iconColor="var(--color-brand)"
+            iconBg="rgba(228,242,34,0.1)"
+            wide
+          />
+
+          <SpotlightBentoCard
+            icon={DollarSign}
+            title="Automated Deposit Invoicing"
+            body="Connect Stripe to auto-generate milestone invoices with gentle dunning reminders. Never chase overdue payments or start work without secured funds."
+            badgeText="0 Overdue Days Average"
+            badgeColor="var(--color-pulse-green)"
+            iconColor="var(--color-pulse-green)"
+            iconBg="rgba(39,166,68,0.1)"
+          />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.8fr", gap: "20px" }} className="grid-responsive-2">
+          <SpotlightBentoCard
+            icon={Users}
+            title="Client CRM Intelligence"
+            body="Know exactly which clients pay on time. Track contract LTV, active project milestones, and account health signals in one clean dashboard."
+            badgeText="Real-time Account Health Tags"
+            badgeColor="var(--color-brand)"
+            iconColor="var(--color-accent)"
+            iconBg="rgba(2,184,204,0.1)"
+          />
+
+          <SpotlightBentoCard
+            icon={TrendingUp}
+            title="Contract Rate Intelligence"
+            body="Price every proposal with confidence. Our engine analyzes scope complexity and client budget indicators, giving you data-backed rate recommendations so you never undercharge for senior expertise."
+            badgeText="+28% Contract Lift"
+            badgeColor="var(--color-brand)"
+            iconColor="var(--color-iris-violet)"
+            iconBg="rgba(139,92,246,0.1)"
+            wide
+          />
+        </div>
+      </motion.section>
+
+      {/* ── 5. INTERACTIVE AUDIENCE PERSONA SELECTOR ── */}
+      <motion.section
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.4, ease: EASE_STANDARD }}
+        style={{ padding: "60px 24px", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}
+      >
+        <div style={{ marginBottom: "28px", textAlign: "center" }}>
+          <h2 className="font-heading" style={{ fontSize: "32px", fontWeight: 590, letterSpacing: "-0.012em", color: "var(--text-primary)", margin: 0 }}>
+            Tailored workflows for specialized domain experts.
+          </h2>
+          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "6px" }}>
+            Select your discipline to see concrete operational outcomes.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "6px", justifyContent: "center", flexWrap: "wrap", marginBottom: "24px" }}>
+          {[
+            { id: "developers", label: "Developers" },
+            { id: "designers", label: "Designers" },
+            { id: "editors", label: "Video Editors" },
+            { id: "writers", label: "Copywriters" },
+            { id: "consultants", label: "Consultants" },
+            { id: "agencies", label: "Agencies" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveAudience(item.id)}
+              style={{
+                padding: "8px 16px",
+                fontSize: "12.5px",
+                fontWeight: 510,
+                borderRadius: "var(--radius-inputs)",
+                border: activeAudience === item.id ? "0.5px solid var(--color-brand)" : "0.5px solid var(--border)",
+                background: activeAudience === item.id ? "var(--surface-2)" : "var(--surface-1)",
+                color: activeAudience === item.id ? "var(--text-primary)" : "var(--text-muted)",
+                cursor: "pointer",
+                transition: "all var(--dur-fast)",
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeAudience}
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -12 }}
+            transition={{ duration: 0.2, ease: EASE_STANDARD }}
+            style={{
+              background: "var(--surface-1)",
+              border: "0.5px solid var(--border)",
+              borderRadius: "var(--radius-cards)",
+              padding: "32px",
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1fr",
+              gap: "32px",
+              alignItems: "center",
+            }}
+            className="grid-responsive-2"
+          >
+            <div>
+              <span style={{ fontSize: "11px", fontWeight: 590, color: "var(--color-brand)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {activeAudienceContent.badge}
+              </span>
+              <h3 className="font-heading" style={{ fontSize: "24px", fontWeight: 590, color: "var(--text-primary)", margin: "8px 0 12px 0", letterSpacing: "-0.015em" }}>
+                {activeAudienceContent.title}
+              </h3>
+              <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>
+                {activeAudienceContent.desc}
+              </p>
+              <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "16px", fontStyle: "italic", borderLeft: "2px solid var(--color-brand)", paddingLeft: "12px", margin: "16px 0 0 0" }}>
+                "{activeAudienceContent.highlight}"
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {activeAudienceContent.metrics.map((m: string, idx: number) => (
                 <div
-                  key={i}
+                  key={idx}
                   style={{
-                    background: "var(--surface-1)",
+                    padding: "12px 16px",
+                    background: "var(--bg-base)",
                     border: "0.5px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    overflow: "hidden",
-                    transition: "all 0.3s ease",
+                    borderRadius: "var(--radius-inputs)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    fontSize: "13px",
+                    color: "var(--text-primary)",
+                    fontWeight: 510,
                   }}
                 >
-                  <button
-                    onClick={() => setActiveFaq(open ? null : i)}
-                    style={{
-                      width: "100%",
-                      padding: "var(--spacing-16) var(--spacing-20)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--text-primary)",
-                      fontWeight: 510,
-                      textAlign: "left",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <span>{faq.q}</span>
-                    <ChevronRight
-                      size={15}
-                      style={{
-                        transform: open ? "rotate(90deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s",
-                        color: "var(--text-muted)",
-                      }}
-                    />
-                  </button>
-                  {open && (
-                    <div
-                      style={{
-                        padding: "0 var(--spacing-20) var(--spacing-16) var(--spacing-20)",
-                        fontSize: "var(--text-caption)",
-                        color: "var(--text-secondary)",
-                        lineHeight: 1.6,
-                        animation: "fadeIn 0.20s ease-out",
-                      }}
-                    >
-                      {faq.a}
-                    </div>
-                  )}
+                  <Check size={14} color="var(--color-pulse-green)" />
+                  {m}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </motion.section>
 
-      {/* ── FINAL EMOTIONAL CTA ─────────────────────────────────── */}
-      <section
-        style={{
-          padding: "var(--spacing-96) 0",
-          borderTop: "0.5px solid var(--border)",
-          background: "var(--surface-1)",
-          textAlign: "center",
-        }}
+      {/* ── 6. CONVERSATIONAL TESTIMONIALS SECTION ── */}
+      <motion.section
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.4, ease: EASE_STANDARD }}
+        style={{ padding: "60px 24px", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}
       >
-        <div className="container-main">
-          <h2
-            className="font-display"
-            style={{
-              fontSize: "clamp(30px, 5vw, 54px)",
-              fontWeight: 510,
-              color: "var(--text-primary)",
-              marginBottom: "var(--spacing-16)",
-              lineHeight: 1.1,
-            }}
-          >
-            Reclaim your time. <br />
-            Scale your business.
+        <div style={{ marginBottom: "32px", textAlign: "center" }}>
+          <h2 className="font-heading" style={{ fontSize: "32px", fontWeight: 590, letterSpacing: "-0.012em", color: "var(--text-primary)", margin: 0 }}>
+            Trusted by senior freelancers worldwide.
           </h2>
-          <p
-            style={{
-              fontSize: "var(--text-body-sm)",
-              color: "var(--text-muted)",
-              maxWidth: "480px",
-              margin: "0 auto var(--spacing-36) auto",
-              lineHeight: 1.5,
-            }}
-          >
-            Leave the administrative dread behind. Start your AI business cockpit today and spend more time focusing on your core craft.
+          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "6px" }}>
+            See how top independent professionals use FreelAI to scale contract earnings.
           </p>
-          <Link href="/signup">
+        </div>
+
+        <ConversationalTestimonials />
+      </motion.section>
+
+      {/* ── 7. FINAL ACTION CALLOUT ── */}
+      <motion.section
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.4, ease: EASE_STANDARD }}
+        style={{ padding: "60px 24px 80px", maxWidth: "1000px", margin: "0 auto", position: "relative", zIndex: 1 }}
+      >
+        <div
+          style={{
+            background: "var(--surface-1)",
+            border: "0.5px solid var(--border-strong)",
+            borderRadius: "var(--radius-cards)",
+            padding: "48px 32px",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "16px",
+          }}
+        >
+          <h2 className="font-heading" style={{ fontSize: "34px", fontWeight: 590, letterSpacing: "-0.02em", color: "var(--text-primary)", margin: 0 }}>
+            Win your next high-ticket contract today.
+          </h2>
+          <p style={{ fontSize: "15px", color: "var(--text-muted)", maxWidth: "540px", margin: 0 }}>
+            Get started free. Generate client-ready proposals, track client pipelines, and collect Stripe deposits in under two minutes.
+          </p>
+          <Link href="/signup" style={{ marginTop: "8px" }}>
             <Button variant="primary" size="lg" rightIcon={<ArrowRight size={15} />}>
               Get Started Free
             </Button>
           </Link>
         </div>
-      </section>
+      </motion.section>
 
       <Footer />
     </div>

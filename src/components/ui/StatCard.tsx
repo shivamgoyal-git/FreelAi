@@ -2,7 +2,7 @@ import React, { ReactNode } from "react";
 
 interface StatCardProps {
   label: string;
-  value: string;
+  value: React.ReactNode;
   icon: ReactNode;
   accentColor?: string;
   change?: string;

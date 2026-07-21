@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -10,20 +10,15 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  ChevronRight,
   Plus,
   Users,
-  Calendar,
   Eye,
   Sparkles,
   Target,
   Loader2,
-  Bell,
   AlertTriangle,
   ArrowUpRight,
-  User,
-  Heart,
-  ChevronUp,
+  Filter,
 } from "lucide-react";
 import {
   LineChart,
@@ -34,11 +29,14 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { OnboardingFlow } from "@/components/features/onboarding/onboarding-flow";
+import { CountUp } from "@/components/ui/CountUp";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -76,24 +74,24 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORY_COLORS: Record<string, string> = {
   design: "var(--color-iris-violet)",
-  development: "var(--color-signal-teal)",
+  development: "var(--color-accent)",
   illustration: "var(--color-lavender)",
   video: "var(--color-coral-red)",
-  writing: "var(--color-mist)",
+  writing: "var(--text-secondary)",
   marketing: "var(--color-pulse-green)",
-  consulting: "var(--color-bone)",
-  other: "var(--color-fog)",
+  consulting: "var(--text-primary)",
+  other: "var(--text-muted)",
 };
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
-  design: "linear-gradient(135deg, var(--color-iris-violet) 0%, rgba(99,102,241,0.5) 100%)",
-  development: "linear-gradient(135deg, var(--color-signal-teal) 0%, rgba(2,184,204,0.5) 100%)",
-  illustration: "linear-gradient(135deg, var(--color-lavender) 0%, rgba(139,92,246,0.5) 100%)",
-  video: "linear-gradient(135deg, var(--color-coral-red) 0%, rgba(235,87,87,0.5) 100%)",
-  writing: "linear-gradient(135deg, var(--color-mist) 0%, rgba(208,214,224,0.5) 100%)",
-  marketing: "linear-gradient(135deg, var(--color-pulse-green) 0%, rgba(39,166,68,0.5) 100%)",
-  consulting: "linear-gradient(135deg, var(--color-bone) 0%, rgba(229,229,230,0.5) 100%)",
-  other: "linear-gradient(135deg, var(--color-fog) 0%, rgba(138,143,152,0.5) 100%)",
+  design: "linear-gradient(135deg, var(--color-iris-violet) 0%, rgba(99,102,241,0.3) 100%)",
+  development: "linear-gradient(135deg, var(--color-accent) 0%, rgba(2,184,204,0.3) 100%)",
+  illustration: "linear-gradient(135deg, var(--color-lavender) 0%, rgba(139,92,246,0.3) 100%)",
+  video: "linear-gradient(135deg, var(--color-coral-red) 0%, rgba(235,87,87,0.3) 100%)",
+  writing: "linear-gradient(135deg, var(--text-secondary) 0%, rgba(208,214,224,0.3) 100%)",
+  marketing: "linear-gradient(135deg, var(--color-pulse-green) 0%, rgba(39,166,68,0.3) 100%)",
+  consulting: "linear-gradient(135deg, var(--text-primary) 0%, rgba(229,229,230,0.3) 100%)",
+  other: "linear-gradient(135deg, var(--text-muted) 0%, rgba(138,143,152,0.3) 100%)",
 };
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
@@ -104,21 +102,6 @@ const STATUS_CFG: Record<string, { label: string; color: string }> = {
   on_hold: { label: "On Hold", color: "var(--warning)" },
   cancelled: { label: "Cancelled", color: "var(--error)" },
 };
-
-function timeAgo(dateString?: string) {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 interface DashboardChartItem {
   month: string;
@@ -150,33 +133,52 @@ const getActivityConfig = (type: string) => {
     case "client_added":
       return {
         icon: Users,
-        iconBg: "rgba(245,158,11,0.15)",
+        iconBg: "rgba(245,158,11,0.12)",
         iconColor: "#f59e0b",
         label: "Client Added",
       };
     case "proposal_generated":
       return {
         icon: Target,
-        iconBg: "var(--primary-light)",
-        iconColor: "var(--primary)",
+        iconBg: "rgba(228,242,34,0.12)",
+        iconColor: "var(--color-brand)",
         label: "Proposal Generated",
       };
     case "invoice_paid":
       return {
         icon: DollarSign,
-        iconBg: "var(--success-bg)",
-        iconColor: "var(--success)",
+        iconBg: "rgba(39,166,68,0.12)",
+        iconColor: "var(--color-pulse-green)",
         label: "Invoice Paid",
       };
     case "antigravity_prompt":
     default:
       return {
         icon: Sparkles,
-        iconBg: "rgba(6,182,212,0.15)",
-        iconColor: "var(--info)",
-        label: "Antigravity Prompt",
+        iconBg: "rgba(99,102,241,0.12)",
+        iconColor: "var(--color-iris-violet)",
+        label: "AI Recommendation",
       };
   }
+};
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const cardStaggerVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 420, damping: 30 },
+  },
 };
 
 export default function DashboardPage() {
@@ -184,7 +186,6 @@ export default function DashboardPage() {
   const [projectFilter, setProjectFilter] = useState("All");
   const [profileCompleteness, setProfileCompleteness] = useState<number | null>(null);
 
-  // Stats States
   const [stats, setStats] = useState({
     totalClients: 0,
     activeProjects: 0,
@@ -219,7 +220,6 @@ export default function DashboardPage() {
   const [dbProjects, setDbProjects] = useState<DashboardProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Copilot States
   const [aiAction, setAiAction] = useState<"prompt" | "proposal">("prompt");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -227,7 +227,7 @@ export default function DashboardPage() {
 
   const userName = session?.user?.name ?? "Freelancer";
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (silent = false) => {
     try {
       const res = await fetch("/api/dashboard/stats");
       if (res.ok) {
@@ -252,9 +252,14 @@ export default function DashboardPage() {
         setChartData(data.chartData || []);
         setActivities(data.activities || []);
         setDbProjects(data.recentProjects || []);
+
+        if (!silent) {
+          toast.success("Dashboard metrics synchronized");
+        }
       }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
+      toast.error("Failed to sync dashboard metrics");
     } finally {
       setLoading(false);
     }
@@ -280,7 +285,7 @@ export default function DashboardPage() {
   }, [session]);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(true);
   }, []);
 
   const handleAiSubmit = async (e: React.FormEvent) => {
@@ -289,6 +294,7 @@ export default function DashboardPage() {
 
     setAiLoading(true);
     setAnimatedResponse("");
+    toast.info("Sending prompt to AI Copilot...");
 
     try {
       const res = await fetch("/api/dashboard/actions", {
@@ -298,6 +304,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        toast.success("Response generated successfully");
         let i = 0;
         const text = data.response;
         const timer = setInterval(() => {
@@ -310,12 +317,14 @@ export default function DashboardPage() {
         }, 8);
 
         setAiPrompt("");
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         setAnimatedResponse(`Error: ${data.error || "Failed to process Action"}`);
+        toast.error("AI Copilot failed to process request");
       }
     } catch {
       setAnimatedResponse("Network connection error. Please try again.");
+      toast.error("Network connection error");
     } finally {
       setAiLoading(false);
     }
@@ -331,120 +340,172 @@ export default function DashboardPage() {
           return true;
         });
 
-  // Calculate dynamic welcome subtitle date
   const formattedToday = new Date().toLocaleDateString("en-US", {
     weekday: "long",
-    month: "long",
+    month: "short",
     day: "numeric",
-    year: "numeric",
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }} className="page-enter">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        padding: "4px 0",
+      }}
+    >
       <OnboardingFlow />
 
-      {/* ── MISSION CONTROL HEADER ── */}
+      {/* ── $100M SAAS MISSION CONTROL HEADER ── */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: "16px",
-          borderBottom: "1px solid var(--border)",
-          paddingBottom: "20px",
+          gap: "12px",
+          borderBottom: "0.5px solid var(--border)",
+          paddingBottom: "16px",
         }}
       >
-        <div>
-          <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em" }}>
-            Mission Control
-          </h1>
-          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "2px" }}>
-            {formattedToday} • Welcome back, {userName.split(" ")[0]}
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <h1 className="font-heading" style={{ fontSize: "20px", fontWeight: 510, letterSpacing: "-0.015em", color: "var(--text-primary)", margin: 0 }}>
+                Mission Control
+              </h1>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 510,
+                  fontFamily: "var(--font-berkeley-mono), ui-monospace, monospace",
+                  background: "var(--surface-2)",
+                  border: "0.5px solid var(--border)",
+                  padding: "1px 6px",
+                  borderRadius: "var(--radius-badges)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                LIVE
+              </span>
+            </div>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", margin: 0 }}>
+              {formattedToday} • Welcome back, {userName.split(" ")[0]}
+            </p>
+          </div>
         </div>
 
-        {/* Header Action Tools */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {/* Toolbar & Shortcuts */}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <Link href="/dashboard/proposals">
-            <Button variant="outline" size="sm" leftIcon={<Sparkles size={14} />}>
-              Draft Proposal
+            <Button variant="ghost" size="sm" leftIcon={<Sparkles size={13} />}>
+              Proposal
             </Button>
           </Link>
           <Link href="/dashboard/invoices">
-            <Button variant="outline" size="sm" leftIcon={<DollarSign size={14} />}>
-              Create Invoice
+            <Button variant="ghost" size="sm" leftIcon={<DollarSign size={13} />}>
+              Invoice
             </Button>
           </Link>
           <Link href="/dashboard/projects">
-            <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus size={13} />}
+              rightIcon={
+                <kbd
+                  style={{
+                    fontFamily: "var(--font-berkeley-mono), ui-monospace, monospace",
+                    fontSize: "9px",
+                    opacity: 0.7,
+                    marginLeft: "2px",
+                  }}
+                >
+                  ⌘N
+                </kbd>
+              }
+            >
               New Project
             </Button>
           </Link>
         </div>
       </div>
 
+      {/* ── HIGH DENSITY LOADING SKELETON (SHIMMER) ── */}
       {loading ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <div style={{ height: "70px", borderRadius: "var(--radius)", background: "var(--surface-2)" }} className="skeleton" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ height: "64px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} className="skeleton" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="skeleton" style={{ height: "110px", borderRadius: "var(--radius-lg)" }} />
+              <div key={i} className="skeleton" style={{ height: "96px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              <div className="skeleton" style={{ height: "300px", borderRadius: "var(--radius-lg)" }} />
-              <div className="skeleton" style={{ height: "340px", borderRadius: "var(--radius-lg)" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "20px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div className="skeleton" style={{ height: "260px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
+              <div className="skeleton" style={{ height: "300px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              <div className="skeleton" style={{ height: "240px", borderRadius: "var(--radius-lg)" }} />
-              <div className="skeleton" style={{ height: "280px", borderRadius: "var(--radius-lg)" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div className="skeleton" style={{ height: "220px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
+              <div className="skeleton" style={{ height: "240px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
             </div>
           </div>
         </div>
       ) : (
-        <>
-          {/* ── PROFILE COMPLETION ONBOARDING CARD ── */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+        >
+          {/* ── PROFILE ONBOARDING BANNER ── */}
           {profileCompleteness !== null && profileCompleteness < 100 && (
-            <div
+            <motion.div
+              variants={cardStaggerVariants}
               style={{
-                background: "linear-gradient(90deg, var(--bg-surface) 0%, var(--bg-elevated) 100%)",
-                border: "0.5px solid var(--border-strong)",
-                borderLeft: "4px solid var(--color-brand)",
-                borderRadius: "var(--radius-lg)",
-                padding: "20px 24px",
+                background: "var(--surface-1)",
+                border: "0.5px solid var(--border)",
+                borderLeft: "3px solid var(--color-brand)",
+                borderRadius: "var(--radius-cards)",
+                padding: "16px 20px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
-                gap: "20px",
-                boxShadow: "var(--shadow-sm)",
+                gap: "16px",
               }}
             >
-              <div style={{ flex: 1, minWidth: "280px" }}>
+              <div style={{ flex: 1, minWidth: "260px" }}>
                 <h3
                   className="font-heading"
                   style={{
-                    fontSize: "15px",
+                    fontSize: "14px",
+                    fontWeight: 510,
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                     color: "var(--text-primary)",
+                    margin: 0,
                   }}
                 >
-                  <Sparkles size={16} color="var(--color-brand)" /> Complete your Freelancer Profile
+                  <Sparkles size={14} color="var(--color-brand)" /> Complete your Freelancer Profile
                 </h3>
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "4px", maxWidth: "600px" }}>
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px", margin: 0, maxWidth: "560px", lineHeight: 1.45 }}>
                   Configure your skills registry and service rates to activate AI-powered proposal auto-matching, dunning scripts, and rate optimizations.
                 </p>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)" }}>Onboarding Stage</span>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--color-brand)" }}>
-                    {profileCompleteness}% Finished
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", flexShrink: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1px", alignItems: "flex-end" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 510, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Progress</span>
+                  <span style={{ fontSize: "13px", fontWeight: 590, color: "var(--color-brand)", fontVariantNumeric: "tabular-nums" }}>
+                    <CountUp value={profileCompleteness} suffix="%" />
                   </span>
                 </div>
                 <Link href="/dashboard/profile">
@@ -453,171 +514,188 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ── DAILY AI BRIEFING BANNER ── */}
-          <div
+          <motion.div
+            variants={cardStaggerVariants}
             style={{
-              background: "rgba(99, 102, 241, 0.05)",
-              border: "1px solid rgba(99, 102, 241, 0.15)",
-              borderRadius: "var(--radius-lg)",
-              padding: "20px",
+              background: "var(--surface-1)",
+              border: "0.5px solid var(--border)",
+              borderLeft: "3px solid var(--color-iris-violet)",
+              borderRadius: "var(--radius-cards)",
+              padding: "14px 18px",
               display: "flex",
               flexDirection: "column",
-              gap: "12px",
+              gap: "10px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "50%",
-                  background: "rgba(99, 102, 241, 0.15)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Sparkles size={14} color="var(--color-iris-violet)" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Sparkles size={13} color="var(--color-iris-violet)" />
+                <h3
+                  className="font-heading"
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 590,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "var(--color-iris-violet)",
+                    margin: 0,
+                  }}
+                >
+                  Daily Briefing
+                </h3>
               </div>
-              <h3
-                className="font-heading"
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  color: "var(--color-iris-violet)",
-                }}
-              >
-                Daily AI Briefing
-              </h3>
+              <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontFamily: "var(--font-berkeley-mono), monospace" }}>
+                AUTO-SYNCED
+              </span>
             </div>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: "16px",
-                fontSize: "13.5px",
+                gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+                gap: "12px",
+                fontSize: "12.5px",
                 color: "var(--text-secondary)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                <span style={{ color: "var(--color-iris-violet)", fontWeight: "bold" }}>•</span>
-                <p>
-                  You have <strong>{stats.activeProjects}</strong> active projects and{" "}
-                  <strong>{stats.totalClients}</strong> clients registered in your pipeline.
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                <span style={{ color: "var(--color-iris-violet)", fontWeight: 590 }}>•</span>
+                <p style={{ margin: 0, lineHeight: 1.45 }}>
+                  Active pipeline: <strong>{stats.activeProjects}</strong> projects, <strong>{stats.totalClients}</strong> registered clients.
                 </p>
               </div>
 
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                <span style={{ color: "var(--color-iris-violet)", fontWeight: "bold" }}>•</span>
-                <p>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                <span style={{ color: "var(--color-iris-violet)", fontWeight: 590 }}>•</span>
+                <p style={{ margin: 0, lineHeight: 1.45 }}>
                   {stats.overdueInvoicesCount > 0 ? (
-                    <span style={{ color: "var(--error)" }}>
-                      ⚠️ <strong>{stats.overdueInvoicesCount} overdue</strong> invoice(s) outstanding ($
-                      {stats.overdueInvoicesSum.toLocaleString()}). Action needed.
+                    <span style={{ color: "var(--color-coral-red)" }}>
+                      ⚠️ <strong>{stats.overdueInvoicesCount} overdue</strong> invoice ($
+                      {stats.overdueInvoicesSum.toLocaleString()}).
                     </span>
                   ) : (
-                    "✓ Financial collection status: All active invoices are currently up to date."
+                    "✓ Collection status: Invoices are current."
                   )}
                 </p>
               </div>
 
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                <span style={{ color: "var(--color-iris-violet)", fontWeight: "bold" }}>•</span>
-                <p>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                <span style={{ color: "var(--color-iris-violet)", fontWeight: 590 }}>•</span>
+                <p style={{ margin: 0, lineHeight: 1.45 }}>
                   {projectHealth.atRiskCount > 0 ? (
                     <span style={{ color: "var(--warning)" }}>
-                      🚨 <strong>{projectHealth.atRiskCount} project(s)</strong> are approaching deadline limits with low completion percentages.
+                      🚨 <strong>{projectHealth.atRiskCount} project</strong> approaching deadline threshold.
                     </span>
                   ) : (
-                    "✓ Project schedule status: Active milestones are on track."
+                    "✓ Milestone status: Deliverables on track."
                   )}
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* ── REVENUE & FINANCIAL KPIS ── */}
-          <div className="grid-responsive-4">
-            <StatCard
-              label="Total Earnings"
-              value={`$${stats.totalRevenue.toLocaleString()}`}
-              icon={<DollarSign />}
-              accentColor="var(--success)"
-              change="Aggregated contract earnings"
-            />
-            <StatCard
-              label="Awaiting Payment"
-              value={`$${stats.pendingInvoices.toLocaleString()}`}
-              icon={<Clock />}
-              accentColor="var(--warning)"
-              change="Unbilled & sent balances"
-            />
-            <StatCard
-              label="Overdue Invoices"
-              value={`$${stats.overdueInvoicesSum.toLocaleString()}`}
-              icon={<AlertTriangle />}
-              accentColor={stats.overdueInvoicesCount > 0 ? "var(--error)" : "var(--text-muted)"}
-              change={`${stats.overdueInvoicesCount} invoices overdue`}
-            />
-            <StatCard
-              label="AI Proposals Score"
-              value={proposalsStats.total > 0 ? `${proposalsStats.averageAiScore}%` : "—"}
-              icon={<Target />}
-              accentColor="var(--color-iris-violet)"
-              change={`${proposalsStats.total} total proposals generated`}
-            />
-          </div>
+          {/* ── FINANCIAL KPIS GRID ── */}
+          <motion.div
+            variants={containerVariants}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "14px",
+            }}
+            className="grid-responsive-4"
+          >
+            <motion.div variants={cardStaggerVariants}>
+              <StatCard
+                label="Total Earnings"
+                value={<CountUp value={stats.totalRevenue} prefix="$" />}
+                icon={<DollarSign />}
+                accentColor="var(--color-pulse-green)"
+                change="Lifetime contract total"
+              />
+            </motion.div>
+            <motion.div variants={cardStaggerVariants}>
+              <StatCard
+                label="Awaiting Payment"
+                value={<CountUp value={stats.pendingInvoices} prefix="$" />}
+                icon={<Clock />}
+                accentColor="var(--warning)"
+                change="Pending & sent balances"
+              />
+            </motion.div>
+            <motion.div variants={cardStaggerVariants}>
+              <StatCard
+                label="Overdue Invoices"
+                value={<CountUp value={stats.overdueInvoicesSum} prefix="$" />}
+                icon={<AlertTriangle />}
+                accentColor={stats.overdueInvoicesCount > 0 ? "var(--color-coral-red)" : "var(--text-muted)"}
+                change={`${stats.overdueInvoicesCount} overdue`}
+              />
+            </motion.div>
+            <motion.div variants={cardStaggerVariants}>
+              <StatCard
+                label="AI Proposal Score"
+                value={proposalsStats.total > 0 ? <CountUp value={proposalsStats.averageAiScore} suffix="%" /> : "—"}
+                icon={<Target />}
+                accentColor="var(--color-iris-violet)"
+                change={`${proposalsStats.total} proposals created`}
+              />
+            </motion.div>
+          </motion.div>
 
-          {/* ── MISSION GRID ── */}
+          {/* ── HIGH DENSITY WORKSPACE GRID ── */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 340px",
-              gap: "24px",
+              gridTemplateColumns: "1fr 320px",
+              gap: "20px",
               alignItems: "flex-start",
             }}
             className="grid-responsive-2"
           >
-            {/* LEFT SIDEBAR: CONTENT & CHARTS */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px", minWidth: 0 }}>
+            {/* LEFT COLUMN: REVENUE CHART & PROJECTS FEED */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 }}>
               
-              {/* Business Health Overview (Line Chart) */}
-              <div className="glass-card" style={{ padding: "24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              {/* Earnings Overview Chart */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25, duration: 0.35, ease: "easeOut" }}
+                className="glass-card"
+                style={{ padding: "20px", borderRadius: "var(--radius-cards)" }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <div>
-                    <h3 className="font-heading" style={{ fontSize: "16px", fontWeight: 700 }}>
+                    <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>
                       Earnings Overview
                     </h3>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                      Monthly revenue trend chart for the current year
+                    <p style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px", margin: 0 }}>
+                      Monthly financial velocity (YTD)
                     </p>
                   </div>
                   <Badge variant="active">
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <TrendingUp size={11} />
-                      Active Year
+                      YTD Active
                     </span>
                   </Badge>
                 </div>
 
-                <div style={{ width: "100%", height: "240px" }}>
+                <div style={{ width: "100%", height: "210px" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis
                         dataKey="month"
-                        tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                        tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
-                        tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                        tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(v) => (v === 0 ? "$0" : `$${v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}`)}
@@ -626,11 +704,11 @@ export default function DashboardPage() {
                         contentStyle={{
                           background: "var(--surface-2)",
                           border: "0.5px solid var(--border-strong)",
-                          borderRadius: "var(--radius)",
-                          fontSize: "12px",
+                          borderRadius: "var(--radius-inputs)",
+                          fontSize: "11.5px",
                         }}
                         itemStyle={{ color: "var(--text-primary)" }}
-                        labelStyle={{ color: "var(--text-muted)", fontWeight: 700 }}
+                        labelStyle={{ color: "var(--text-muted)", fontWeight: 510 }}
                         formatter={(value) => ["$" + Number(value || 0).toLocaleString(), "Revenue"]}
                       />
                       <Line
@@ -638,108 +716,113 @@ export default function DashboardPage() {
                         dataKey="earnings"
                         stroke="var(--color-brand)"
                         strokeWidth={2}
-                        dot={{ stroke: "var(--color-brand)", strokeWidth: 1, r: 3, fill: "var(--bg-surface)" }}
-                        activeDot={{ r: 5 }}
+                        dot={{ stroke: "var(--color-brand)", strokeWidth: 1, r: 2.5, fill: "var(--bg-surface)" }}
+                        activeDot={{ r: 4.5 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Proposals Performance & Conversion rates */}
-              <div
+              {/* Proposal Funnel Summary */}
+              <motion.div
+                variants={cardStaggerVariants}
                 className="glass-card"
                 style={{
-                  padding: "24px",
+                  padding: "20px",
+                  borderRadius: "var(--radius-cards)",
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: "24px",
+                  gap: "20px",
                 }}
               >
                 <div>
-                  <h3 className="font-heading" style={{ fontSize: "15px", fontWeight: 700 }}>
+                  <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, margin: 0 }}>
                     Proposal Funnel
                   </h3>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                    Performance metrics matching won proposals
+                  <p style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px", margin: 0 }}>
+                    Win rate metrics
                   </p>
 
-                  <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Win Rate</span>
-                      <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--success)" }}>
-                        {proposalsStats.conversionRate}%
+                      <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Win Rate</span>
+                      <span style={{ fontSize: "13px", fontWeight: 590, color: "var(--color-pulse-green)", fontVariantNumeric: "tabular-nums" }}>
+                        <CountUp value={proposalsStats.conversionRate} suffix="%" />
                       </span>
                     </div>
                     <div style={{ height: "4px", background: "var(--surface-2)", borderRadius: "2px", overflow: "hidden" }}>
-                      <div
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${proposalsStats.conversionRate}%` }}
+                        transition={{ duration: 1, ease: "easeOut", delay: 0.1 }}
                         style={{
-                          width: `${proposalsStats.conversionRate}%`,
                           height: "100%",
-                          background: "var(--success)",
+                          background: "var(--color-pulse-green)",
                         }}
                       />
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
-                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Proposals Sent</span>
-                      <span style={{ fontSize: "12px", fontWeight: 600 }}>{proposalsStats.sent}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px" }}>
+                      <span style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>Sent</span>
+                      <span style={{ fontSize: "11.5px", fontWeight: 510, fontVariantNumeric: "tabular-nums" }}>{proposalsStats.sent}</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Proposals Won</span>
-                      <span style={{ fontSize: "12px", fontWeight: 600 }}>{proposalsStats.won}</span>
+                      <span style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>Won</span>
+                      <span style={{ fontSize: "11.5px", fontWeight: 510, fontVariantNumeric: "tabular-nums" }}>{proposalsStats.won}</span>
                     </div>
                   </div>
                 </div>
 
                 <div
                   style={{
-                    borderLeft: "1px solid var(--border)",
-                    paddingLeft: "24px",
+                    borderLeft: "0.5px solid var(--border)",
+                    paddingLeft: "20px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "center",
                   }}
                 >
-                  <h4 style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
-                    Proposal LTV Value
+                  <h4 style={{ fontSize: "10.5px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 590, letterSpacing: "0.06em", margin: 0 }}>
+                    Est. Pipeline LTV
                   </h4>
-                  <p style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
-                    ${(proposalsStats.won * 2500).toLocaleString()}
-                  </p>
-                  <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                    Est. pipeline contract values won
+                  <div style={{ fontSize: "22px", fontWeight: 590, color: "var(--text-primary)", marginTop: "3px", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+                    <CountUp value={proposalsStats.won * 2500} prefix="$" />
+                  </div>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px", margin: 0 }}>
+                    Won contract value sum
                   </p>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Active Projects Feed */}
-              <div className="glass-card" style={{ padding: "24px" }}>
+              {/* Active Projects Table */}
+              <motion.div variants={cardStaggerVariants} className="glass-card" style={{ padding: "20px", borderRadius: "var(--radius-cards)" }}>
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "16px",
+                    marginBottom: "14px",
                     flexWrap: "wrap",
-                    gap: "12px",
+                    gap: "10px",
                   }}
                 >
                   <div>
-                    <h3 className="font-heading" style={{ fontSize: "16px", fontWeight: 700 }}>
+                    <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, margin: 0 }}>
                       Active Projects
                     </h3>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      Workspaces tracking active contracts
+                    <p style={{ fontSize: "11.5px", color: "var(--text-muted)", margin: 0 }}>
+                      Active contract deliverables
                     </p>
                   </div>
 
-                  <div className="filter-tabs">
+                  <div className="filter-tabs" style={{ background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-inputs)" }}>
                     {["All", "In Progress", "Completed"].map((f) => (
                       <button
                         key={f}
                         onClick={() => setProjectFilter(f)}
                         className={`filter-tab${projectFilter === f ? " active" : ""}`}
+                        style={{ fontSize: "11.5px", padding: "3px 10px", position: "relative" }}
                       >
                         {f}
                       </button>
@@ -751,20 +834,21 @@ export default function DashboardPage() {
                   {filteredProjects.length === 0 ? (
                     <EmptyState
                       icon={<Briefcase />}
-                      heading="No projects matched"
+                      heading="No active projects"
                       description="Create new active projects or adjust filter parameters."
+                      actionLabel="Create Project"
+                      onActionClick={() => window.location.href = "/dashboard/projects"}
                     />
                   ) : (
-                    <table className="data-table">
+                    <table className="data-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
-                        <tr>
-                          <th>Project</th>
-                          <th>Category</th>
-                          <th>Progress</th>
-                          <th>Budget</th>
-                          <th>Due Date</th>
-                          <th>Status</th>
-                          <th></th>
+                        <tr style={{ borderBottom: "0.5px solid var(--border)", textAlign: "left" }}>
+                          <th style={{ padding: "8px 10px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Project</th>
+                          <th style={{ padding: "8px 10px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Category</th>
+                          <th style={{ padding: "8px 10px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Progress</th>
+                          <th style={{ padding: "8px 10px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Budget</th>
+                          <th style={{ padding: "8px 10px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
+                          <th style={{ padding: "8px 10px" }}></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -775,81 +859,80 @@ export default function DashboardPage() {
                           const sCfg = STATUS_CFG[project.status] || { label: project.status, color: "var(--info)" };
 
                           return (
-                            <tr key={project._id}>
-                              <td>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <tr key={project._id} style={{ borderBottom: "0.5px solid var(--border)" }}>
+                              <td style={{ padding: "10px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                   <div
                                     className="avatar"
                                     style={{
-                                      width: "30px",
-                                      height: "30px",
+                                      width: "26px",
+                                      height: "26px",
                                       background: gradient,
-                                      fontSize: "11px",
-                                      fontWeight: 800,
+                                      fontSize: "10.5px",
+                                      fontWeight: 590,
+                                      borderRadius: "6px",
                                     }}
                                   >
                                     {project.title.charAt(0).toUpperCase()}
                                   </div>
                                   <div>
-                                    <p style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text-primary)" }}>
+                                    <p style={{ fontSize: "13px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>
                                       {project.title}
                                     </p>
-                                    <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                                      {project.clientName || "Direct Project"}
+                                    <p style={{ fontSize: "10.5px", color: "var(--text-muted)", margin: 0 }}>
+                                      {project.clientName || "Direct Client"}
                                     </p>
                                   </div>
                                 </div>
                               </td>
-                              <td>
+                              <td style={{ padding: "10px" }}>
                                 <span
                                   className="badge"
                                   style={{
-                                    fontSize: "10.5px",
-                                    background: `${categoryColor}15`,
+                                    fontSize: "10px",
+                                    background: `${categoryColor}12`,
                                     color: categoryColor,
-                                    border: `1px solid ${categoryColor}25`,
+                                    border: `0.5px solid ${categoryColor}25`,
+                                    padding: "2px 6px",
+                                    borderRadius: "var(--radius-badges)",
                                   }}
                                 >
                                   {categoryLabel}
                                 </span>
                               </td>
-                              <td style={{ minWidth: "100px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <div className="progress-bar" style={{ flex: 1, height: "4px" }}>
-                                    <div className="progress-fill" style={{ width: `${project.progress}%` }} />
+                              <td style={{ padding: "10px", minWidth: "90px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <div className="progress-bar" style={{ flex: 1, height: "4px", background: "var(--surface-2)", borderRadius: "2px", overflow: "hidden" }}>
+                                    <motion.div
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${project.progress}%` }}
+                                      transition={{ duration: 0.8, ease: "easeOut" }}
+                                      className="progress-fill"
+                                      style={{ height: "100%", background: "var(--color-brand)" }}
+                                    />
                                   </div>
-                                  <span style={{ fontSize: "11.5px", color: "var(--text-muted)", width: "28px", textAlign: "right" }}>
+                                  <span style={{ fontSize: "11px", color: "var(--text-muted)", width: "26px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                                     {project.progress}%
                                   </span>
                                 </div>
                               </td>
-                              <td>
-                                <span style={{ fontSize: "13px", fontWeight: 700 }}>
+                              <td style={{ padding: "10px" }}>
+                                <span style={{ fontSize: "12.5px", fontWeight: 510, fontVariantNumeric: "tabular-nums" }}>
                                   ${project.budget.toLocaleString()}
                                 </span>
                               </td>
-                              <td>
-                                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                                  {project.dueDate
-                                    ? new Date(project.dueDate).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                      })
-                                    : "—"}
-                                </span>
-                              </td>
-                              <td>
+                              <td style={{ padding: "10px" }}>
                                 <Badge variant={getBadgeVariant(project.status)}>
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    {project.status === "active" && <Clock size={10} />}
-                                    {project.status === "completed" && <CheckCircle size={10} />}
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                    {project.status === "active" && <Clock size={9} />}
+                                    {project.status === "completed" && <CheckCircle size={9} />}
                                     <span>{sCfg.label}</span>
                                   </span>
                                 </Badge>
                               </td>
-                              <td>
+                              <td style={{ padding: "10px", textAlign: "right" }}>
                                 <Link href={`/dashboard/projects/${project._id}`}>
-                                  <Button variant="ghost" size="icon" style={{ width: "26px", height: "26px" }}>
+                                  <Button variant="ghost" size="icon" style={{ width: "24px", height: "24px" }}>
                                     <Eye size={12} />
                                   </Button>
                                 </Link>
@@ -861,28 +944,29 @@ export default function DashboardPage() {
                     </table>
                   )}
                 </div>
-              </div>
+              </motion.div>
             </div>
 
-            {/* RIGHT SIDEBAR: COPILOT & CRM */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* RIGHT SIDEBAR: AI COPILOT & CRM INTELLIGENCE */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               
               {/* AI Copilot Panel */}
-              <div
+              <motion.div
+                variants={cardStaggerVariants}
                 style={{
                   background: "var(--surface-1)",
-                  border: "1px solid var(--border)",
+                  border: "0.5px solid var(--border)",
                   borderTop: "3px solid var(--color-iris-violet)",
-                  borderRadius: "var(--radius-lg)",
-                  padding: "20px",
+                  borderRadius: "var(--radius-cards)",
+                  padding: "18px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "14px",
+                  gap: "12px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Sparkles size={16} color="var(--color-iris-violet)" />
-                  <h3 className="font-heading" style={{ fontSize: "15px", fontWeight: 700 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Sparkles size={14} color="var(--color-iris-violet)" />
+                  <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, margin: 0 }}>
                     AI Copilot Workspace
                   </h3>
                 </div>
@@ -890,8 +974,8 @@ export default function DashboardPage() {
                 <div
                   style={{
                     display: "flex",
-                    gap: "14px",
-                    borderBottom: "1px solid var(--border)",
+                    gap: "12px",
+                    borderBottom: "0.5px solid var(--border)",
                   }}
                 >
                   <button
@@ -901,13 +985,13 @@ export default function DashboardPage() {
                       setAnimatedResponse("");
                     }}
                     style={{
-                      padding: "6px 0",
+                      padding: "4px 0",
                       background: "transparent",
                       border: "none",
                       borderBottom: aiAction === "prompt" ? "2px solid var(--color-iris-violet)" : "2px solid transparent",
                       color: aiAction === "prompt" ? "var(--text-primary)" : "var(--text-muted)",
-                      fontSize: "13px",
-                      fontWeight: 600,
+                      fontSize: "12px",
+                      fontWeight: 510,
                       cursor: "pointer",
                     }}
                   >
@@ -920,13 +1004,13 @@ export default function DashboardPage() {
                       setAnimatedResponse("");
                     }}
                     style={{
-                      padding: "6px 0",
+                      padding: "4px 0",
                       background: "transparent",
                       border: "none",
                       borderBottom: aiAction === "proposal" ? "2px solid var(--color-iris-violet)" : "2px solid transparent",
                       color: aiAction === "proposal" ? "var(--text-primary)" : "var(--text-muted)",
-                      fontSize: "13px",
-                      fontWeight: 600,
+                      fontSize: "12px",
+                      fontWeight: 510,
                       cursor: "pointer",
                     }}
                   >
@@ -934,7 +1018,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                <form onSubmit={handleAiSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <form onSubmit={handleAiSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <textarea
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
@@ -947,16 +1031,18 @@ export default function DashboardPage() {
                     required
                     style={{
                       width: "100%",
-                      padding: "10px",
+                      padding: "8px 10px",
                       background: "var(--bg-base)",
-                      border: "1.5px solid var(--border)",
-                      borderRadius: "var(--radius)",
-                      fontSize: "12.5px",
+                      border: "0.5px solid var(--border)",
+                      borderRadius: "var(--radius-inputs)",
+                      fontSize: "12px",
                       color: "var(--text-primary)",
                       fontFamily: "inherit",
                       outline: "none",
                       resize: "none",
                     }}
+                    onFocus={(e) => e.target.style.borderColor = "var(--color-iris-violet)"}
+                    onBlur={(e) => e.target.style.borderColor = "var(--border)"}
                   />
                   <Button
                     type="submit"
@@ -976,43 +1062,49 @@ export default function DashboardPage() {
                   </Button>
                 </form>
 
-                {animatedResponse && (
-                  <div
-                    style={{
-                      maxHeight: "220px",
-                      overflowY: "auto",
-                      padding: "10px 12px",
-                      background: "var(--bg-base)",
-                      border: "0.5px solid var(--border-strong)",
-                      borderRadius: "var(--radius)",
-                      fontSize: "12.5px",
-                      color: "var(--text-secondary)",
-                      lineHeight: "1.6",
-                      whiteSpace: "pre-wrap",
-                      animation: "fadeIn 0.2s ease",
-                    }}
-                  >
-                    {animatedResponse}
-                  </div>
-                )}
-              </div>
+                <AnimatePresence>
+                  {animatedResponse && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      style={{
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                        padding: "10px",
+                        background: "var(--bg-base)",
+                        border: "0.5px solid var(--border-strong)",
+                        borderRadius: "var(--radius-inputs)",
+                        fontSize: "12px",
+                        color: "var(--text-secondary)",
+                        lineHeight: 1.55,
+                        whiteSpace: "pre-wrap",
+                        fontFamily: "var(--font-berkeley-mono), monospace",
+                      }}
+                    >
+                      {animatedResponse}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
 
               {/* CRM Client Intelligence */}
-              <div className="glass-card" style={{ padding: "20px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", fontWeight: 700, marginBottom: "14px" }}>
+              <motion.div variants={cardStaggerVariants} className="glass-card" style={{ padding: "18px", borderRadius: "var(--radius-cards)" }}>
+                <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, marginBottom: "12px", margin: 0 }}>
                   Top Clients
                 </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" }}>
                   {topClients.length === 0 ? (
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No clients registered yet.</p>
+                    <p style={{ fontSize: "11.5px", color: "var(--text-muted)", margin: 0 }}>No clients registered yet.</p>
                   ) : (
                     topClients.map((client) => {
                       const healthColor =
                         client.relationshipHealth === "Good"
-                          ? "var(--success)"
+                          ? "var(--color-pulse-green)"
                           : client.relationshipHealth === "Fair"
                           ? "var(--warning)"
-                          : "var(--error)";
+                          : "var(--color-coral-red)";
                       return (
                         <div
                           key={client.clientId}
@@ -1020,42 +1112,42 @@ export default function DashboardPage() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            paddingBottom: "10px",
+                            paddingBottom: "8px",
                             borderBottom: "0.5px solid var(--border)",
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <div
                               style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "6px",
+                                width: "26px",
+                                height: "26px",
+                                borderRadius: "var(--radius-inputs)",
                                 background: "var(--surface-2)",
                                 color: "var(--text-primary)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: "11px",
-                                fontWeight: 800,
+                                fontSize: "10.5px",
+                                fontWeight: 590,
                               }}
                             >
                               {client.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <p style={{ fontSize: "12.5px", fontWeight: 600 }}>{client.name}</p>
-                              <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{client.company}</p>
+                              <p style={{ fontSize: "12px", fontWeight: 510, margin: 0 }}>{client.name}</p>
+                              <p style={{ fontSize: "10.5px", color: "var(--text-muted)", margin: 0 }}>{client.company}</p>
                             </div>
                           </div>
 
                           <div style={{ textAlign: "right" }}>
-                            <p style={{ fontSize: "12.5px", fontWeight: 700 }}>
-                              ${client.revenue.toLocaleString()}
-                            </p>
+                            <div style={{ fontSize: "12px", fontWeight: 510, fontVariantNumeric: "tabular-nums" }}>
+                              <CountUp value={client.revenue} prefix="$" />
+                            </div>
                             <span
                               style={{
-                                fontSize: "10px",
+                                fontSize: "9.5px",
                                 color: healthColor,
-                                fontWeight: 600,
+                                fontWeight: 510,
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "3px",
@@ -1063,8 +1155,8 @@ export default function DashboardPage() {
                             >
                               <span
                                 style={{
-                                  width: "5px",
-                                  height: "5px",
+                                  width: "4px",
+                                  height: "4px",
                                   borderRadius: "50%",
                                   background: healthColor,
                                 }}
@@ -1077,18 +1169,18 @@ export default function DashboardPage() {
                     })
                   )}
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Upcoming Deadlines (within 14 days) */}
-              <div className="glass-card" style={{ padding: "20px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", fontWeight: 700, marginBottom: "14px" }}>
+              {/* Upcoming Deadlines */}
+              <motion.div variants={cardStaggerVariants} className="glass-card" style={{ padding: "18px", borderRadius: "var(--radius-cards)" }}>
+                <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, marginBottom: "12px", margin: 0 }}>
                   Upcoming Deadlines
                 </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
                   {upcomingDeadlines.length === 0 ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", padding: "10px 0" }}>
-                      <CheckCircle size={14} color="var(--success)" />
-                      <span style={{ fontSize: "12px" }}>No deadlines next 14 days</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", padding: "4px 0" }}>
+                      <CheckCircle size={13} color="var(--color-pulse-green)" />
+                      <span style={{ fontSize: "11.5px" }}>No deadlines next 14 days</span>
                     </div>
                   ) : (
                     upcomingDeadlines.map((deadline) => {
@@ -1100,25 +1192,26 @@ export default function DashboardPage() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            padding: "8px 10px",
+                            padding: "6px 8px",
                             background: "var(--surface-2)",
-                            borderRadius: "var(--radius)",
+                            borderRadius: "var(--radius-inputs)",
+                            border: "0.5px solid var(--border)",
                           }}
                         >
                           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                             <span
                               style={{
-                                fontSize: "12px",
-                                fontWeight: 600,
+                                fontSize: "11.5px",
+                                fontWeight: 510,
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
-                                maxWidth: "160px",
+                                maxWidth: "150px",
                               }}
                             >
                               {deadline.title}
                             </span>
-                            <span style={{ fontSize: "10.5px", color: "var(--text-muted)" }}>
+                            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
                               {deadline.clientName}
                             </span>
                           </div>
@@ -1126,16 +1219,16 @@ export default function DashboardPage() {
                           <div style={{ textAlign: "right", flexShrink: 0 }}>
                             <span
                               style={{
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                color: isUrgent ? "var(--error)" : "var(--text-secondary)",
+                                fontSize: "10.5px",
+                                fontWeight: 590,
+                                color: isUrgent ? "var(--color-coral-red)" : "var(--text-secondary)",
                               }}
                             >
                               {deadline.daysLeft === 0
                                 ? "Due today"
                                 : deadline.daysLeft === 1
                                 ? "Due tomorrow"
-                                : `In ${deadline.daysLeft} days`}
+                                : `In ${deadline.daysLeft}d`}
                             </span>
                           </div>
                         </div>
@@ -1143,42 +1236,22 @@ export default function DashboardPage() {
                     })
                   )}
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Growth Opportunities */}
-              <div
-                className="glass-card"
-                style={{
-                  padding: "20px",
-                  borderLeft: "2.5px solid var(--color-iris-violet)",
-                  background: "var(--surface-1)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
-                  <TrendingUp size={14} color="var(--color-iris-violet)" />
-                  <h4 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                    Growth Opportunity
-                  </h4>
-                </div>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
-                  Based on your won proposals average of {proposalsStats.averageAiScore || 85}%, consider increasing your standard project rates by <strong>15%</strong> for upcoming pitches.
-                </p>
-              </div>
-
-              {/* Recent Activity timeline */}
-              <div className="glass-card" style={{ padding: "20px" }}>
-                <h3 className="font-heading" style={{ fontSize: "15px", fontWeight: 700, marginBottom: "14px" }}>
+              {/* Recent Activity Timeline */}
+              <motion.div variants={cardStaggerVariants} className="glass-card" style={{ padding: "18px", borderRadius: "var(--radius-cards)" }}>
+                <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, marginBottom: "12px", margin: 0 }}>
                   Recent Activity
                 </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
                   {activities.slice(0, 4).map((activity) => {
                     const cfg = getActivityConfig(activity.type);
                     return (
-                      <div key={activity._id} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                      <div key={activity._id} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
                         <div
                           style={{
-                            width: "24px",
-                            height: "24px",
+                            width: "22px",
+                            height: "22px",
                             borderRadius: "50%",
                             background: cfg.iconBg,
                             display: "flex",
@@ -1187,13 +1260,13 @@ export default function DashboardPage() {
                             flexShrink: 0,
                           }}
                         >
-                          <cfg.icon size={11} color={cfg.iconColor} />
+                          <cfg.icon size={10} color={cfg.iconColor} />
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
+                          <p style={{ fontSize: "11.5px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>
                             {activity.title}
                           </p>
-                          <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "1px" }}>
+                          <p style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px", margin: 0 }}>
                             {activity.description}
                           </p>
                         </div>
@@ -1201,11 +1274,11 @@ export default function DashboardPage() {
                     );
                   })}
                 </div>
-              </div>
+              </motion.div>
 
             </div>
           </div>
-        </>
+        </motion.div>
       )}
 
       <style>{`
@@ -1213,11 +1286,7 @@ export default function DashboardPage() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
       `}</style>
-    </div>
+    </motion.div>
   );
 }

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Bell, ChevronRight, Menu } from "lucide-react";
+import { Search, Bell, ChevronRight } from "lucide-react";
 import AccountDropdown from "@/components/AccountDropdown";
 import { useTheme } from "@/hooks/useTheme";
 import { Sun, Moon } from "lucide-react";
@@ -37,17 +37,8 @@ export default function TopNav({ userName, userInitial, userImage, userEmail, on
         gap: "16px",
       }}
     >
-      {/* Left: mobile menu + breadcrumbs */}
+      {/* Left: breadcrumbs */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-        <button
-          onClick={onMenuClick}
-          aria-label="Open navigation menu"
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", padding: "4px", borderRadius: "var(--radius-sm)" }}
-          className="mobile-only"
-        >
-          <Menu size={18} />
-        </button>
-
         <Breadcrumb />
       </div>
 

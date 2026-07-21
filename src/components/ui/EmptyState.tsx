@@ -23,62 +23,64 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "56px 24px",
+        padding: "48px 24px",
         width: "100%",
-        minHeight: "280px",
+        minHeight: "240px",
         textAlign: "center",
         gap: "0",
       }}
     >
       <div
         style={{
-          width: "52px",
-          height: "52px",
+          width: "44px",
+          height: "44px",
           background: "var(--surface-2)",
           border: "0.5px solid var(--border)",
           borderRadius: "50%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: "14px",
+          marginBottom: "12px",
         }}
       >
         {React.isValidElement(icon)
           ? React.cloneElement(icon as React.ReactElement<{ size?: number; style?: React.CSSProperties }>, {
-              size: 22,
+              size: 20,
               style: { color: "var(--text-muted)" },
             })
           : icon}
       </div>
       <h3
         style={{
-          fontSize: "15px",
-          fontWeight: 700,
+          fontSize: "14px",
+          fontWeight: 510,
           color: "var(--text-primary)",
-          letterSpacing: "-0.015em",
+          letterSpacing: "-0.012em",
           margin: 0,
-          fontFamily: "var(--font-jakarta), var(--font-sans), sans-serif",
+          fontFamily: "var(--font-inter-variable), var(--font-sans), sans-serif",
         }}
       >
         {heading}
       </h3>
       <p
         style={{
-          fontSize: "13px",
+          fontSize: "12.5px",
           color: "var(--text-muted)",
-          marginTop: "6px",
-          marginBottom: "20px",
-          maxWidth: "300px",
-          lineHeight: "1.6",
+          marginTop: "4px",
+          marginBottom: actionLabel ? "16px" : "0",
+          maxWidth: "360px",
+          lineHeight: "1.5",
         }}
       >
         {description}
       </p>
       {actionLabel && onActionClick && (
-        <Button variant="primary" onClick={onActionClick}>
+        <Button variant="secondary" size="sm" onClick={onActionClick}>
           {actionLabel}
         </Button>
       )}
     </div>
   );
 };
+
+export default EmptyState;

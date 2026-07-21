@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 export type ButtonSize = "sm" | "md" | "lg" | "icon";
@@ -33,16 +34,35 @@ const sizeClass: Record<ButtonSize, string> = {
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = "secondary", size = "md", loading, asChild, leftIcon, rightIcon, children, disabled, className = "", style, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
     const cls = `${variantClass[variant]} ${sizeClass[size]} ${className}`.trim();
+    const isInteractive = !disabled && !loading;
+
+    if (asChild) {
+      return (
+        <Slot
+          ref={ref}
+          className={cls}
+          style={style}
+          {...(props as any)}
+        >
+          {children}
+        </Slot>
+      );
+    }
+
+    // Omit drag handlers to avoid type conflicts with HTMLMotionProps
+    const { onDrag, onDragStart, onDragEnd, onAnimationStart, ...motionProps } = props as any;
 
     return (
-      <Comp
+      <motion.button
         ref={ref}
         disabled={disabled || loading}
         className={cls}
         style={style}
-        {...props}
+        whileHover={isInteractive ? { y: -1.5, scale: 1.01 } : undefined}
+        whileTap={isInteractive ? { scale: 0.975, y: 0 } : undefined}
+        transition={{ type: "spring", stiffness: 450, damping: 25 }}
+        {...motionProps}
       >
         {loading ? (
           <Loader2 size={14} style={{ animation: "spin 0.85s linear infinite", flexShrink: 0 }} />
@@ -54,7 +74,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {rightIcon && !loading && (
           <span style={{ display: "flex", flexShrink: 0 }}>{rightIcon}</span>
         )}
-      </Comp>
+      </motion.button>
     );
   }
 );

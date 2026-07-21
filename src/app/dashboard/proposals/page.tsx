@@ -21,10 +21,25 @@ import {
   Check,
   Award,
   ArrowRight,
+  Printer,
+  Wand2,
+  Sliders,
+  CheckCircle2,
+  Layers,
+  BarChart3,
+  FileCode,
+  ArrowLeft,
+  Eye,
+  Edit2,
+  DollarSign,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton, ProposalListSkeleton } from "@/components/ui/Skeleton";
 
 interface IProposalSection {
   executiveSummary: string;
@@ -148,18 +163,29 @@ const TEMPLATES = [
     timeline: "Monthly",
     tone: "Friendly",
     jobPost: "Looking for a monthly growth partner to manage our SEO, Google Ads, and landing page conversions. We currently spend $5k/mo on ads but aren't seeing positive ROI. Need detailed weekly reporting.",
-    portfolios: ["https://case-studies.freelai.com/ecommerce-growth", "https://portfolio.freelai.com/seo-results"],
+    portfolios: ["https://freelai.com/case-studies/bloom-seo"],
   },
 ];
 
-export default function AIProposalsPage() {
-  useSession();
-  
-  const [activeTab, setActiveTab] = useState<"workspace" | "compare" | "history">("workspace");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [historyLoading, setHistoryLoading] = useState<boolean>(true);
+const GENERATION_STEPS = [
+  "Analyzing job requirements & pain points...",
+  "Querying profile skills & past case studies...",
+  "Auto-matching high-confidence portfolio links...",
+  "Synthesizing win-strategy & tiered pricing...",
+  "Formatting markdown proposal document...",
+];
 
-  // Workspace Form States
+export default function ProposalsPage() {
+  useSession();
+
+  // Navigation tab state
+  const [activeTab, setActiveTab] = useState<"workspace" | "compare" | "history">("workspace");
+
+  // Step Wizard state for Left Studio Panel (1: Client Brief -> 2: Strategy & Terms -> 3: Review & Generate)
+  const [studioStep, setStudioStep] = useState<1 | 2 | 3>(1);
+
+  // Form State
+  const [selectedTemplateId, setSelectedTemplateId] = useState("custom");
   const [clientName, setClientName] = useState("");
   const [platform, setPlatform] = useState<IProposal["platform"]>("Upwork");
   const [jobPost, setJobPost] = useState("");
@@ -167,13 +193,23 @@ export default function AIProposalsPage() {
   const [timeline, setTimeline] = useState("");
   const [tone, setTone] = useState("Auto");
   const [portfolios, setPortfolios] = useState<string[]>([]);
-  const [newPortfolioLink, setNewPortfolioLink] = useState("");
-  const [selectedTemplateId, setSelectedTemplateId] = useState("custom");
+  const [portfolioInput, setPortfolioInput] = useState("");
 
-  // AI Active Proposal States
+  // Right Panel Display mode: Edit mode vs Rendered Formatted Proposal Preview
+  const [outputViewMode, setOutputViewMode] = useState<"edit" | "preview">("preview");
+
+  // Response / Execution State
+  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [proposals, setProposals] = useState<IProposal[]>([]);
   const [activeProposal, setActiveProposal] = useState<IProposal | null>(null);
   const [activeVersionNumber, setActiveVersionNumber] = useState<number>(1);
-  const [proposalBody, setProposalBody] = useState<string>("");
+  const [activeSectionTab, setActiveSectionTab] = useState<
+    "proposal" | "analysis" | "portfolio" | "score" | "suggestions" | "versions"
+  >("proposal");
+
+  // Active editable fields
+  const [proposalBody, setProposalBody] = useState("");
   const [jobAnalysis, setJobAnalysis] = useState<any>(null);
   const [matchedPortfolio, setMatchedPortfolio] = useState<any[]>([]);
   const [explainableScores, setExplainableScores] = useState<any>(null);
@@ -186,319 +222,202 @@ export default function AIProposalsPage() {
     timelineAndMilestones: "",
     callToAction: "",
   });
+
   const [editingPricing, setEditingPricing] = useState<IPpricingBreakdown>({
     basic: { price: 0, description: "", timeline: "" },
     standard: { price: 0, description: "", timeline: "" },
     premium: { price: 0, description: "", timeline: "" },
   });
 
-  // Section Tab inside Right Workspace - Phase 11 Tab Options
-  const [activeSectionTab, setActiveSectionTab] = useState<"proposal" | "analysis" | "portfolio" | "score" | "suggestions" | "versions">("proposal");
+  // Compare version states
+  const [comparePropId, setComparePropId] = useState<string>("");
+  const [historySearch, setHistorySearch] = useState("");
 
-  // Undo / Redo & Autosave States
-  const [bodyHistory, setBodyHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Last saved just now">("Saved");
+  // Auto-save debouncing
+  const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "">("");
 
-  const updateBody = (newBody: string, pushToHistory = true) => {
-    setProposalBody(newBody);
-    if (pushToHistory) {
-      const nextHistory = bodyHistory.slice(0, historyIndex + 1);
-      nextHistory.push(newBody);
-      if (nextHistory.length > 20) {
-        nextHistory.shift();
+  const [pageLoading, setPageLoading] = useState(true);
+
+  // Fetch proposals list
+  const fetchProposals = useCallback(async () => {
+    setPageLoading(true);
+    try {
+      const res = await fetch("/api/proposals");
+      if (res.ok) {
+        const data = await res.json();
+        setProposals(data.proposals || []);
       }
-      setBodyHistory(nextHistory);
-      setHistoryIndex(nextHistory.length - 1);
+    } catch (err) {
+      console.error("Failed to load proposals:", err);
+    } finally {
+      setPageLoading(false);
     }
-  };
+  }, []);
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const prevIndex = historyIndex - 1;
-      setHistoryIndex(prevIndex);
-      setProposalBody(bodyHistory[prevIndex]);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < bodyHistory.length - 1) {
-      const nextIndex = historyIndex + 1;
-      setHistoryIndex(nextIndex);
-      setProposalBody(bodyHistory[nextIndex]);
-    }
-  };
-
-  // Autosave effect
   useEffect(() => {
-    if (!proposalBody || !activeProposal) return;
-    const timer = setInterval(() => {
-      setSaveStatus("Saving...");
-      localStorage.setItem(`autosave-proposal-${activeProposal._id || "draft"}`, proposalBody);
-      setTimeout(() => {
-        setSaveStatus("Saved");
-      }, 600);
-    }, 5000);
+    fetchProposals();
+  }, [fetchProposals]);
+
+  // Loading animation step ticker
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (loading) {
+      setLoadingStep(0);
+      timer = setInterval(() => {
+        setLoadingStep((prev) => (prev < GENERATION_STEPS.length - 1 ? prev + 1 : prev));
+      }, 750);
+    }
     return () => clearInterval(timer);
-  }, [proposalBody, activeProposal]);
-
-  // Section Improvement States
-  const [improvingProposal, setImprovingProposal] = useState(false);
-  const [improveFocusArea, setImproveFocusArea] = useState<string>("Introduction");
-  const [improveFeedbackText, setImproveFeedbackText] = useState("");
-
-  // Dev Debug Panel States (Phase 11 Bug Fix)
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-  const [regressionTestResults, setRegressionTestResults] = useState<any>(null);
-  const [runningRegressionTests, setRunningRegressionTests] = useState(false);
-
-  // Version Comparison States
-  const [comparePropId, setComparePropId] = useState("");
-  const [compareVerA, setCompareVerA] = useState<number>(1);
-  const [compareVerB, setCompareVerB] = useState<number>(1);
-
-  // Proposal History States
-  const [proposals, setProposals] = useState<IProposal[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [platformFilter, setPlatformFilter] = useState("all");
-  const [favoriteFilter, setFavoriteFilter] = useState(false);
-
+  }, [loading]);
 
   // Handle template selection
-  const handleTemplateChange = (id: string) => {
-    setSelectedTemplateId(id);
-    const tmpl = TEMPLATES.find((t) => t.id === id);
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const tmpl = TEMPLATES.find((t) => t.id === templateId);
     if (tmpl) {
       setClientName(tmpl.clientName);
       setPlatform(tmpl.platform);
-      setJobPost(tmpl.jobPost);
       setBudget(tmpl.budget);
       setTimeline(tmpl.timeline);
       setTone(tmpl.tone);
+      setJobPost(tmpl.jobPost);
       setPortfolios(tmpl.portfolios);
     }
   };
 
-  // Add portfolio link
-  const addPortfolioLink = () => {
-    if (newPortfolioLink.trim() && !portfolios.includes(newPortfolioLink.trim())) {
-      setPortfolios([...portfolios, newPortfolioLink.trim()]);
-      setNewPortfolioLink("");
+  // Add portfolio handler
+  const handleAddPortfolio = () => {
+    if (portfolioInput.trim() && !portfolios.includes(portfolioInput.trim())) {
+      setPortfolios([...portfolios, portfolioInput.trim()]);
+      setPortfolioInput("");
     }
   };
 
-  // Remove portfolio link
-  const removePortfolioLink = (index: number) => {
-    setPortfolios(portfolios.filter((_, idx) => idx !== index));
+  const handleRemovePortfolio = (url: string) => {
+    setPortfolios(portfolios.filter((p) => p !== url));
   };
 
-  // Fetch Proposals History
-  const fetchProposalsHistory = useCallback(async () => {
-    setHistoryLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchQuery) params.set("q", searchQuery);
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (platformFilter !== "all") params.set("platform", platformFilter);
-      if (favoriteFilter) params.set("favorite", "true");
+  // Update body text with auto-save trigger
+  const updateBody = (newVal: string) => {
+    setProposalBody(newVal);
+    setSaveStatus("Saving...");
+  };
 
-      const res = await fetch(`/api/proposals?${params.toString()}`);
-      const data = await res.json();
-      if (res.ok) {
-        setProposals(data.proposals || []);
-      }
-    } catch (err) {
-      console.error("Failed to load proposals history:", err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [searchQuery, statusFilter, platformFilter, favoriteFilter]);
-
-  // Load history on filter change or tab switch
   useEffect(() => {
-    if (activeTab === "history" || activeTab === "compare") {
-      fetchProposalsHistory();
-    }
-  }, [activeTab, fetchProposalsHistory]);
+    if (!activeProposal || !saveStatus) return;
 
-  // Trigger proposal generation
+    const timer = setTimeout(async () => {
+      try {
+        const activeIdx = activeProposal.activeVersionIndex;
+        const currentVersion = activeProposal.versions[activeIdx];
+        if (!currentVersion) return;
+
+        const updatedVersions = [...activeProposal.versions];
+        updatedVersions[activeIdx] = {
+          ...currentVersion,
+          proposalBody,
+          sections: editingSections,
+          pricingBreakdown: editingPricing,
+        };
+
+        const res = await fetch(`/api/proposals/${activeProposal._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            versions: updatedVersions,
+            sections: editingSections,
+            pricingBreakdown: editingPricing,
+          }),
+        });
+
+        if (res.ok) {
+          setSaveStatus("Saved");
+          setTimeout(() => setSaveStatus(""), 2000);
+        }
+      } catch (err) {
+        console.error("Failed to auto-save proposal:", err);
+        setSaveStatus("");
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [proposalBody, editingSections, editingPricing]);
+
+  // Main proposal generation trigger
   const handleGenerateProposal = async () => {
-    if (!clientName.trim() || !jobPost.trim()) {
-      toast.error("Please fill in the Client Name and Job Post details.");
+    if (!jobPost.trim()) {
+      toast.error("Please provide a client job post brief.");
+      setStudioStep(1);
       return;
     }
 
     setLoading(true);
+
     try {
-      const res = await fetch("/api/proposals/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientName,
-          platform,
-          jobPost,
-          budget: Number(budget) || 0,
-          timeline,
-          tone,
-          proposalId: activeProposal?._id || undefined,
-        }),
-      });
-
-      const generated = await res.json();
-      if (res.ok) {
-        // Construct a new active proposal local wrapper
-        const newVersion = {
-          versionNumber: activeProposal ? activeProposal.versions.length + 1 : 1,
-          sections: generated.sections,
-          pricingBreakdown: generated.pricingBreakdown,
-          aiAnalysis: generated.aiAnalysis,
-          scoreBreakdown: generated.scoreBreakdown,
-          detectedPainPoints: generated.detectedPainPoints,
-          aiSuggestions: generated.aiSuggestions,
-          promptVersion: generated.promptVersion,
-          proposalBody: generated.proposalBody || "",
-          jobAnalysis: generated.jobAnalysis || null,
-          matchedPortfolio: generated.matchedPortfolio || [],
-          explainableScores: generated.explainableScores || null,
-          winChecklist: generated.winChecklist || [],
-          generationMetadata: generated.generationMetadata || null,
-          createdAt: new Date().toISOString(),
-        };
-
-        const mockProposal: IProposal = {
-          _id: activeProposal?._id || "",
-          title: `Proposal for ${clientName}`,
-          status: "draft",
-          value: generated.pricingBreakdown.standard.price,
-          currency: "USD",
-          isFavorite: false,
-          clientName,
-          platform,
-          jobPost,
-          portfolios,
-          budget: Number(budget) || 0,
-          timeline,
-          tone,
-          activeVersionIndex: activeProposal ? activeProposal.versions.length : 0,
-          versions: activeProposal
-            ? [...activeProposal.versions, newVersion]
-            : [newVersion],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        setActiveProposal(mockProposal);
-        setActiveVersionNumber(newVersion.versionNumber);
-        setProposalBody(newVersion.proposalBody);
-        setJobAnalysis(newVersion.jobAnalysis);
-        setMatchedPortfolio(newVersion.matchedPortfolio);
-        setExplainableScores(newVersion.explainableScores);
-        setWinChecklist(newVersion.winChecklist);
-        setGenerationMetadata(newVersion.generationMetadata);
-
-        setEditingSections(newVersion.sections);
-        setEditingPricing(newVersion.pricingBreakdown);
-        setActiveSectionTab("proposal");
-      } else {
-        toast.error(generated.error || "Failed to generate proposal");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error generating proposal");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Save/Update proposal to database
-  const handleSaveProposal = async () => {
-    if (!activeProposal) return;
-
-    setLoading(true);
-    try {
-      const activeVer = activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber);
-      if (!activeVer) return;
-
-      const isUpdate = activeProposal._id !== "";
-      
-      const payload = {
-        proposalId: isUpdate ? activeProposal._id : undefined,
-        clientName: activeProposal.clientName,
-        platform: activeProposal.platform,
-        jobPost: activeProposal.jobPost,
-        portfolios: activeProposal.portfolios,
-        budget: activeProposal.budget,
-        timeline: activeProposal.timeline,
-        tone: activeProposal.tone,
-        templateId: selectedTemplateId === "custom" ? null : selectedTemplateId,
-        sections: {
-          ...editingSections,
-          executiveSummary: proposalBody || editingSections.executiveSummary, // Fallback binding
-        },
-        pricingBreakdown: editingPricing,
-        aiAnalysis: activeVer.aiAnalysis,
-        scoreBreakdown: activeVer.scoreBreakdown,
-        detectedPainPoints: activeVer.detectedPainPoints,
-        aiSuggestions: activeVer.aiSuggestions,
-        promptVersion: activeVer.promptVersion,
-        // Phase 11 Fields
-        proposalBody,
-        jobAnalysis,
-        matchedPortfolio,
-        explainableScores,
-        winChecklist,
-        generationMetadata,
+      const payload: Record<string, unknown> = {
+        clientName: clientName || "Valued Client",
+        platform,
+        jobPost,
+        budget: budget ? parseFloat(budget) : undefined,
+        timeline: timeline || undefined,
+        tone: tone === "Auto" ? undefined : tone,
+        portfolios,
       };
 
-      const res = await fetch("/api/proposals", {
+      if (activeProposal) {
+        payload.proposalId = activeProposal._id;
+      }
+
+      const res = await fetch("/api/proposals/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        setActiveProposal(data.proposal);
-        const lastIdx = data.proposal.versions.length - 1;
-        const savedVer = data.proposal.versions[lastIdx];
-        
-        setActiveVersionNumber(savedVer.versionNumber);
-        const initialBody = savedVer.proposalBody || savedVer.sections.executiveSummary || "";
-        setProposalBody(initialBody);
-        setBodyHistory([initialBody]);
-        setHistoryIndex(0);
-        setJobAnalysis(savedVer.jobAnalysis || null);
-        setMatchedPortfolio(savedVer.matchedPortfolio || []);
-        setExplainableScores(savedVer.explainableScores || null);
-        setWinChecklist(savedVer.winChecklist || []);
-        setGenerationMetadata(savedVer.generationMetadata || null);
 
-        setEditingSections(savedVer.sections);
-        setEditingPricing(savedVer.pricingBreakdown);
-        toast.success(isUpdate ? "New version saved successfully!" : "Proposal saved successfully!");
-      } else {
-        toast.error(data.error || "Failed to save proposal");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate proposal");
       }
-    } catch (err) {
+
+      toast.success(data.message || "Proposal generated successfully!");
+
+      const newProp: IProposal = data.proposal;
+      setActiveProposal(newProp);
+      
+      const activeIdx = newProp.activeVersionIndex;
+      const latestVer = newProp.versions[activeIdx];
+
+      setActiveVersionNumber(latestVer.versionNumber);
+      setEditingSections(latestVer.sections);
+      setEditingPricing(latestVer.pricingBreakdown);
+      setProposalBody(latestVer.proposalBody || latestVer.sections.executiveSummary || "");
+      setJobAnalysis(latestVer.jobAnalysis || null);
+      setMatchedPortfolio(latestVer.matchedPortfolio || []);
+      setExplainableScores(latestVer.explainableScores || null);
+      setWinChecklist(latestVer.winChecklist || []);
+      setGenerationMetadata(latestVer.generationMetadata || null);
+
+      fetchProposals();
+      setActiveSectionTab("proposal");
+      setOutputViewMode("preview");
+    } catch (err: unknown) {
       console.error(err);
-      toast.error("Error saving proposal");
+      toast.error(err instanceof Error ? err.message : "Error generating proposal");
     } finally {
       setLoading(false);
     }
   };
 
-  // Reopen saved proposal from history
-  const handleReopenProposal = (prop: IProposal) => {
+  const handleLoadProposal = (prop: IProposal) => {
     setActiveProposal(prop);
-    setSelectedTemplateId(prop.templateId || "custom");
-    setClientName(prop.clientName);
-    setPlatform(prop.platform);
-    setJobPost(prop.jobPost);
-    setBudget(prop.budget.toString());
-    setTimeline(prop.timeline);
-    setTone(prop.tone);
-    setPortfolios(prop.portfolios);
+    setClientName(prop.clientName || "");
+    setPlatform(prop.platform || "Upwork");
+    setJobPost(prop.jobPost || "");
+    setBudget(prop.budget ? prop.budget.toString() : "");
+    setTimeline(prop.timeline || "");
+    setTone(prop.tone || "Auto");
+    setPortfolios(prop.portfolios || []);
 
     const activeIdx = prop.activeVersionIndex;
     const version = prop.versions[activeIdx];
@@ -515,9 +434,9 @@ export default function AIProposalsPage() {
     setEditingPricing(version.pricingBreakdown);
     setActiveSectionTab("proposal");
     setActiveTab("workspace");
+    setOutputViewMode("preview");
   };
 
-  // Switch versions in editor
   const handleSwitchVersion = (versionNum: number) => {
     if (!activeProposal) return;
     const ver = activeProposal.versions.find((v) => v.versionNumber === versionNum);
@@ -535,7 +454,6 @@ export default function AIProposalsPage() {
     }
   };
 
-  // Delete proposal handler
   const handleDeleteProposal = async (id: string) => {
     if (!confirm("Are you sure you want to delete this proposal? This cannot be undone.")) return;
 
@@ -546,6 +464,7 @@ export default function AIProposalsPage() {
         if (activeProposal && activeProposal._id === id) {
           setActiveProposal(null);
         }
+        toast.success("Proposal deleted");
       }
     } catch (err) {
       console.error(err);
@@ -553,7 +472,6 @@ export default function AIProposalsPage() {
     }
   };
 
-  // Toggle favorite status
   const handleToggleFavorite = async (prop: IProposal) => {
     try {
       const res = await fetch(`/api/proposals/${prop._id}`, {
@@ -563,7 +481,6 @@ export default function AIProposalsPage() {
       });
       if (res.ok) {
         const updated = await res.json();
-        // Update local list
         setProposals(proposals.map((p) => (p._id === prop._id ? updated.proposal : p)));
         if (activeProposal && activeProposal._id === prop._id) {
           setActiveProposal(updated.proposal);
@@ -574,27 +491,6 @@ export default function AIProposalsPage() {
     }
   };
 
-  // Update status dropdown
-  const handleStatusChange = async (prop: IProposal, newStatus: IProposal["status"]) => {
-    try {
-      const res = await fetch(`/api/proposals/${prop._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setProposals(proposals.map((p) => (p._id === prop._id ? updated.proposal : p)));
-        if (activeProposal && activeProposal._id === prop._id) {
-          setActiveProposal(updated.proposal);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Copy full proposal markdown to clipboard
   const handleCopyToClipboard = () => {
     const textToCopy = proposalBody || `
 # ${activeProposal?.title}
@@ -621,7 +517,6 @@ ${editingSections.callToAction}
     toast.success("Proposal copied to clipboard!");
   };
 
-  // Export as markdown file download
   const handleExportMarkdown = () => {
     const textToCopy = proposalBody || `
 # ${activeProposal?.title}
@@ -653,377 +548,473 @@ ${editingSections.callToAction}
     document.body.removeChild(link);
   };
 
-  // Trigger PDF print view
   const handlePrintPDF = () => {
     window.print();
   };
 
-  // Pricing inputs handler helper
-  const handlePricingFieldChange = (tier: keyof IPpricingBreakdown, field: keyof IPricingTier, val: string | number) => {
-    setEditingPricing({
-      ...editingPricing,
-      [tier]: {
-        ...editingPricing[tier],
-        [field]: val,
-      },
-    });
-  };
-
-  // Compare active selection resolver
   const getCompareProposal = () => proposals.find((p) => p._id === comparePropId);
 
   return (
     <ProfileGuard feature="proposal-generator">
-      <div className="proposals-page-container" style={{ minHeight: "100vh", background: "var(--surface-0)", display: "flex", flexDirection: "column" }}>
+      <div className="proposals-page-container" style={{ minHeight: "100vh", background: "var(--bg-base)", display: "flex", flexDirection: "column" }}>
       
-      {/* Printable CSS Page Styles for PDF Handoff */}
+      {/* Printable CSS Page Styles */}
       <style>{`
         @media print {
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .print-full {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .print-doc {
-            border: none !important;
-            background: white !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-          }
-          .proposals-page-container {
-            background: white !important;
-          }
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .print-full { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+          .print-doc { border: none !important; background: white !important; box-shadow: none !important; padding: 0 !important; }
         }
       `}</style>
 
-      {/* Top Navigation Header */}
-      <header className="no-print" style={{ height: "60px", display: "flex", alignItems: "center", gap: "16px", padding: "0 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
+      {/* Top Header Navbar */}
+      <header className="no-print" style={{ height: "54px", display: "flex", alignItems: "center", gap: "14px", padding: "0 20px", borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)", position: "sticky", top: 0, zIndex: 20 }}>
         <Link href="/dashboard"
-          style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", textDecoration: "none", fontSize: "13px", transition: "color 0.15s" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
+          style={{ display: "flex", alignItems: "center", gap: "5px", color: "var(--text-muted)", textDecoration: "none", fontSize: "12.5px" }}
         >
-          <ChevronLeft size={14} /> Dashboard
+          <ChevronLeft size={13} /> Dashboard
         </Link>
-        <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--color-brand-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Sparkles size={13} color="var(--color-brand)" />
-          </div>
-          <h1 className="font-heading" style={{ fontSize: "15px", letterSpacing: "-0.01em" }}>AI Proposals</h1>
+        <span style={{ color: "var(--border-strong)", fontSize: "11px" }}>/</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <Sparkles size={14} color="var(--color-brand)" />
+          <h1 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, margin: 0 }}>AI Proposal Studio</h1>
         </div>
         <div style={{ flex: 1 }} />
         
-        {/* Workspace Tab Selectors */}
-        <div style={{ display: "flex", gap: "4px", background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-sm)" }}>
+        {/* Nav Tabs */}
+        <div style={{ display: "flex", gap: "4px", background: "var(--bg-base)", padding: "2px", borderRadius: "var(--radius-inputs)", border: "0.5px solid var(--border)" }}>
           {[
-            { id: "workspace", label: "Proposal Generator" },
-            { id: "compare", label: "Compare Versions" },
-            { id: "history", label: "Proposal History" },
+            { id: "workspace", label: "Studio Workflow" },
+            { id: "compare", label: "Compare" },
+            { id: "history", label: "History" },
           ].map((t) => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id as "workspace" | "compare" | "history")}
+              onClick={() => setActiveTab(t.id as any)}
               style={{
-                padding: "6px 14px",
-                fontSize: "12px",
-                fontWeight: 600,
-                borderRadius: "var(--radius-sm)",
+                padding: "4px 12px",
+                fontSize: "11.5px",
+                fontWeight: 510,
+                borderRadius: "var(--radius-buttons)",
                 border: "none",
-                background: activeTab === t.id ? "var(--surface-1)" : "transparent",
-                color: activeTab === t.id ? "var(--text-primary)" : "var(--text-secondary)",
+                background: activeTab === t.id ? "var(--surface-2)" : "transparent",
+                color: activeTab === t.id ? "var(--text-primary)" : "var(--text-muted)",
                 cursor: "pointer",
-                boxShadow: activeTab === t.id ? "var(--shadow-sm)" : "none",
               }}
             >
               {t.label}
             </button>
           ))}
-          {/* Intelligence — navigates to dedicated page */}
           <Link
             href="/dashboard/proposals/intelligence"
             style={{
-              padding: "6px 14px",
-              fontSize: "12px",
-              fontWeight: 600,
-              borderRadius: "var(--radius-sm)",
-              border: "none",
+              padding: "4px 10px",
+              fontSize: "11.5px",
+              fontWeight: 510,
+              borderRadius: "var(--radius-buttons)",
               background: "transparent",
               color: "var(--color-brand)",
-              cursor: "pointer",
               textDecoration: "none",
               display: "flex",
               alignItems: "center",
-              gap: "5px",
-              transition: "background var(--dur-fast)",
+              gap: "4px",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--color-brand-subtle)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
           >
-            ✦ Proposal Intelligence
+            Intelligence ✦
           </Link>
         </div>
       </header>
 
-      {/* Main Panel Content */}
-      <main className="print-full" style={{ flex: 1, padding: "24px", maxWidth: "1500px", width: "100%", margin: "0 auto" }}>
+      {/* Main Container */}
+      <main className="print-full" style={{ flex: 1, padding: "20px", maxWidth: "1200px", width: "100%", margin: "0 auto" }}>
         
-        {/* VIEW 1: WORKSPACE */}
+        {/* VIEW 1: STUDIO WORKFLOW */}
         {activeTab === "workspace" && (
-          <div className="no-print" style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: "24px", alignItems: "start" }}>
+          <div className="no-print" style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: "20px", alignItems: "start" }}>
             
-            {/* LEFT INPUT PANEL */}
-            <section style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
-                <h3 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)" }}>Generation Studio</h3>
-                <p style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>Provide client specifics to generate an optimized proposal outline.</p>
-              </div>
-
-              {/* Template selector */}
-              <div className="input-group">
-                <label className="input-label">System Templates</label>
-                <select
-                  value={selectedTemplateId}
-                  onChange={(e) => handleTemplateChange(e.target.value)}
-                  className="input-field"
-                  style={{ fontSize: "12.5px" }}
-                >
-                  {TEMPLATES.map((tmpl) => (
-                    <option key={tmpl.id} value={tmpl.id}>
-                      {tmpl.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Client & Platform Row */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Client / Org Name</label>
-                  <input
-                    type="text"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="e.g. Acme Corp"
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
+            {/* LEFT PANEL: 3-STEP WIZARD STUDIO */}
+            <section
+              style={{
+                background: "var(--surface-1)",
+                border: "0.5px solid var(--border)",
+                borderRadius: "var(--radius-cards)",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
+            >
+              {/* Wizard Step Progress Tracker Bar */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "0.5px solid var(--border)", paddingBottom: "12px" }}>
+                <div>
+                  <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, margin: 0, color: "var(--text-primary)" }}>
+                    Generation Studio
+                  </h3>
+                  <p style={{ fontSize: "11.5px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+                    Step {studioStep} of 3: {studioStep === 1 ? "Job Brief" : studioStep === 2 ? "Terms & Tone" : "Synthesize"}
+                  </p>
                 </div>
-                <div className="input-group">
-                  <label className="input-label">Freelance Platform</label>
-                  <select
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value as IProposal["platform"])}
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  >
-                    {["Upwork", "Freelancer", "Fiverr", "LinkedIn", "Direct", "Other"].map((plat) => (
-                      <option key={plat} value={plat}>
-                        {plat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Job post body */}
-              <div className="input-group">
-                <label className="input-label">Client Job Post Brief</label>
-                <textarea
-                  value={jobPost}
-                  onChange={(e) => setJobPost(e.target.value)}
-                  placeholder="Paste the Upwork description, client requirements, or RFPs here..."
-                  className="input-field"
-                  style={{ height: "140px", resize: "none", fontSize: "12.5px", lineHeight: "1.5" }}
-                />
-              </div>
-
-              {/* Budget, Timeline & Tone */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="input-group">
-                  <label className="input-label">Budget ($ USD)</label>
-                  <input
-                    type="number"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="e.g. 5000"
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Timeline Target</label>
-                  <input
-                    type="text"
-                    value={timeline}
-                    onChange={(e) => setTimeline(e.target.value)}
-                    placeholder="e.g. 4 weeks, Monthly"
-                    className="input-field"
-                    style={{ fontSize: "12.5px" }}
-                  />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <label className="input-label">Proposal Tone Style</label>
-                  {generationMetadata?.isMockMode && (
-                    <span
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {[1, 2, 3].map((stepNum) => (
+                    <button
+                      key={stepNum}
+                      onClick={() => setStudioStep(stepNum as any)}
                       style={{
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        padding: "1px 6px",
-                        borderRadius: "var(--radius-pill)",
-                        background: "var(--color-warning-bg)",
-                        color: "var(--color-warning)",
-                        border: "0.5px solid rgba(217,119,6,0.2)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
+                        width: "22px",
+                        height: "22px",
+                        borderRadius: "50%",
+                        border: "0.5px solid var(--border)",
+                        background: studioStep === stepNum ? "var(--color-brand)" : studioStep > stepNum ? "rgba(39,166,68,0.2)" : "var(--bg-base)",
+                        color: studioStep === stepNum ? "#08090a" : studioStep > stepNum ? "var(--color-pulse-green)" : "var(--text-muted)",
+                        fontSize: "11px",
+                        fontWeight: 590,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      Development Mode
-                    </span>
-                  )}
+                      {studioStep > stepNum ? "✓" : stepNum}
+                    </button>
+                  ))}
                 </div>
-                <select
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  className="input-field"
-                  style={{ fontSize: "12.5px" }}
-                >
-                  <option value="Auto">Auto (Recommended)</option>
-                  <option value="Professional">Professional</option>
-                  <option value="Friendly">Friendly</option>
-                  <option value="Confident">Confident</option>
-                  <option value="Casual">Casual</option>
-                  <option value="Minimal">Minimal</option>
-                </select>
               </div>
 
-              {/* Auto-Matched Portfolio Preview (Phase 11) */}
-              {matchedPortfolio && matchedPortfolio.length > 0 && (
-                <div className="input-group" style={{ gap: "6px" }}>
-                  <label className="input-label">Auto-Matched Portfolio</label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {matchedPortfolio.map((item, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          background: "var(--surface-2)",
-                          padding: "6px 10px",
-                          borderRadius: "4px",
-                          fontSize: "11px",
-                          border: "0.5px solid var(--border)",
-                        }}
+              {/* Wizard Step 1: Client & Job Post Brief */}
+              <AnimatePresence mode="wait">
+                {studioStep === 1 && (
+                  <motion.div
+                    key="step-1"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.18 }}
+                    style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+                  >
+                    {/* Template Preset Dropdown */}
+                    <div className="form-group-redesign">
+                      <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Template Preset</label>
+                      <select
+                        value={selectedTemplateId}
+                        onChange={(e) => handleTemplateChange(e.target.value)}
+                        style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", cursor: "pointer" }}
                       >
-                        <span style={{ fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
-                          {item.project.title}
-                        </span>
-                        <span style={{ color: "var(--color-success)", fontWeight: 700 }}>
-                          {item.matchScore}% match
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                        {TEMPLATES.map((tmpl) => (
+                          <option key={tmpl.id} value={tmpl.id}>
+                            {tmpl.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              {/* Trigger button */}
-              <Button
-                variant="primary"
-                onClick={handleGenerateProposal}
-                disabled={loading}
-                leftIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={13} />}
-                style={{ marginTop: "8px" }}
-              >
-                {loading ? "Analyzing & Generating..." : activeProposal ? "Regenerate Proposal" : "Generate Proposal"}
-              </Button>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div className="form-group-redesign">
+                        <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Client Name</label>
+                        <input
+                          type="text"
+                          value={clientName}
+                          onChange={(e) => setClientName(e.target.value)}
+                          placeholder="e.g. Acme Corp"
+                          style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)" }}
+                        />
+                      </div>
+                      <div className="form-group-redesign">
+                        <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Platform</label>
+                        <select
+                          value={platform}
+                          onChange={(e) => setPlatform(e.target.value as IProposal["platform"])}
+                          style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", cursor: "pointer" }}
+                        >
+                          {["Upwork", "Freelancer", "Fiverr", "LinkedIn", "Direct", "Other"].map((plat) => (
+                            <option key={plat} value={plat}>
+                              {plat}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-group-redesign">
+                      <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Client Job Post Brief *</label>
+                      <textarea
+                        value={jobPost}
+                        onChange={(e) => setJobPost(e.target.value)}
+                        placeholder="Paste Upwork description, client requirements, or RFPs..."
+                        rows={6}
+                        style={{ resize: "none", fontSize: "12px", lineHeight: "1.5", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", padding: "10px" }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
+                      <Button variant="secondary" size="sm" onClick={() => setStudioStep(2)} rightIcon={<ArrowRight size={13} />}>
+                        Next: Terms & Tone
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Wizard Step 2: Budget, Timeline & Tone Style */}
+                {studioStep === 2 && (
+                  <motion.div
+                    key="step-2"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.18 }}
+                    style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+                  >
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div className="form-group-redesign">
+                        <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Budget ($ USD)</label>
+                        <input
+                          type="number"
+                          value={budget}
+                          onChange={(e) => setBudget(e.target.value)}
+                          placeholder="e.g. 5000"
+                          style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)" }}
+                        />
+                      </div>
+                      <div className="form-group-redesign">
+                        <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Timeline Target</label>
+                        <input
+                          type="text"
+                          value={timeline}
+                          onChange={(e) => setTimeline(e.target.value)}
+                          placeholder="e.g. 4 weeks"
+                          style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)" }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group-redesign">
+                      <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Proposal Tone Style</label>
+                      <select
+                        value={tone}
+                        onChange={(e) => setTone(e.target.value)}
+                        style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", cursor: "pointer" }}
+                      >
+                        <option value="Auto">Auto (Recommended)</option>
+                        <option value="Professional">Professional</option>
+                        <option value="Friendly">Friendly</option>
+                        <option value="Confident">Confident</option>
+                        <option value="Casual">Casual</option>
+                        <option value="Minimal">Minimal</option>
+                      </select>
+                    </div>
+
+                    {/* Manual Portfolio Add */}
+                    <div className="form-group-redesign">
+                      <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Reference Case Study Links</label>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <input
+                          type="text"
+                          value={portfolioInput}
+                          onChange={(e) => setPortfolioInput(e.target.value)}
+                          placeholder="https://behance.net/my-project"
+                          style={{ flex: 1, fontSize: "12px", height: "32px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", padding: "0 8px" }}
+                        />
+                        <Button variant="outline" size="sm" onClick={handleAddPortfolio}>Add</Button>
+                      </div>
+                      {portfolios.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "6px" }}>
+                          {portfolios.map((url) => (
+                            <div key={url} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px", color: "var(--text-secondary)", background: "var(--bg-base)", padding: "4px 8px", borderRadius: "var(--radius-badges)", border: "0.5px solid var(--border)" }}>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "200px" }}>{url}</span>
+                              <button onClick={() => handleRemovePortfolio(url)} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={11} /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                      <Button variant="ghost" size="sm" onClick={() => setStudioStep(1)} leftIcon={<ArrowLeft size={13} />}>
+                        Back
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setStudioStep(3)} rightIcon={<ArrowRight size={13} />}>
+                        Next: Review & Generate
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Wizard Step 3: Review & Synthesize */}
+                {studioStep === 3 && (
+                  <motion.div
+                    key="step-3"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.18 }}
+                    style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+                  >
+                    <div style={{ padding: "12px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <span style={{ fontSize: "10.5px", fontWeight: 590, textTransform: "uppercase", color: "var(--text-muted)" }}>Parameter Summary</span>
+                      <div style={{ fontSize: "12px", color: "var(--text-primary)", display: "flex", justifyContent: "space-between" }}>
+                        <span>Client:</span> <strong style={{ fontWeight: 510 }}>{clientName || "Valued Client"} ({platform})</strong>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-primary)", display: "flex", justifyContent: "space-between" }}>
+                        <span>Budget Target:</span> <strong style={{ fontWeight: 510 }}>{budget ? `$${budget}` : "Not specified"}</strong>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-primary)", display: "flex", justifyContent: "space-between" }}>
+                        <span>Tone:</span> <strong style={{ fontWeight: 510 }}>{tone}</strong>
+                      </div>
+                    </div>
+
+                    {/* Matched Portfolio count */}
+                    {matchedPortfolio && matchedPortfolio.length > 0 && (
+                      <div style={{ fontSize: "11.5px", color: "var(--color-pulse-green)", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <CheckCircle size={13} /> {matchedPortfolio.length} portfolio project(s) ready for auto-matching.
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+                      <Button variant="ghost" size="sm" onClick={() => setStudioStep(2)} leftIcon={<ArrowLeft size={13} />}>
+                        Back
+                      </Button>
+                      {/* FOCAL PRIMARY CTA (DESIGN.md Acid Lime #e4f222 flashlight button) */}
+                      <Button
+                        variant="primary"
+                        onClick={handleGenerateProposal}
+                        disabled={loading}
+                        leftIcon={loading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={14} />}
+                      >
+                        {loading ? "Synthesizing..." : activeProposal ? "Regenerate Proposal" : "Generate Proposal"}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </section>
 
-            {/* RIGHT OUTPUT PANEL */}
-            <section style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px", minHeight: "600px" }}>
-              {!activeProposal ? (
+            {/* RIGHT OUTPUT PANEL: WORKSPACE & DOCUMENT PREVIEW */}
+            <section
+              style={{
+                background: "var(--surface-1)",
+                border: "0.5px solid var(--border)",
+                borderRadius: "var(--radius-cards)",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+              }}
+            >
+              {loading ? (
+                /* ANIMATED SKELETON LOADING STATE MATCHING DASHBOARD PAGES */
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", flex: 1, padding: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" }}>
+                    <Skeleton height={20} width="40%" />
+                    <Skeleton height={20} width="80px" rounded />
+                  </div>
+                  <Skeleton height={180} style={{ borderRadius: "var(--radius-cards)", marginTop: "8px" }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginTop: "4px" }}>
+                    <Skeleton height={80} style={{ borderRadius: "var(--radius-inputs)" }} />
+                    <Skeleton height={80} style={{ borderRadius: "var(--radius-inputs)" }} />
+                    <Skeleton height={80} style={{ borderRadius: "var(--radius-inputs)" }} />
+                  </div>
+                </div>
+              ) : !activeProposal ? (
                 <EmptyState
                   icon={<Sparkles />}
                   heading="AI Proposal Workspace"
-                  description="Use the left panel to define parameters and kickstart proposal generation. Your output, pricing tiers, version logs, and analytics scores will compile here."
+                  description="Use the left studio wizard to define parameters and generate a structured proposal document, tier breakdown, and win score."
                 />
               ) : (
                 <>
-                  {/* Top Version bar & Actions */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)", paddingBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
+                  {/* Top Bar: Title, Confidence & Document Actions */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "0.5px solid var(--border)", paddingBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <h3 className="font-heading" style={{ fontSize: "14px", color: "var(--text-primary)" }}>Proposal Document Editor</h3>
+                        <h3 className="font-heading" style={{ fontSize: "14px", fontWeight: 510, margin: 0, color: "var(--text-primary)" }}>
+                          Proposal Document
+                        </h3>
                         {(() => {
                           const activeVer = activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber);
                           const conf = activeVer?.aiAnalysis?.confidence ?? 90;
                           return (
                             <span
-                              title={activeVer?.explainableScores?.authenticity?.reason || "Based on verification of profile, portfolio, and job description."}
                               style={{
-                                fontSize: "10.5px",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: "var(--radius-pill)",
-                                background: conf >= 85 ? "var(--color-success-bg)" : "var(--color-warning-bg)",
-                                color: conf >= 85 ? "var(--color-success)" : "var(--color-warning)",
-                                cursor: "help",
-                                border: "0.5px solid rgba(0,0,0,0.05)",
+                                fontSize: "10px",
+                                fontWeight: 590,
+                                padding: "1px 6px",
+                                borderRadius: "var(--radius-pills)",
+                                background: conf >= 85 ? "rgba(39,166,68,0.12)" : "rgba(245,158,11,0.12)",
+                                color: conf >= 85 ? "var(--color-pulse-green)" : "var(--warning)",
+                                fontVariantNumeric: "tabular-nums",
                               }}
                             >
-                              ✦ {conf}% Confidence
+                              ✦ {conf}% Match Confidence
                             </span>
                           );
                         })()}
                       </div>
-                      {activeProposal._id && (
-                        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Document ID: {activeProposal._id}</p>
-                      )}
                     </div>
                     
-                    {/* Version Selector */}
+                    {/* View mode toggle (Preview vs Raw Edit) + Toolbar Actions */}
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>Active Version</span>
-                      <select
-                        value={activeVersionNumber}
-                        onChange={(e) => handleSwitchVersion(Number(e.target.value))}
-                        className="input-field"
-                        style={{ width: "auto", padding: "4px 24px 4px 10px", height: "30px", fontSize: "11.5px" }}
-                      >
-                        {activeProposal.versions.map((ver) => (
-                          <option key={ver.versionNumber} value={ver.versionNumber}>
-                            v{ver.versionNumber} ({ver.promptVersion.substring(0, 10)})
-                          </option>
-                        ))}
-                      </select>
-                      
+                      <div style={{ background: "var(--bg-base)", padding: "2px", borderRadius: "var(--radius-inputs)", border: "0.5px solid var(--border)", display: "flex" }}>
+                        <button
+                          onClick={() => setOutputViewMode("preview")}
+                          style={{
+                            padding: "3px 8px",
+                            fontSize: "11px",
+                            border: "none",
+                            borderRadius: "4px",
+                            background: outputViewMode === "preview" ? "var(--surface-2)" : "transparent",
+                            color: outputViewMode === "preview" ? "var(--text-primary)" : "var(--text-muted)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Eye size={11} /> Preview
+                        </button>
+                        <button
+                          onClick={() => setOutputViewMode("edit")}
+                          style={{
+                            padding: "3px 8px",
+                            fontSize: "11px",
+                            border: "none",
+                            borderRadius: "4px",
+                            background: outputViewMode === "edit" ? "var(--surface-2)" : "transparent",
+                            color: outputViewMode === "edit" ? "var(--text-primary)" : "var(--text-muted)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Edit2 size={11} /> Raw Code
+                        </button>
+                      </div>
+
+                      <Button variant="ghost" size="sm" onClick={handleCopyToClipboard} leftIcon={<Copy size={12} />}>
+                        Copy
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleExportMarkdown} leftIcon={<Download size={12} />}>
+                        Export .md
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handlePrintPDF} leftIcon={<Printer size={12} />}>
+                        PDF
+                      </Button>
                       <button
                         onClick={() => handleToggleFavorite(activeProposal)}
-                        style={{ background: "none", border: "none", color: activeProposal.isFavorite ? "var(--color-brand)" : "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        style={{ background: "none", border: "none", color: activeProposal.isFavorite ? "var(--color-brand)" : "var(--text-muted)", cursor: "pointer", display: "flex", padding: "4px" }}
                       >
-                        <Star size={16} fill={activeProposal.isFavorite ? "var(--color-brand)" : "none"} />
+                        <Star size={15} fill={activeProposal.isFavorite ? "var(--color-brand)" : "none"} />
                       </button>
                     </div>
                   </div>
-                  {/* Right Panel Tabs (Phase 11) */}
-                  <div style={{ display: "flex", gap: "4px", background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-sm)", overflowX: "auto" }}>
+
+                  {/* Right Section Tabs */}
+                  <div style={{ display: "flex", gap: "4px", background: "var(--bg-base)", padding: "2px", borderRadius: "var(--radius-inputs)", border: "0.5px solid var(--border)", overflowX: "auto" }}>
                     {[
-                      { id: "proposal", label: "Proposal" },
+                      { id: "proposal", label: "Proposal Document" },
                       { id: "analysis", label: "Client Analysis" },
-                      { id: "portfolio", label: "Portfolio References" },
-                      { id: "score", label: "Proposal Score" },
+                      { id: "portfolio", label: "Portfolios" },
+                      { id: "score", label: "Score Breakdown" },
                       { id: "suggestions", label: "Suggestions" },
                       { id: "versions", label: "Versions" },
                     ].map((tab) => (
@@ -1031,13 +1022,13 @@ ${editingSections.callToAction}
                         key={tab.id}
                         onClick={() => setActiveSectionTab(tab.id as any)}
                         style={{
-                          padding: "6px 10px",
+                          padding: "4px 10px",
                           fontSize: "11px",
-                          fontWeight: 600,
-                          borderRadius: "var(--radius-sm)",
+                          fontWeight: 510,
+                          borderRadius: "var(--radius-buttons)",
                           border: "none",
-                          background: activeSectionTab === tab.id ? "var(--surface-1)" : "transparent",
-                          color: activeSectionTab === tab.id ? "var(--text-primary)" : "var(--text-secondary)",
+                          background: activeSectionTab === tab.id ? "var(--surface-2)" : "transparent",
+                          color: activeSectionTab === tab.id ? "var(--text-primary)" : "var(--text-muted)",
                           cursor: "pointer",
                           whiteSpace: "nowrap",
                         }}
@@ -1047,459 +1038,211 @@ ${editingSections.callToAction}
                     ))}
                   </div>
 
-                  {/* Tab Contents */}
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px", minHeight: 0 }}>
-                    
-                    {/* 1. PROPOSAL BODY TAB */}
-                    {activeSectionTab === "proposal" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>PROPOSAL TEXT</span>
-                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                              {proposalBody ? proposalBody.split(/\s+/).filter(Boolean).length : 0} words
-                            </span>
-                            <div style={{ display: "flex", gap: "4px" }}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleUndo}
-                                disabled={historyIndex <= 0}
-                                style={{ padding: "2px 8px", height: "24px", fontSize: "11px" }}
-                              >
-                                Undo
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleRedo}
-                                disabled={historyIndex >= bodyHistory.length - 1}
-                                style={{ padding: "2px 8px", height: "24px", fontSize: "11px" }}
-                              >
-                                Redo
-                              </Button>
+                  {/* Tab Contents with Framer Motion AnimatePresence */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${activeSectionTab}-${outputViewMode}`}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                      style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px", minHeight: 0 }}
+                    >
+                      {/* 1. PROPOSAL TEXT TAB */}
+                      {activeSectionTab === "proposal" && (
+                        outputViewMode === "edit" ? (
+                          /* RAW MONOSPACE EDIT MODE */
+                          <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 590, textTransform: "uppercase" }}>RAW MARKDOWN CODE</span>
+                              {saveStatus && <span style={{ fontSize: "10.5px", color: "var(--color-brand)" }}>{saveStatus}</span>}
                             </div>
-                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{saveStatus}</span>
-                          </div>
-                        </div>
-                        <textarea
-                          value={proposalBody}
-                          onChange={(e) => updateBody(e.target.value)}
-                          className="input-field"
-                          placeholder="Proposal text will generate here..."
-                          style={{
-                            flex: 1,
-                            minHeight: "260px",
-                            resize: "none",
-                            fontFamily: "var(--font-sans)",
-                            fontSize: "13px",
-                            lineHeight: "1.6",
-                            padding: "12px 14px",
-                            background: "var(--surface-2)",
-                            outline: "none",
-                          }}
-                        />
-
-                        {/* Section-Specific Improvement Engine (Phase 11) */}
-                        <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px 14px" }}>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "8px" }}>
-                            Improve Focus Section
-                          </span>
-                          <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: "8px", marginBottom: "8px" }}>
-                            <select
-                              value={improveFocusArea}
-                              onChange={(e) => setImproveFocusArea(e.target.value)}
-                              className="input-field"
-                              style={{ height: "32px", fontSize: "12px" }}
-                            >
-                              {["Introduction", "Body", "Portfolio Mention", "Pricing", "CTA", "Readability", "Personalization", "Grammar", "Tone"].map((f) => (
-                                <option key={f} value={f}>{f}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="text"
-                              value={improveFeedbackText}
-                              onChange={(e) => setImproveFeedbackText(e.target.value)}
-                              placeholder="e.g. Make it more casual, add hourly rate context..."
-                              className="input-field"
-                              style={{ height: "32px", fontSize: "12px" }}
+                            <textarea
+                              value={proposalBody}
+                              onChange={(e) => updateBody(e.target.value)}
+                              placeholder="Proposal text..."
+                              style={{
+                                flex: 1,
+                                minHeight: "360px",
+                                resize: "vertical",
+                                fontFamily: "var(--font-berkeley-mono), monospace",
+                                fontSize: "12px",
+                                lineHeight: 1.6,
+                                padding: "12px",
+                                background: "var(--bg-base)",
+                                border: "0.5px solid var(--border)",
+                                borderRadius: "var(--radius-inputs)",
+                                color: "var(--text-primary)",
+                                outline: "none",
+                              }}
                             />
                           </div>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            disabled={improvingProposal || !proposalBody}
-                            onClick={async () => {
-                              if (!proposalBody) return;
-                              setImprovingProposal(true);
-                              try {
-                                const res = await fetch("/api/proposals/improve", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    proposalText: proposalBody,
-                                    jobPost,
-                                    focus: improveFocusArea,
-                                    feedback: improveFeedbackText,
-                                  }),
-                                });
-                                const data = await res.json();
-                                if (res.ok) {
-                                  setProposalBody(data.rewritten);
-                                  setImproveFeedbackText("");
-                                  toast.success(`Improved proposal for "${improveFocusArea}"!`);
-                                } else {
-                                  toast.error(data.error || "Failed to improve section");
-                                }
-                              } catch {
-                                toast.error("Failed to improve section");
-                              } finally {
-                                setImprovingProposal(false);
-                              }
-                            }}
-                            leftIcon={improvingProposal ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={11} />}
-                            style={{ width: "100%", height: "32px" }}
-                          >
-                            {improvingProposal ? "Refining draft..." : `Improve ${improveFocusArea}`}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                        ) : (
+                          /* FORMATTED RICH DOCUMENT PREVIEW MODE */
+                          <div style={{ display: "flex", flexDirection: "column", gap: "14px", flex: 1, padding: "16px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", maxHeight: "460px", overflowY: "auto" }}>
+                            <div style={{ borderBottom: "0.5px solid var(--border)", paddingBottom: "10px" }}>
+                              <h2 style={{ fontSize: "18px", fontWeight: 510, color: "var(--text-primary)", margin: 0, letterSpacing: "-0.015em" }}>
+                                {activeProposal.title}
+                              </h2>
+                              <p style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px", margin: 0 }}>
+                                Prepared for {activeProposal.clientName || "Valued Client"} • {activeProposal.platform}
+                              </p>
+                            </div>
 
-                    {/* 2. CLIENT ANALYSIS TAB */}
-                    {activeSectionTab === "analysis" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "400px", overflowY: "auto", paddingRight: "4px" }}>
-                        {jobAnalysis ? (
-                          <>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "11.5px" }}>
-                              {[
-                                { label: "Client Tone", val: jobAnalysis.clientTone },
-                                { label: "Communication style", val: jobAnalysis.communicationStyle },
-                                { label: "Complexity", val: jobAnalysis.projectComplexity },
-                                { label: "Budget Sensitivity", val: jobAnalysis.budgetSensitivity },
-                                { label: "Urgency", val: jobAnalysis.urgency },
-                                { label: "Risk Level", val: jobAnalysis.riskLevel },
-                                { label: "Decision Driver", val: jobAnalysis.decisionDrivers?.join(", ") || "Quality" },
-                                { label: "Experience Expected", val: jobAnalysis.preferredExperience },
-                              ].map((item) => (
-                                <div key={item.label} style={{ padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px" }}>
-                                  <span style={{ fontSize: "10px", color: "var(--text-muted)", display: "block" }}>{item.label}</span>
-                                  <span style={{ fontWeight: "bold", color: "var(--text-secondary)" }}>{item.val || "Medium"}</span>
+                            {/* Section Blocks */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                              <div>
+                                <h4 style={{ fontSize: "12px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px 0" }}>
+                                  Executive Summary
+                                </h4>
+                                <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
+                                  {editingSections.executiveSummary || proposalBody}
+                                </p>
+                              </div>
+
+                              {editingSections.scopeOfWork && (
+                                <div>
+                                  <h4 style={{ fontSize: "12px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "10px 0 4px 0" }}>
+                                    Scope of Work & Deliverables
+                                  </h4>
+                                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
+                                    {editingSections.scopeOfWork}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Tiered Pricing Breakdown */}
+                              {editingPricing && editingPricing.standard?.price > 0 && (
+                                <div style={{ marginTop: "10px" }}>
+                                  <h4 style={{ fontSize: "12px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 8px 0" }}>
+                                    Tiered Investment Breakdown
+                                  </h4>
+                                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                                    {(["basic", "standard", "premium"] as const).map((tierKey) => {
+                                      const tier = editingPricing[tierKey];
+                                      return (
+                                        <div key={tierKey} style={{ padding: "10px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)" }}>
+                                          <span style={{ fontSize: "10px", fontWeight: 590, textTransform: "uppercase", color: "var(--text-muted)" }}>{tierKey} Tier</span>
+                                          <div style={{ fontSize: "16px", fontWeight: 590, color: "var(--text-primary)", marginTop: "2px", fontVariantNumeric: "tabular-nums" }}>
+                                            ${tier.price.toLocaleString()}
+                                          </div>
+                                          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>{tier.timeline}</p>
+                                          <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: "4px 0 0 0", lineHeight: 1.4 }}>{tier.description}</p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      )}
+
+                      {/* 2. CLIENT ANALYSIS TAB */}
+                      {activeSectionTab === "analysis" && jobAnalysis && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                          <div style={{ padding: "14px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)" }}>
+                            <h4 style={{ fontSize: "12px", fontWeight: 590, color: "var(--text-primary)", margin: 0 }}>Detected Core Needs</h4>
+                            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", margin: 0, lineHeight: 1.5 }}>
+                              {jobAnalysis.coreNeed}
+                            </p>
+                          </div>
+                          {jobAnalysis.keyPainPoints && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 590, textTransform: "uppercase" }}>Key Pain Points</span>
+                              {jobAnalysis.keyPainPoints.map((pt: string, idx: number) => (
+                                <div key={idx} style={{ fontSize: "12px", color: "var(--text-secondary)", padding: "8px 10px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ color: "var(--color-coral-red)" }}>•</span> {pt}
                                 </div>
                               ))}
                             </div>
-                            <div style={{ fontSize: "12px", background: "var(--surface-2)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)" }}>
-                              <span style={{ fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>Extracted Pain Points</span>
-                              {jobAnalysis.painPoints?.map((p: string, i: number) => (
-                                <p key={i} style={{ margin: "2px 0", color: "var(--text-secondary)" }}>• {p}</p>
-                              ))}
-                            </div>
-                            <div style={{ fontSize: "12px", background: "var(--surface-2)", padding: "10px", borderRadius: "4px", border: "1px solid var(--border)" }}>
-                              <span style={{ fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>Important Keywords</span>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                                {jobAnalysis.importantKeywords?.map((kw: string) => (
-                                  <span key={kw} style={{ background: "var(--surface-3)", padding: "2px 6px", borderRadius: "var(--radius-pill)", fontSize: "10px" }}>{kw}</span>
-                                ))}
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Client analysis details will populate after generation.</p>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      )}
 
-                    {/* 3. PORTFOLIO REFERENCES */}
-                    {activeSectionTab === "portfolio" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "400px", overflowY: "auto" }}>
-                        {matchedPortfolio && matchedPortfolio.length > 0 ? (
-                          matchedPortfolio.map((item, idx) => (
-                            <div
-                              key={idx}
-                              style={{
-                                padding: "12px 14px",
-                                background: "var(--surface-2)",
-                                border: "1.5px solid var(--border)",
-                                borderLeft: "4px solid var(--color-success)",
-                                borderRadius: "var(--radius)",
-                              }}
-                            >
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-primary)" }}>
-                                  {item.project.title}
-                                </span>
-                                <span style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: 700 }}>
+                      {/* 3. PORTFOLIOS TAB */}
+                      {activeSectionTab === "portfolio" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                          {matchedPortfolio.length === 0 ? (
+                            <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No portfolio projects matched.</p>
+                          ) : (
+                            matchedPortfolio.map((item, idx) => (
+                              <div key={idx} style={{ padding: "12px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                  <h4 style={{ fontSize: "13px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>{item.project.title}</h4>
+                                  <p style={{ fontSize: "11.5px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>{item.project.category}</p>
+                                </div>
+                                <span style={{ fontSize: "12px", fontWeight: 590, color: "var(--color-pulse-green)", fontVariantNumeric: "tabular-nums" }}>
                                   {item.matchScore}% Match
                                 </span>
                               </div>
-                              <p style={{ fontSize: "11.5px", color: "var(--text-secondary)", margin: "0 0 6px" }}>
-                                {item.project.description}
-                              </p>
-                              <span style={{ fontSize: "10.5px", color: "var(--text-muted)", display: "block" }}>
-                                <strong>Why matched:</strong> {item.matchReason}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No portfolio projects were automatically matched.</p>
-                        )}
-                      </div>
-                    )}
+                            ))
+                          )}
+                        </div>
+                      )}
 
-                    {/* 4. PROPOSAL SCORES & WIN CHECKLIST */}
-                    {activeSectionTab === "score" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "420px", overflowY: "auto", paddingRight: "4px" }}>
-                        {explainableScores ? (
-                          <>
-                            {/* Win Checklist Completion */}
-                            <div style={{ padding: "12px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", gap: "14px" }}>
-                              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--color-success-bg)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--color-success)" }}>
-                                <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--color-success)" }}>
-                                  {activeProposal?.versions.find((v) => v.versionNumber === activeVersionNumber)?.winChecklistPercentage || 85}%
-                                </span>
-                              </div>
-                              <div>
-                                <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--text-primary)", display: "block" }}>Win Checklist Score</span>
-                                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Reflects completeness and key freelancer indicators.</span>
-                              </div>
-                            </div>
-
-                            {/* Scores List */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                              {Object.entries(explainableScores).map(([key, item]: any) => {
-                                const barColor = item.score >= 80 ? "var(--color-success)" : item.score >= 60 ? "var(--color-brand)" : "var(--color-danger)";
-                                return (
-                                  <div key={key} style={{ padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                                      <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-secondary)", textTransform: "capitalize" }}>
-                                        {key.replace(/([A-Z])/g, " $1")}
-                                      </span>
-                                      <span style={{ fontSize: "11px", fontWeight: 700, color: barColor }}>{item.score}%</span>
-                                    </div>
-                                    <div style={{ height: "4px", background: "var(--surface-3)", borderRadius: "999px", overflow: "hidden", marginBottom: "4px" }}>
-                                      <div style={{ width: `${item.score}%`, height: "100%", background: barColor }} />
-                                    </div>
-                                    <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>{item.reason}</p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* Win Checklist Items */}
-                            {winChecklist && winChecklist.length > 0 && (
-                              <div style={{ padding: "10px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
-                                <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>Win Checklist Items</span>
-                                {winChecklist.map((item, idx) => (
-                                  <div key={idx} style={{ display: "flex", gap: "6px", fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>
-                                    <span style={{ color: item.passed ? "var(--color-success)" : "var(--color-danger)" }}>
-                                      {item.passed ? "✓" : "✗"}
-                                    </span>
-                                    <span><strong>{item.label}:</strong> {item.explanation}</span>
+                      {/* 4. SCORE BREAKDOWN TAB */}
+                      {activeSectionTab === "score" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                          {winChecklist.length > 0 && (
+                            <div style={{ padding: "12px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)" }}>
+                              <span style={{ fontSize: "11px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase" }}>Win Checklist Compliance</span>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "8px" }}>
+                                {winChecklist.map((chk, idx) => (
+                                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: chk.passed ? "var(--text-primary)" : "var(--text-muted)" }}>
+                                    <CheckCircle2 size={13} color={chk.passed ? "var(--color-pulse-green)" : "var(--border-strong)"} />
+                                    <span>{chk.label}</span>
                                   </div>
                                 ))}
                               </div>
-                            )}
-                          </>
-                        ) : (
-                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Proposal scores are calculated upon generation.</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 5. AI SUGGESTIONS TAB */}
-                    {activeSectionTab === "suggestions" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "400px", overflowY: "auto" }}>
-                        {activeProposal?.versions.find((v) => v.versionNumber === activeVersionNumber)?.aiSuggestions && (
-                          activeProposal.versions.find((v) => v.versionNumber === activeVersionNumber)!.aiSuggestions.map((sug, i) => (
-                            <div key={i} style={{ padding: "10px 12px", background: "var(--surface-2)", borderLeft: "3px solid var(--color-brand)", borderRadius: "var(--radius-sm)", fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
-                              {sug}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    {/* 6. VERSIONS TAB */}
-                    {activeSectionTab === "versions" && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "400px", overflowY: "auto" }}>
-                        {activeProposal?.versions.map((ver) => (
-                          <button
-                            key={ver.versionNumber}
-                            onClick={() => handleSwitchVersion(ver.versionNumber)}
-                            style={{
-                              padding: "10px 12px",
-                              textAlign: "left",
-                              background: ver.versionNumber === activeVersionNumber ? "var(--color-brand-subtle)" : "var(--surface-2)",
-                              border: "1px solid",
-                              borderColor: ver.versionNumber === activeVersionNumber ? "var(--color-brand)" : "var(--border)",
-                              borderRadius: "var(--radius)",
-                              cursor: "pointer",
-                              display: "flex",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <div>
-                              <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--text-primary)", display: "block" }}>
-                                Version {ver.versionNumber}
-                              </span>
-                              <span style={{ fontSize: "10.5px", color: "var(--text-muted)" }}>
-                                Generated on {new Date(ver.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-brand)" }}>
-                              Score: {ver.scoreBreakdown.overall}/100
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions footer */}
-                  <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "auto", flexWrap: "wrap" }}>
-                    <Button variant="secondary" size="sm" onClick={handleCopyToClipboard} leftIcon={<Copy size={13} />}>
-                      Copy combined markdown
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={handleExportMarkdown} leftIcon={<Download size={13} />}>
-                      Export Markdown
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={handlePrintPDF} leftIcon={<FileText size={13} />}>
-                      Print PDF
-                    </Button>
-                    
-                    <div style={{ flex: 1 }} />
-                    
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleSaveProposal}
-                      disabled={loading}
-                      leftIcon={loading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={13} />}
-                    >
-                      {activeProposal._id ? "Save version" : "Save Proposal"}
-                    </Button>
-                  </div>
-
-                  {/* Collapsible Development Debug Panel (Phase 11 Bug Fix) */}
-                  {process.env.NODE_ENV === "development" && (
-                    <div style={{ marginTop: "14px", borderTop: "1px solid var(--border)", paddingTop: "14px" }} className="no-print">
-                      <button
-                        onClick={() => setShowDebugPanel(!showDebugPanel)}
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "8px 12px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          background: "var(--surface-2)",
-                          border: "1px solid var(--border)",
-                          borderRadius: "var(--radius)",
-                          cursor: "pointer",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        <span>[DEV ONLY] Generation Pipeline Debug Panel</span>
-                        <span>{showDebugPanel ? "Collapse ▲" : "Expand ▼"}</span>
-                      </button>
-                      
-                      {showDebugPanel && (
-                        <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px", fontSize: "11px", maxHeight: "350px", overflowY: "auto", background: "var(--surface-1)", padding: "10px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                          {/* Cache & Cost Metadata */}
-                          {generationMetadata && (
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
-                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
-                                <strong>Prompt Size / Tokens:</strong> {generationMetadata.promptTokens || "N/A"}
-                              </div>
-                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
-                                <strong>Completion Tokens:</strong> {generationMetadata.completionTokens || "N/A"}
-                              </div>
-                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
-                                <strong>Cache Status:</strong> {generationMetadata.cacheStatus || "MISS"}
-                              </div>
-                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
-                                <strong>Generation Time:</strong> {generationMetadata.generationTimeMs}ms
-                              </div>
-                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
-                                <strong>Retry Count:</strong> {generationMetadata.validationAttempts}
-                              </div>
-                              <div style={{ padding: "6px", background: "var(--surface-2)", borderRadius: "4px" }}>
-                                <strong>Word / Char Count:</strong> {generationMetadata.wordCount} / {generationMetadata.charCount}
-                              </div>
                             </div>
                           )}
-
-                          {/* Raw Job Post */}
-                          <div>
-                            <strong>Raw Job Post:</strong>
-                            <pre style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: "6px", borderRadius: "4px", margin: "4px 0", maxHeight: "80px", overflowY: "auto" }}>
-                              {jobPost}
-                            </pre>
-                          </div>
-
-                          {/* Gemini Job Analysis */}
-                          {jobAnalysis && (
-                            <div>
-                              <strong>Extracted Client Analysis:</strong>
-                              <pre style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: "6px", borderRadius: "4px", margin: "4px 0", maxHeight: "80px", overflowY: "auto" }}>
-                                {JSON.stringify(jobAnalysis, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-
-                          {/* Matched Portfolio */}
-                          {matchedPortfolio && matchedPortfolio.length > 0 && (
-                            <div>
-                              <strong>Matched Portfolios:</strong>
-                              <pre style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: "6px", borderRadius: "4px", margin: "4px 0", maxHeight: "80px", overflowY: "auto" }}>
-                                {JSON.stringify(matchedPortfolio, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-
-                          {/* Regression Testing Trigger */}
-                          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "4px" }}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              disabled={runningRegressionTests}
-                              onClick={async () => {
-                                setRunningRegressionTests(true);
-                                try {
-                                  const res = await fetch("/api/proposals/test-regression");
-                                  const data = await res.json();
-                                  setRegressionTestResults(data);
-                                } catch {
-                                  toast.error("Failed to run regression tests");
-                                } finally {
-                                  setRunningRegressionTests(false);
-                                }
-                              }}
-                              style={{ width: "100%" }}
-                            >
-                              {runningRegressionTests ? "Running Test Suite..." : "Execute Automated Regression Tests"}
-                            </Button>
-
-                            {regressionTestResults && (
-                              <div style={{ marginTop: "6px", background: "var(--surface-2)", padding: "8px", borderRadius: "4px" }}>
-                                <span style={{ fontWeight: "bold", color: regressionTestResults.success ? "var(--color-success)" : "var(--color-danger)" }}>
-                                  Test Results: {regressionTestResults.success ? "SUCCESS" : "FAILURE"} ({regressionTestResults.testCount} tests run)
-                                </span>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
-                                  {regressionTestResults.results?.map((r: any, idx: number) => (
-                                    <div key={idx} style={{ color: r.passed ? "var(--color-success)" : "var(--color-danger)" }}>
-                                      {r.passed ? "✓" : "✗"} {r.name}: {r.message}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       )}
-                    </div>
-                  )}
+
+                      {/* 5. SUGGESTIONS TAB */}
+                      {activeSectionTab === "suggestions" && activeProposal.versions[0]?.aiSuggestions && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {activeProposal.versions[0].aiSuggestions.map((sug: string, idx: number) => (
+                            <div key={idx} style={{ padding: "10px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                              💡 {sug}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 6. VERSIONS TAB */}
+                      {activeSectionTab === "versions" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {activeProposal.versions.map((ver) => (
+                            <div
+                              key={ver.versionNumber}
+                              onClick={() => handleSwitchVersion(ver.versionNumber)}
+                              style={{
+                                padding: "10px 12px",
+                                background: activeVersionNumber === ver.versionNumber ? "var(--surface-2)" : "var(--bg-base)",
+                                border: "0.5px solid var(--border)",
+                                borderRadius: "var(--radius-inputs)",
+                                cursor: "pointer",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div>
+                                <span style={{ fontSize: "12.5px", fontWeight: 510, color: "var(--text-primary)" }}>Version {ver.versionNumber}</span>
+                                <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "1px 0 0 0" }}>{new Date(ver.createdAt).toLocaleTimeString()}</p>
+                              </div>
+                              {activeVersionNumber === ver.versionNumber && (
+                                <Badge variant="active">Active</Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                 </>
               )}
             </section>
@@ -1508,421 +1251,138 @@ ${editingSections.callToAction}
 
         {/* VIEW 2: COMPARE VERSIONS */}
         {activeTab === "compare" && (
-          <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            
-            {/* Version Selectors bar */}
-            <div style={{ display: "flex", gap: "16px", alignItems: "center", background: "var(--surface-1)", border: "1px solid var(--border)", padding: "14px 18px", borderRadius: "var(--radius)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "12.5px", color: "var(--text-secondary)", fontWeight: 600 }}>Proposal to Compare:</span>
-                <select
-                  value={comparePropId}
-                  onChange={(e) => {
-                    setComparePropId(e.target.value);
-                    const prop = proposals.find((p) => p._id === e.target.value);
-                    if (prop && prop.versions.length > 0) {
-                      setCompareVerA(prop.versions[0].versionNumber);
-                      setCompareVerB(prop.versions[prop.versions.length - 1].versionNumber);
-                    }
-                  }}
-                  className="input-field"
-                  style={{ width: "auto", fontSize: "12px" }}
-                >
-                  <option value="">-- Choose saved proposal --</option>
-                  {proposals.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.title} ({p.versions.length} versions)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {comparePropId && getCompareProposal() && (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Compare Version A</span>
-                    <select
-                      value={compareVerA}
-                      onChange={(e) => setCompareVerA(Number(e.target.value))}
-                      className="input-field"
-                      style={{ width: "auto", padding: "2px 20px 2px 8px", height: "26px", fontSize: "11px" }}
-                    >
-                      {getCompareProposal()!.versions.map((v) => (
-                        <option key={v.versionNumber} value={v.versionNumber}>
-                          v{v.versionNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>with Version B</span>
-                    <select
-                      value={compareVerB}
-                      onChange={(e) => setCompareVerB(Number(e.target.value))}
-                      className="input-field"
-                      style={{ width: "auto", padding: "2px 20px 2px 8px", height: "26px", fontSize: "11px" }}
-                    >
-                      {getCompareProposal()!.versions.map((v) => (
-                        <option key={v.versionNumber} value={v.versionNumber}>
-                          v{v.versionNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
+          <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Compare Version Target:</span>
+              <select
+                value={comparePropId}
+                onChange={(e) => setComparePropId(e.target.value)}
+                style={{ fontSize: "12px", height: "32px", padding: "0 10px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)" }}
+              >
+                <option value="">Select a proposal to compare...</option>
+                {proposals.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.title} ({p.clientName})
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Split Comparison grid */}
-            {!comparePropId ? (
-              <EmptyState
-                icon={<Award />}
-                heading="Version Comparison Workspace"
-                description="Select a proposal from the dropdown above to load and compare different generation iterations side-by-side."
-              />
+            {getCompareProposal() ? (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ padding: "16px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-cards)" }}>
+                  <h4 style={{ fontSize: "13px", fontWeight: 510, margin: "0 0 10px 0" }}>Active Proposal: {activeProposal?.title}</h4>
+                  <pre style={{ fontSize: "11.5px", fontFamily: "var(--font-berkeley-mono), monospace", whiteSpace: "pre-wrap", color: "var(--text-secondary)", margin: 0 }}>
+                    {proposalBody}
+                  </pre>
+                </div>
+                <div style={{ padding: "16px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-cards)" }}>
+                  <h4 style={{ fontSize: "13px", fontWeight: 510, margin: "0 0 10px 0" }}>Compared Proposal: {getCompareProposal()?.title}</h4>
+                  <pre style={{ fontSize: "11.5px", fontFamily: "var(--font-berkeley-mono), monospace", whiteSpace: "pre-wrap", color: "var(--text-secondary)", margin: 0 }}>
+                    {getCompareProposal()?.versions[0]?.proposalBody || getCompareProposal()?.versions[0]?.sections?.executiveSummary}
+                  </pre>
+                </div>
+              </div>
             ) : (
-              (() => {
-                const prop = getCompareProposal();
-                if (!prop) return null;
-                const verA = prop.versions.find((v) => v.versionNumber === compareVerA);
-                const verB = prop.versions.find((v) => v.versionNumber === compareVerB);
-                
-                if (!verA || !verB) return <p>Selected versions are invalid.</p>;
-
-                return (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                    
-                    {/* VERSION A PANEL */}
-                    <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                      <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text-primary)" }}>Version {verA.versionNumber}</span>
-                        <Badge variant="active">Score: {verA.scoreBreakdown.overall}</Badge>
-                      </div>
-
-                      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                        <div>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-muted)" }}>EXECUTIVE SUMMARY</span>
-                          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: "10px", borderRadius: "4px", fontSize: "12px", whiteSpace: "pre-wrap", color: "var(--text-secondary)" }}>
-                            {verA.sections.executiveSummary}
-                          </div>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-muted)" }}>SCOPE OF WORK</span>
-                          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: "10px", borderRadius: "4px", fontSize: "12px", whiteSpace: "pre-wrap", color: "var(--text-secondary)" }}>
-                            {verA.sections.scopeOfWork}
-                          </div>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-muted)" }}>PRICING (STANDARD)</span>
-                          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: "10px", borderRadius: "4px", fontSize: "12px", color: "var(--color-brand)", fontWeight: "bold" }}>
-                            ${verA.pricingBreakdown.standard.price.toLocaleString()} ({verA.pricingBreakdown.standard.timeline})
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* VERSION B PANEL */}
-                    <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                      <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text-primary)" }}>Version {verB.versionNumber}</span>
-                        <Badge variant="active">Score: {verB.scoreBreakdown.overall}</Badge>
-                      </div>
-
-                      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                        <div>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-muted)" }}>EXECUTIVE SUMMARY</span>
-                          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: "10px", borderRadius: "4px", fontSize: "12px", whiteSpace: "pre-wrap", color: "var(--text-secondary)" }}>
-                            {verB.sections.executiveSummary}
-                          </div>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-muted)" }}>SCOPE OF WORK</span>
-                          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: "10px", borderRadius: "4px", fontSize: "12px", whiteSpace: "pre-wrap", color: "var(--text-secondary)" }}>
-                            {verB.sections.scopeOfWork}
-                          </div>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-muted)" }}>PRICING (STANDARD)</span>
-                          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: "10px", borderRadius: "4px", fontSize: "12px", color: "var(--color-brand)", fontWeight: "bold" }}>
-                            ${verB.pricingBreakdown.standard.price.toLocaleString()} ({verB.pricingBreakdown.standard.timeline})
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                );
-              })()
+              <EmptyState
+                icon={<Layers />}
+                heading="Select Proposal to Compare"
+                description="Choose a saved proposal from the dropdown above to run side-by-side version comparison."
+              />
             )}
           </div>
         )}
 
         {/* VIEW 3: PROPOSAL HISTORY */}
         {activeTab === "history" && (
-          <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            
-            {/* Search & Filter tools */}
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-              
-              {/* Search */}
-              <div className="search-input-wrapper" style={{ flex: 1, minWidth: "240px", maxWidth: "340px" }}>
-                <span className="search-input-icon"><Search size={13} /></span>
+          <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div style={{ position: "relative", width: "240px" }}>
+                <Search size={13} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by client or job post..."
-                  className="search-input"
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  placeholder="Search proposals..."
+                  style={{ width: "100%", height: "32px", paddingLeft: "30px", fontSize: "12px", background: "var(--surface-1)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", outline: "none" }}
                 />
               </div>
-
-              {/* Platform selector */}
-              <select
-                value={platformFilter}
-                onChange={(e) => setPlatformFilter(e.target.value)}
-                className="input-redesign"
-                style={{ width: "auto", height: "36px", fontSize: "12px", cursor: "pointer" }}
-              >
-                <option value="all">All Platforms</option>
-                {["Upwork", "Freelancer", "Fiverr", "LinkedIn", "Direct", "Other"].map((plat) => (
-                  <option key={plat} value={plat}>
-                    {plat}
-                  </option>
-                ))}
-              </select>
-
-              {/* Status Filters */}
-              <div className="filter-tabs">
-                {["all", "draft", "sent", "won", "lost"].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`filter-tab${statusFilter === st ? " active" : ""}`}
-                    style={{ textTransform: "capitalize", fontSize: "12px" }}
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
-
-              {/* Favorite Toggle button */}
-              <button
-                onClick={() => setFavoriteFilter(!favoriteFilter)}
-                style={{
-                  height: "36px",
-                  padding: "0 14px",
-                  borderRadius: "var(--radius)",
-                  border: "1px solid var(--border-strong)",
-                  background: favoriteFilter ? "rgba(99,102,241,0.08)" : "transparent",
-                  color: favoriteFilter ? "var(--color-brand)" : "var(--text-secondary)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                }}
-              >
-                <Star size={13} fill={favoriteFilter ? "var(--color-brand)" : "none"} />
-                <span>Starred</span>
-              </button>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>
+                {proposals.length} total proposals
+              </span>
             </div>
 
-            {/* List Table of History */}
-            {historyLoading ? (
-              <div style={{ display: "grid", gap: "10px" }}>
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="skeleton" style={{ height: "70px", borderRadius: "var(--radius)" }} />
+            {pageLoading ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    className="skeleton"
+                    style={{
+                      height: "140px",
+                      borderRadius: "var(--radius-cards)",
+                      background: "var(--surface-1)",
+                      border: "0.5px solid var(--border)",
+                    }}
+                  />
                 ))}
               </div>
             ) : proposals.length === 0 ? (
               <EmptyState
-                icon={<Briefcase />}
-                heading="No proposals match filters"
-                description="Try broadening your search query or platforms parameters."
+                icon={<FileText />}
+                heading="No Saved Proposals"
+                description="Proposals created in the Studio will automatically save into your history."
               />
             ) : (
-              <div className="glass-card" style={{ overflow: "hidden" }}>
-                <div style={{ overflowX: "auto" }}>
-                  <table className="data-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Starred</th>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Title & Client</th>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Platform</th>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Versions</th>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Standard Price</th>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Score</th>
-                        <th style={{ padding: "12px 18px", textAlign: "left" }}>Status</th>
-                        <th style={{ padding: "12px 18px", textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {proposals.map((prop) => {
-                        const activeVer = prop.versions[prop.activeVersionIndex] || { scoreBreakdown: { overall: 0 }, pricingBreakdown: { standard: { price: 0 } } };
-                        return (
-                          <tr key={prop._id} style={{ borderBottom: "1px solid var(--border)" }}>
-                            
-                            {/* Starred */}
-                            <td style={{ padding: "12px 18px" }}>
-                              <button
-                                onClick={() => handleToggleFavorite(prop)}
-                                style={{ background: "none", border: "none", color: prop.isFavorite ? "var(--color-brand)" : "var(--text-muted)", cursor: "pointer" }}
-                              >
-                                <Star size={14} fill={prop.isFavorite ? "var(--color-brand)" : "none"} />
-                              </button>
-                            </td>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
+                {proposals
+                  .filter((p) => p.title.toLowerCase().includes(historySearch.toLowerCase()) || p.clientName.toLowerCase().includes(historySearch.toLowerCase()))
+                  .map((prop) => (
+                    <div
+                      key={prop._id}
+                      style={{
+                        padding: "16px",
+                        background: "var(--surface-1)",
+                        border: "0.5px solid var(--border)",
+                        borderRadius: "var(--radius-cards)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <h4 style={{ fontSize: "13.5px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>{prop.title}</h4>
+                          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>{prop.clientName || "Direct Client"} • {prop.platform}</p>
+                        </div>
+                        <Badge variant={prop.status === "won" ? "active" : "draft"}>{prop.status}</Badge>
+                      </div>
 
-                            {/* Client & Title */}
-                            <td style={{ padding: "12px 18px" }}>
-                              <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontWeight: "bold", color: "var(--text-primary)", fontSize: "13.5px" }}>{prop.title}</span>
-                                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Client: {prop.clientName}</span>
-                              </div>
-                            </td>
-
-                            {/* Platform */}
-                            <td style={{ padding: "12px 18px" }}>
-                              <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", fontWeight: 500 }}>{prop.platform}</span>
-                            </td>
-
-                            {/* Versions */}
-                            <td style={{ padding: "12px 18px" }}>
-                              <span style={{ fontSize: "11px", background: "var(--surface-2)", color: "var(--text-secondary)", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold" }}>
-                                v{prop.versions.length}
-                              </span>
-                            </td>
-
-                            {/* Value */}
-                            <td style={{ padding: "12px 18px", fontWeight: 600, color: "var(--text-primary)", fontSize: "13px" }}>
-                              ${activeVer.pricingBreakdown.standard.price.toLocaleString()}
-                            </td>
-
-                            {/* Score */}
-                            <td style={{ padding: "12px 18px" }}>
-                              <span style={{
-                                padding: "2px 6px",
-                                borderRadius: "4px",
-                                fontSize: "11px",
-                                fontWeight: "bold",
-                                background: activeVer.scoreBreakdown.overall >= 80 ? "rgba(16,185,129,0.1)" : "rgba(99,102,241,0.1)",
-                                color: activeVer.scoreBreakdown.overall >= 80 ? "#10b981" : "var(--color-brand)",
-                              }}>
-                                {activeVer.scoreBreakdown.overall}
-                              </span>
-                            </td>
-
-                            {/* Status Selector */}
-                            <td style={{ padding: "12px 18px" }}>
-                              <select
-                                value={prop.status}
-                                onChange={(e) => handleStatusChange(prop, e.target.value as IProposal["status"])}
-                                className="input-field"
-                                style={{ width: "auto", height: "26px", padding: "2px 20px 2px 6px", fontSize: "11px", textTransform: "capitalize", cursor: "pointer" }}
-                              >
-                                {["draft", "sent", "won", "lost"].map((st) => (
-                                  <option key={st} value={st}>
-                                    {st}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-
-                            {/* Actions */}
-                            <td style={{ padding: "12px 18px", textAlign: "right" }}>
-                              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                                <Button variant="secondary" size="sm" onClick={() => handleReopenProposal(prop)} leftIcon={<ArrowRight size={12} />}>
-                                  Open
-                                </Button>
-                                <button
-                                  onClick={() => handleDeleteProposal(prop._id)}
-                                  style={{
-                                    background: "none",
-                                    border: "none",
-                                    color: "var(--text-muted)",
-                                    cursor: "pointer",
-                                    padding: "4px",
-                                    borderRadius: "4px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    transition: "color 0.15s, background 0.15s",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.color = "var(--error)";
-                                    e.currentTarget.style.background = "var(--surface-2)";
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.color = "var(--text-muted)";
-                                    e.currentTarget.style.background = "none";
-                                  }}
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </td>
-
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* PRINT SECTION (Displays formatted proposal contents cleanly for PDF exporting, hidden on screen) */}
-        {activeProposal && (
-          <div className="print-doc" style={{ display: "none" }}>
-            <h1 style={{ fontSize: "28px", marginBottom: "8px", fontWeight: "bold" }}>{activeProposal.title}</h1>
-            <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
-              Prepared for: <strong>{activeProposal.clientName}</strong> | Platform: <strong>{activeProposal.platform}</strong> | Target Budget: <strong>${activeProposal.budget.toLocaleString()}</strong>
-            </p>
-            <hr style={{ border: "0.5px solid #ccc", marginBottom: "24px" }} />
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px", fontSize: "14px", lineHeight: 1.65 }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "bold", borderBottom: "1px solid #eee", paddingBottom: "6px", marginBottom: "8px" }}>Executive Summary</h3>
-                <div style={{ whiteSpace: "pre-wrap" }}>{editingSections.executiveSummary}</div>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "bold", borderBottom: "1px solid #eee", paddingBottom: "6px", marginBottom: "8px" }}>Scope of Work</h3>
-                <div style={{ whiteSpace: "pre-wrap" }}>{editingSections.scopeOfWork}</div>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "bold", borderBottom: "1px solid #eee", paddingBottom: "6px", marginBottom: "8px" }}>Timeline and Milestones</h3>
-                <div style={{ whiteSpace: "pre-wrap" }}>{editingSections.timelineAndMilestones}</div>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "bold", borderBottom: "1px solid #eee", paddingBottom: "6px", marginBottom: "8px" }}>Call to Action</h3>
-                <div style={{ whiteSpace: "pre-wrap" }}>{editingSections.callToAction}</div>
-              </div>
-
-              <div style={{ pageBreakBefore: "always" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "bold", borderBottom: "1px solid #eee", paddingBottom: "6px", marginBottom: "12px" }}>Pricing Options</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
-                  {(["basic", "standard", "premium"] as const).map((tier) => (
-                    <div key={tier} style={{ border: "1px solid #ccc", padding: "12px 16px", borderRadius: "6px" }}>
-                      <h4 style={{ textTransform: "capitalize", fontSize: "14px", fontWeight: "bold", marginBottom: "4px" }}>{tier} Tier</h4>
-                      <span style={{ fontSize: "18px", fontWeight: "bold", color: "#f5a623", display: "block", marginBottom: "8px" }}>
-                        ${editingPricing[tier].price.toLocaleString()}
-                      </span>
-                      <p style={{ fontSize: "11.5px", color: "#555", marginBottom: "8px" }}>{editingPricing[tier].description}</p>
-                      <span style={{ fontSize: "11px", fontWeight: 600, color: "#888" }}>Delivery: {editingPricing[tier].timeline}</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "6px", borderTop: "0.5px solid var(--border)" }}>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>
+                          v{prop.versions.length} • {new Date(prop.updatedAt).toLocaleDateString()}
+                        </span>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <Button variant="outline" size="sm" onClick={() => handleLoadProposal(prop)}>
+                            Load
+                          </Button>
+                          <Button variant="ghost" size="icon" style={{ width: "24px", height: "24px", color: "var(--color-coral-red)" }} onClick={() => handleDeleteProposal(prop._id)}>
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ))}
-                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
       </main>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
     </ProfileGuard>
   );

@@ -24,10 +24,8 @@ import {
   Clock,
   UserX,
   Archive,
-  ChevronLeft,
   AlertTriangle,
   Loader2,
-  StickyNote,
   DollarSign,
   Briefcase,
   TrendingUp,
@@ -35,6 +33,7 @@ import {
   ChevronDown,
   ArrowUpDown,
   Check,
+  ArrowUpRight,
 } from "lucide-react";
 import type { Client, ClientStatus, ClientFormData } from "@/types/client";
 import { Button } from "@/components/ui/Button";
@@ -92,13 +91,11 @@ function getInitials(name: string) {
 }
 
 const AVATAR_GRADIENTS = [
-  "linear-gradient(135deg,#e8a838,#d4922a)",
-  "linear-gradient(135deg,#6366f1,#8b5cf6)",
-  "linear-gradient(135deg,#06b6d4,#6366f1)",
-  "linear-gradient(135deg,#10b981,#06b6d4)",
-  "linear-gradient(135deg,#8b5cf6,#ec4899)",
-  "linear-gradient(135deg,#f59e0b,#ef4444)",
-  "linear-gradient(135deg,#34d399,#10b981)",
+  "linear-gradient(135deg,rgba(99,102,241,0.2) 0%,rgba(139,92,246,0.3) 100%)",
+  "linear-gradient(135deg,rgba(2,184,204,0.2) 0%,rgba(99,102,241,0.3) 100%)",
+  "linear-gradient(135deg,rgba(39,166,68,0.2) 0%,rgba(2,184,204,0.3) 100%)",
+  "linear-gradient(135deg,rgba(139,92,246,0.2) 0%,rgba(236,72,153,0.3) 100%)",
+  "linear-gradient(135deg,rgba(245,158,11,0.2) 0%,rgba(235,87,87,0.3) 100%)",
 ];
 
 function avatarGradient(name: string) {
@@ -196,13 +193,13 @@ function ClientFormModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.72)",
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(4px)",
         zIndex: 200,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
-        animation: "fadeIn 0.18s ease",
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -210,12 +207,14 @@ function ClientFormModal({
         className="glass-card"
         style={{
           width: "100%",
-          maxWidth: "560px",
+          maxWidth: "540px",
           maxHeight: "90vh",
           overflowY: "auto",
-          padding: "28px",
-          animation: "scaleIn 0.2s ease",
+          padding: "24px",
           position: "relative",
+          borderRadius: "var(--radius-cards)",
+          border: "0.5px solid var(--border)",
+          background: "var(--surface-1)",
         }}
       >
         {/* Header */}
@@ -224,26 +223,26 @@ function ClientFormModal({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: "24px",
+            marginBottom: "20px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "var(--primary-light)",
+                width: "32px",
+                height: "32px",
+                borderRadius: "var(--radius-inputs)",
+                background: "var(--surface-2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Users size={17} color="var(--primary)" />
+              <Users size={16} color="var(--text-primary)" />
             </div>
             <h2
               className="font-heading"
-              style={{ fontSize: "18px", color: "var(--text-primary)" }}
+              style={{ fontSize: "16px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}
             >
               {isEdit ? "Edit Client" : "Add New Client"}
             </h2>
@@ -251,10 +250,10 @@ function ClientFormModal({
           <button
             onClick={onClose}
             style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              border: "1px solid var(--border-default)",
+              width: "28px",
+              height: "28px",
+              borderRadius: "var(--radius-inputs)",
+              border: "0.5px solid var(--border)",
               background: "transparent",
               display: "flex",
               alignItems: "center",
@@ -263,23 +262,23 @@ function ClientFormModal({
               color: "var(--text-muted)",
             }}
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
         {error && (
           <div
             style={{
-              background: "var(--error-bg)",
-              border: "1px solid var(--error)",
-              borderRadius: "var(--radius-md)",
+              background: "rgba(235,87,87,0.1)",
+              border: "0.5px solid var(--color-coral-red)",
+              borderRadius: "var(--radius-inputs)",
               padding: "10px 14px",
               marginBottom: "16px",
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              color: "var(--error)",
-              fontSize: "13px",
+              color: "var(--color-coral-red)",
+              fontSize: "12.5px",
             }}
           >
             <AlertTriangle size={14} />
@@ -287,11 +286,11 @@ function ClientFormModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {/* Name & Email */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-name">Name *</label>
+              <label className="label-redesign" htmlFor="client-name" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Name *</label>
               <input
                 id="client-name"
                 className="input-redesign"
@@ -299,10 +298,11 @@ function ClientFormModal({
                 onChange={(e) => set("name", e.target.value)}
                 placeholder="Jane Doe"
                 required
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
             </div>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-email">Email *</label>
+              <label className="label-redesign" htmlFor="client-email" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Email *</label>
               <input
                 id="client-email"
                 className="input-redesign"
@@ -311,6 +311,7 @@ function ClientFormModal({
                 onChange={(e) => set("email", e.target.value)}
                 placeholder="jane@example.com"
                 required
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
             </div>
           </div>
@@ -318,23 +319,25 @@ function ClientFormModal({
           {/* Phone & Company */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-phone">Phone</label>
+              <label className="label-redesign" htmlFor="client-phone" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Phone</label>
               <input
                 id="client-phone"
                 className="input-redesign"
                 value={form.phone}
                 onChange={(e) => set("phone", e.target.value)}
                 placeholder="+1 555 000 0000"
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
             </div>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-company">Company</label>
+              <label className="label-redesign" htmlFor="client-company" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Company</label>
               <input
                 id="client-company"
                 className="input-redesign"
                 value={form.company}
                 onChange={(e) => set("company", e.target.value)}
                 placeholder="Acme Corp"
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
             </div>
           </div>
@@ -342,23 +345,25 @@ function ClientFormModal({
           {/* Website & Location */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-website">Website</label>
+              <label className="label-redesign" htmlFor="client-website" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Website</label>
               <input
                 id="client-website"
                 className="input-redesign"
                 value={form.website}
                 onChange={(e) => set("website", e.target.value)}
                 placeholder="https://example.com"
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
             </div>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-location">Location</label>
+              <label className="label-redesign" htmlFor="client-location" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Location</label>
               <input
                 id="client-location"
                 className="input-redesign"
                 value={form.location}
                 onChange={(e) => set("location", e.target.value)}
                 placeholder="New York, USA"
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
             </div>
           </div>
@@ -366,13 +371,13 @@ function ClientFormModal({
           {/* Status & Rating */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group-redesign">
-              <label className="label-redesign" htmlFor="client-status">Status</label>
+              <label className="label-redesign" htmlFor="client-status" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Status</label>
               <select
                 id="client-status"
                 className="input-redesign"
                 value={form.status}
                 onChange={(e) => set("status", e.target.value as ClientStatus)}
-                style={{ cursor: "pointer" }}
+                style={{ cursor: "pointer", fontSize: "12.5px", height: "36px" }}
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -381,8 +386,8 @@ function ClientFormModal({
               </select>
             </div>
             <div className="form-group-redesign">
-              <label className="label-redesign">Rating (Click to set stars)</label>
-              <div style={{ display: "flex", gap: "6px", alignItems: "center", height: "40px" }}>
+              <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Rating</label>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center", height: "36px" }}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
@@ -394,110 +399,81 @@ function ClientFormModal({
                       cursor: "pointer",
                       padding: "2px",
                       color: form.rating && form.rating >= star ? "#f59e0b" : "var(--text-muted)",
-                      transition: "transform var(--dur-fast)",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center"
+                      justifyContent: "center",
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.2)"}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                   >
-                    <Star size={20} fill={form.rating && form.rating >= star ? "#f59e0b" : "transparent"} />
+                    <Star size={14} fill={form.rating && form.rating >= star ? "#f59e0b" : "none"} />
                   </button>
                 ))}
-                {form.rating && (
-                  <span style={{ fontSize: "12px", color: "var(--text-muted)", marginLeft: "8px", fontWeight: 600 }}>
-                    ({form.rating} / 5)
-                  </span>
-                )}
               </div>
             </div>
           </div>
 
           {/* Tags */}
           <div className="form-group-redesign">
-            <label className="label-redesign">Tags</label>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "6px",
-                padding: "8px",
-                background: "var(--surface-2)",
-                border: "0.5px solid var(--border)",
-                borderRadius: "var(--radius)",
-                minHeight: "44px",
-                alignItems: "center",
-              }}
-            >
-              {form.tags.map((t) => (
-                <span
-                  key={t}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    padding: "3px 8px",
-                    background: "var(--color-brand-subtle)",
-                    color: "var(--color-brand-hover)",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                  }}
-                >
-                  {t}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(t)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--color-brand-hover)",
-                      display: "flex",
-                      padding: "0",
-                    }}
-                  >
-                    <X size={10} />
-                  </button>
-                </span>
-              ))}
+            <label className="label-redesign" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Tags</label>
+            <div style={{ display: "flex", gap: "8px" }}>
               <input
-                id="client-tag-input"
+                className="input-redesign"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     addTag();
                   }
                 }}
-                placeholder="Add tag & press Enter"
-                style={{
-                  flex: 1,
-                  minWidth: "120px",
-                  background: "none",
-                  border: "none",
-                  outline: "none",
-                  fontSize: "13px",
-                  color: "var(--text-primary)",
-                  fontFamily: "inherit",
-                }}
+                placeholder="Add tag (press Enter)"
+                style={{ fontSize: "12.5px", height: "36px" }}
               />
+              <Button type="button" onClick={addTag} variant="outline" size="sm">
+                Add
+              </Button>
             </div>
+            {form.tags.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                {form.tags.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      padding: "2px 8px",
+                      background: "var(--surface-2)",
+                      border: "0.5px solid var(--border)",
+                      borderRadius: "var(--radius-badges)",
+                      fontSize: "11px",
+                      color: "var(--text-secondary)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    {t}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0 }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Notes */}
           <div className="form-group-redesign">
-            <label className="label-redesign" htmlFor="client-notes">Notes</label>
+            <label className="label-redesign" htmlFor="client-notes" style={{ fontSize: "11px", fontWeight: 510, color: "var(--text-muted)" }}>Notes</label>
             <textarea
               id="client-notes"
-              className="textarea-redesign"
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              placeholder="Internal notes about this client..."
+              className="input-redesign"
               rows={3}
-              style={{ resize: "vertical" }}
+              value={form.notes || ""}
+              onChange={(e) => set("notes", e.target.value)}
+              placeholder="Internal account notes..."
+              style={{ resize: "vertical", fontSize: "12.5px" }}
             />
           </div>
 
@@ -507,13 +483,13 @@ function ClientFormModal({
               display: "flex",
               justifyContent: "flex-end",
               gap: "10px",
-              paddingTop: "4px",
+              paddingTop: "6px",
             }}
           >
             <Button
               type="button"
               onClick={onClose}
-              variant="secondary"
+              variant="ghost"
               size="sm"
               disabled={saving}
             >
@@ -574,13 +550,13 @@ function DeleteModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.72)",
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(4px)",
         zIndex: 300,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
-        animation: "fadeIn 0.18s ease",
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -588,42 +564,44 @@ function DeleteModal({
         className="glass-card"
         style={{
           width: "100%",
-          maxWidth: "400px",
-          padding: "28px",
-          animation: "scaleIn 0.2s ease",
+          maxWidth: "380px",
+          padding: "24px",
           textAlign: "center",
+          borderRadius: "var(--radius-cards)",
+          border: "0.5px solid var(--border)",
+          background: "var(--surface-1)",
         }}
       >
         <div
           style={{
-            width: "52px",
-            height: "52px",
-            borderRadius: "14px",
-            background: "var(--error-bg)",
+            width: "44px",
+            height: "44px",
+            borderRadius: "var(--radius-inputs)",
+            background: "rgba(235,87,87,0.1)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 16px",
+            margin: "0 auto 14px",
           }}
         >
-          <Trash2 size={22} color="var(--error)" />
+          <Trash2 size={20} color="var(--color-coral-red)" />
         </div>
         <h3
           className="font-heading"
-          style={{ fontSize: "18px", marginBottom: "8px" }}
+          style={{ fontSize: "16px", fontWeight: 510, marginBottom: "6px", color: "var(--text-primary)" }}
         >
           Delete Client?
         </h3>
-        <p style={{ fontSize: "14px", color: "var(--text-muted)", marginBottom: "24px" }}>
+        <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
           This will permanently remove{" "}
-          <strong style={{ color: "var(--text-primary)" }}>{client.name}</strong>{" "}
-          from your client list. This action cannot be undone.
+          <strong style={{ color: "var(--text-primary)", fontWeight: 590 }}>{client.name}</strong>{" "}
+          from your account. This action cannot be undone.
         </p>
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
           <Button
             id="delete-cancel-btn"
             onClick={onClose}
-            variant="secondary"
+            variant="ghost"
             size="sm"
             disabled={deleting}
           >
@@ -634,7 +612,7 @@ function DeleteModal({
             onClick={handleDelete}
             variant="danger"
             size="sm"
-            style={{ minWidth: "100px" }}
+            style={{ minWidth: "90px" }}
             disabled={deleting}
             leftIcon={deleting ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={13} />}
           >
@@ -646,7 +624,7 @@ function DeleteModal({
   );
 }
 
-// ── CLIENT CARD ───────────────────────────────────────────────
+// ── CLIENT CARD (GRID VIEW) ───────────────────────────────────
 function ClientCard({
   client,
   onEdit,
@@ -671,17 +649,34 @@ function ClientCard({
   }, []);
 
   return (
-    <div className="client-card">
+    <div
+      style={{
+        background: "var(--surface-1)",
+        border: "0.5px solid var(--border)",
+        borderRadius: "var(--radius-cards)",
+        padding: "20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "14px",
+        transition: "border-color var(--dur-fast)",
+        position: "relative",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-strong)")}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+    >
       {/* Top Row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
         {/* Avatar */}
         <div
           className="avatar"
           style={{
-            width: "46px",
-            height: "46px",
-            fontSize: "15px",
+            width: "40px",
+            height: "40px",
+            fontSize: "13px",
+            fontWeight: 590,
             background: avatarGradient(client.name),
+            color: "var(--text-primary)",
+            borderRadius: "var(--radius-inputs)",
             flexShrink: 0,
           }}
         >
@@ -693,8 +688,8 @@ function ClientCard({
           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "2px" }}>
             <p
               style={{
-                fontSize: "15px",
-                fontWeight: 700,
+                fontSize: "14px",
+                fontWeight: 510,
                 color: "var(--text-primary)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -705,14 +700,14 @@ function ClientCard({
               {client.name}
             </p>
             {client.rating && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", background: "rgba(245,158,11,0.08)", color: "#f59e0b", padding: "1px 6px", borderRadius: "999px", fontSize: "10px", fontWeight: 700 }}>
-                <Star size={9} fill="#f59e0b" style={{ marginTop: "-1px" }} />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", background: "rgba(245,158,11,0.1)", color: "#f59e0b", padding: "1px 5px", borderRadius: "var(--radius-pills)", fontSize: "10px", fontWeight: 590 }}>
+                <Star size={9} fill="#f59e0b" />
                 {client.rating}
               </span>
             )}
           </div>
           {client.company && (
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
+            <p style={{ fontSize: "11.5px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
               {client.company}
             </p>
           )}
@@ -731,10 +726,10 @@ function ClientCard({
               id={`client-menu-${client._id}`}
               onClick={() => setMenuOpen((v) => !v)}
               style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "6px",
-                border: "1px solid var(--border-default)",
+                width: "26px",
+                height: "26px",
+                borderRadius: "var(--radius-inputs)",
+                border: "0.5px solid var(--border)",
                 background: "transparent",
                 display: "flex",
                 alignItems: "center",
@@ -743,40 +738,39 @@ function ClientCard({
                 color: "var(--text-muted)",
               }}
             >
-              <MoreHorizontal size={14} />
+              <MoreHorizontal size={13} />
             </button>
             {menuOpen && (
               <div
                 style={{
                   position: "absolute",
                   right: 0,
-                  top: "34px",
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--border-default)",
-                  borderRadius: "var(--radius-md)",
+                  top: "30px",
+                  background: "var(--surface-2)",
+                  border: "0.5px solid var(--border-strong)",
+                  borderRadius: "var(--radius-inputs)",
                   boxShadow: "var(--shadow-lg)",
                   zIndex: 50,
-                  minWidth: "150px",
+                  minWidth: "140px",
                   overflow: "hidden",
-                  animation: "scaleIn 0.15s ease",
                 }}
               >
                 {[
                   {
                     id: `view-${client._id}`,
-                    icon: <Eye size={13} />,
+                    icon: <Eye size={12} />,
                     label: "View Details",
                     href: `/dashboard/clients/${client._id}`,
                   },
                   {
                     id: `edit-${client._id}`,
-                    icon: <Edit3 size={13} />,
+                    icon: <Edit3 size={12} />,
                     label: "Edit",
                     action: () => { onEdit(client); setMenuOpen(false); },
                   },
                   {
                     id: `delete-${client._id}`,
-                    icon: <Trash2 size={13} />,
+                    icon: <Trash2 size={12} />,
                     label: "Delete",
                     action: () => { onDelete(client); setMenuOpen(false); },
                     danger: true,
@@ -791,18 +785,13 @@ function ClientCard({
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        padding: "9px 14px",
-                        fontSize: "13px",
+                        padding: "8px 12px",
+                        fontSize: "12px",
                         color: "var(--text-secondary)",
                         textDecoration: "none",
-                        transition: "background 0.15s",
                       }}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-card)")
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")
-                      }
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "var(--surface-3)")}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")}
                     >
                       {item.icon}
                       {item.label}
@@ -817,22 +806,17 @@ function ClientCard({
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        padding: "9px 14px",
-                        fontSize: "13px",
-                        color: item.danger ? "var(--error)" : "var(--text-secondary)",
+                        padding: "8px 12px",
+                        fontSize: "12px",
+                        color: item.danger ? "var(--color-coral-red)" : "var(--text-secondary)",
                         background: "transparent",
                         border: "none",
                         cursor: "pointer",
                         fontFamily: "inherit",
                         textAlign: "left",
-                        transition: "background 0.15s",
                       }}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLButtonElement).style.background = "var(--bg-card)")
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLButtonElement).style.background = "transparent")
-                      }
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--surface-3)")}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
                     >
                       {item.icon}
                       {item.label}
@@ -846,25 +830,25 @@ function ClientCard({
       </div>
       
       {/* Contact Details */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         <a
           href={`mailto:${client.email}`}
-          className="contact-link"
+          style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-secondary)", textDecoration: "none" }}
         >
-          <Mail size={12} color="var(--text-subtle)" />
+          <Mail size={11} color="var(--text-muted)" />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {client.email}
           </span>
         </a>
         {client.phone && (
-          <div className="contact-link">
-            <Phone size={12} color="var(--text-subtle)" />
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-muted)" }}>
+            <Phone size={11} color="var(--text-muted)" />
             <span>{client.phone}</span>
           </div>
         )}
         {client.location && (
-          <div className="contact-link">
-            <MapPin size={12} color="var(--text-subtle)" />
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-muted)" }}>
+            <MapPin size={11} color="var(--text-muted)" />
             <span>{client.location}</span>
           </div>
         )}
@@ -872,16 +856,16 @@ function ClientCard({
 
       {/* Tags */}
       {client.tags.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
           {client.tags.slice(0, 3).map((t) => (
             <span
               key={t}
               style={{
-                padding: "2px 8px",
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-full)",
-                fontSize: "11px",
+                padding: "2px 6px",
+                background: "var(--surface-2)",
+                border: "0.5px solid var(--border)",
+                borderRadius: "var(--radius-badges)",
+                fontSize: "10.5px",
                 color: "var(--text-muted)",
               }}
             >
@@ -889,37 +873,47 @@ function ClientCard({
             </span>
           ))}
           {client.tags.length > 3 && (
-            <span style={{ fontSize: "11px", color: "var(--text-subtle)", padding: "2px 4px" }}>
+            <span style={{ fontSize: "10.5px", color: "var(--text-muted)", padding: "2px 4px" }}>
               +{client.tags.length - 3}
             </span>
           )}
         </div>
       )}
 
-      {/* Stats Row */}
-      <div className="kpi-container">
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+      {/* Metrics mini box */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px",
+          background: "var(--surface-2)",
+          border: "0.5px solid var(--border)",
+          borderRadius: "var(--radius-inputs)",
+          padding: "10px",
+        }}
+      >
+        <div>
+          <p style={{ fontSize: "14px", fontWeight: 590, color: "var(--text-primary)", margin: 0, fontVariantNumeric: "tabular-nums" }}>
             {client.totalProjects}
           </p>
-          <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "2px 0 0 0" }}>
+          <p style={{ fontSize: "9.5px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "1px 0 0 0" }}>
             Projects
           </p>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: "16px", fontWeight: 800, color: "var(--primary)", margin: 0 }}>
+        <div>
+          <p style={{ fontSize: "14px", fontWeight: 590, color: "var(--text-primary)", margin: 0, fontVariantNumeric: "tabular-nums" }}>
             ${client.totalEarned.toLocaleString()}
           </p>
-          <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "2px 0 0 0" }}>
+          <p style={{ fontSize: "9.5px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "1px 0 0 0" }}>
             Earned
           </p>
         </div>
       </div>
 
       {/* Footer */}
-      <div style={{ display: "flex", gap: "6px", marginTop: "auto" }}>
+      <div style={{ display: "flex", gap: "6px", marginTop: "auto", paddingTop: "4px" }}>
         <Link href={`/dashboard/clients/${client._id}`} style={{ flex: 1, display: "flex" }}>
-          <Button variant="secondary" size="sm" leftIcon={<Eye size={12} />} style={{ width: "100%" }}>
+          <Button variant="outline" size="sm" leftIcon={<Eye size={12} />} style={{ width: "100%", justifyContent: "center" }}>
             View
           </Button>
         </Link>
@@ -929,7 +923,7 @@ function ClientCard({
           variant="ghost"
           size="sm"
           leftIcon={<Edit3 size={12} />}
-          style={{ flex: 1 }}
+          style={{ flex: 1, justifyContent: "center" }}
         >
           Edit
         </Button>
@@ -951,7 +945,7 @@ export default function ClientsPage() {
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [earnedFilter, setEarnedFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name-asc");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   // Popover toggle states
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -967,7 +961,6 @@ export default function ClientsPage() {
     try {
       const params = new URLSearchParams();
       if (search) params.set("q", search);
-      // Backend api handles status filter directly for quick load
       if (statusFilter !== "all") params.set("status", statusFilter);
       const res = await fetch(`/api/clients?${params.toString()}`);
       const data = await res.json();
@@ -1029,15 +1022,14 @@ export default function ClientsPage() {
     setTotal((t) => t - 1);
   };
 
-  // Compute overall stats (based on fetched list)
+  // Compute stats
   const activeCount = clients.filter((c) => c.status === "active").length;
   const totalEarned = clients.reduce((s, c) => s + c.totalEarned, 0);
 
-  // Filter & sort locally for client-side advanced filters
+  // Filter & sort locally
   const filteredClients = useMemo(() => {
     return clients
       .filter((c) => {
-        // 1. Rating Filter
         if (ratingFilter !== "all") {
           if (ratingFilter === "unrated") {
             if (c.rating !== null && c.rating !== undefined) return false;
@@ -1046,7 +1038,6 @@ export default function ClientsPage() {
             if (!c.rating || c.rating < minStars) return false;
           }
         }
-        // 2. Minimum Earned Filter
         if (earnedFilter !== "all") {
           const minEarned = parseInt(earnedFilter, 10);
           if (c.totalEarned < minEarned) return false;
@@ -1054,24 +1045,12 @@ export default function ClientsPage() {
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === "name-asc") {
-          return a.name.localeCompare(b.name);
-        }
-        if (sortBy === "name-desc") {
-          return b.name.localeCompare(a.name);
-        }
-        if (sortBy === "earned-desc") {
-          return b.totalEarned - a.totalEarned;
-        }
-        if (sortBy === "earned-asc") {
-          return a.totalEarned - b.totalEarned;
-        }
-        if (sortBy === "projects-desc") {
-          return b.totalProjects - a.totalProjects;
-        }
-        if (sortBy === "rating-desc") {
-          return (b.rating || 0) - (a.rating || 0);
-        }
+        if (sortBy === "name-asc") return a.name.localeCompare(b.name);
+        if (sortBy === "name-desc") return b.name.localeCompare(a.name);
+        if (sortBy === "earned-desc") return b.totalEarned - a.totalEarned;
+        if (sortBy === "earned-asc") return a.totalEarned - b.totalEarned;
+        if (sortBy === "projects-desc") return b.totalProjects - a.totalProjects;
+        if (sortBy === "rating-desc") return (b.rating || 0) - (a.rating || 0);
         return 0;
       });
   }, [clients, ratingFilter, earnedFilter, sortBy]);
@@ -1101,183 +1080,180 @@ export default function ClientsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      <style>{`
-        /* Premium Client Redesign Styles */
-        .client-card {
-          background: var(--surface-1);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-xl);
-          padding: 24px;
-          box-shadow: var(--shadow-sm);
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          transition: all var(--dur-base) ease;
-          position: relative;
-        }
-
-        .client-card:hover {
-          transform: translateY(-2px);
-          border-color: var(--color-brand);
-          box-shadow: var(--shadow-md), 0 0 0 1px rgba(99, 102, 241, 0.05);
-        }
-
-        .kpi-container {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          background: var(--surface-2);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-lg);
-          padding: 12px;
-        }
-
-        .contact-link {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 13px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          transition: color var(--dur-fast);
-        }
-
-        .contact-link:hover {
-          color: var(--text-primary);
-        }
-
-        .filter-popover-btn {
-          background: var(--surface-2);
-          border: 1px solid var(--border);
-          color: var(--text-primary);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          height: 36px;
-          padding: 0 12px;
-          font-size: 12px;
-          border-radius: var(--radius-md);
-          cursor: pointer;
-          transition: all var(--dur-fast) ease;
-        }
-
-        .filter-popover-btn:hover {
-          border-color: var(--border-strong);
-        }
-
-        .filter-popover-btn.active {
-          background: var(--color-brand-subtle);
-          border-color: var(--color-brand);
-          color: var(--color-brand);
-        }
-
-        .tag-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(99, 102, 241, 0.08);
-          border: 1px solid rgba(99, 102, 241, 0.15);
-          color: var(--text-primary);
-          padding: 3px 8px;
-          border-radius: var(--radius-md);
-          font-size: 11.5px;
-          font-weight: 500;
-        }
-      `}</style>
-
-      <main style={{ flex: 1, padding: "28px", maxWidth: "1400px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }} className="page-enter">
+      <main style={{ flex: 1, padding: "4px 0", maxWidth: "1200px", width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px" }}>
         
         {/* Page Title + Actions */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", borderBottom: "0.5px solid var(--border)", paddingBottom: "16px" }}>
           <div>
-            <h1 className="font-heading" style={{ fontSize: "28px", letterSpacing: "-0.02em" }}>
+            <h1 className="font-heading" style={{ fontSize: "20px", fontWeight: 510, letterSpacing: "-0.015em", color: "var(--text-primary)", margin: 0 }}>
               Clients
             </h1>
-            <p style={{ fontSize: "14px", color: "var(--text-muted)", marginTop: "2px" }}>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", margin: 0 }}>
               Manage corporate accounts, review project metrics, and analyze aggregated values.
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <button
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <Button
               id="add-client-btn"
               onClick={openAdd}
-              className="btn-redesign btn-redesign-primary btn-redesign-sm"
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus size={13} />}
             >
-              <Plus size={13} /> Add Client
-            </button>
+              Add Client
+            </Button>
           </div>
         </div>
 
-        {/* KPI stats section */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-          {[
-            { icon: <Users size={15} />, label: "Total Network", value: total, color: "var(--color-brand)" },
-            { icon: <CheckCircle size={15} />, label: "Active Accounts", value: activeCount, color: "var(--color-success)" },
-            { icon: <DollarSign size={15} />, label: "Settled Value", value: `$${totalEarned.toLocaleString()}`, color: "var(--color-brand)" },
-          ].map((s) => (
-            <div 
-              key={s.label} 
-              style={{ 
-                padding: "16px 20px", 
-                display: "flex", 
-                alignItems: "center", 
-                gap: "14px", 
-                background: "var(--surface-1)", 
-                border: "0.5px solid var(--border)", 
-                borderRadius: "var(--radius-lg)",
-                boxShadow: "var(--shadow-sm)",
-                transition: "transform var(--dur-base)",
-                cursor: "default"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-1px)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "none"}
-            >
-              <div style={{ width: "34px", height: "34px", borderRadius: "var(--radius)", background: `${s.color}12`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, flexShrink: 0 }}>{s.icon}</div>
-              <div>
-                <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>{s.value}</p>
-                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{s.label}</p>
-              </div>
+        {/* ASYMMETRIC KPI CARDS (DESIGN.md rule: avoid equal width) */}
+        <div style={{ display: "grid", gridTemplateColumns: "2.2fr 1.2fr 1fr", gap: "14px" }} className="grid-responsive-3">
+          {/* Main Settled Value Metric (2.2fr) */}
+          <div
+            style={{
+              padding: "18px 22px",
+              background: "var(--surface-1)",
+              border: "0.5px solid var(--border)",
+              borderRadius: "var(--radius-cards)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <span style={{ fontSize: "10.5px", fontWeight: 590, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
+                Settled Pipeline Value
+              </span>
+              <h2 style={{ fontSize: "26px", fontWeight: 590, letterSpacing: "-0.022em", color: "var(--text-primary)", margin: "4px 0 0 0", fontVariantNumeric: "tabular-nums" }}>
+                ${totalEarned.toLocaleString()}
+              </h2>
+              <p style={{ fontSize: "11.5px", color: "var(--text-muted)", margin: "3px 0 0 0" }}>
+                Aggregated earnings across {total} registered accounts
+              </p>
             </div>
-          ))}
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "var(--radius-inputs)",
+                background: "rgba(39,166,68,0.12)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--color-pulse-green)",
+                flexShrink: 0,
+              }}
+            >
+              <DollarSign size={18} />
+            </div>
+          </div>
+
+          {/* Active Accounts Metric (1.2fr) */}
+          <div
+            style={{
+              padding: "18px",
+              background: "var(--surface-1)",
+              border: "0.5px solid var(--border)",
+              borderRadius: "var(--radius-cards)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(39,166,68,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-pulse-green)" }}>
+                <CheckCircle size={12} />
+              </div>
+              <span style={{ fontSize: "10.5px", fontWeight: 590, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Active Accounts</span>
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: 590, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>
+              {activeCount} <span style={{ fontSize: "12px", fontWeight: 400, color: "var(--text-muted)" }}>/ {total}</span>
+            </div>
+          </div>
+
+          {/* Total Network Metric (1fr) */}
+          <div
+            style={{
+              padding: "18px",
+              background: "var(--surface-1)",
+              border: "0.5px solid var(--border)",
+              borderRadius: "var(--radius-cards)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(228,242,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-brand)" }}>
+                <Users size={12} />
+              </div>
+              <span style={{ fontSize: "10.5px", fontWeight: 590, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Total Network</span>
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: 590, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>
+              {total}
+            </div>
+          </div>
         </div>
 
-        {/* Advanced Filters Block */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", padding: "10px 14px", border: "1px solid var(--border)", background: "var(--surface-1)", borderRadius: "var(--radius-lg)" }}>
+        {/* Toolbar: Search, Filters & View Switcher */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", padding: "8px 12px", border: "0.5px solid var(--border)", background: "var(--surface-1)", borderRadius: "var(--radius-cards)" }}>
             
-            {/* Search */}
-            <div className="search-input-wrapper" style={{ flex: "1", minWidth: "160px", maxWidth: "260px" }}>
-              <span className="search-input-icon"><Search size={13} /></span>
+            {/* Search Input */}
+            <div style={{ flex: "1", minWidth: "160px", maxWidth: "260px", position: "relative" }}>
+              <Search size={13} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
               <input
                 id="client-search"
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search clients..."
-                className="search-input"
+                placeholder="Search accounts..."
+                style={{
+                  width: "100%",
+                  height: "32px",
+                  paddingLeft: "30px",
+                  paddingRight: "10px",
+                  background: "var(--bg-base)",
+                  border: "0.5px solid var(--border)",
+                  borderRadius: "var(--radius-inputs)",
+                  fontSize: "12px",
+                  color: "var(--text-primary)",
+                  outline: "none",
+                }}
               />
             </div>
 
-            {/* Collapsible Filters popover */}
+            {/* Filters Popover */}
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => {
                   setFiltersOpen(!filtersOpen);
                   setSortOpen(false);
                 }}
-                className={`filter-popover-btn${isFilterActive ? " active" : ""}`}
+                style={{
+                  background: isFilterActive ? "var(--surface-2)" : "transparent",
+                  border: "0.5px solid var(--border)",
+                  color: isFilterActive ? "var(--text-primary)" : "var(--text-secondary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  height: "32px",
+                  padding: "0 10px",
+                  fontSize: "12px",
+                  borderRadius: "var(--radius-inputs)",
+                  cursor: "pointer",
+                }}
               >
-                <SlidersHorizontal size={13} />
+                <SlidersHorizontal size={12} />
                 <span>Filters</span>
                 {activeFilterCount > 0 && (
                   <span style={{
                     background: "var(--color-brand)",
-                    color: "white",
-                    borderRadius: "10px",
-                    padding: "1px 6px",
-                    fontSize: "10px",
-                    fontWeight: 700,
+                    color: "#08090a",
+                    borderRadius: "9999px",
+                    padding: "0 5px",
+                    fontSize: "9.5px",
+                    fontWeight: 590,
                   }}>
                     {activeFilterCount}
                   </span>
@@ -1288,44 +1264,41 @@ export default function ClientsPage() {
                 <>
                   <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setFiltersOpen(false)} />
                   <div
-                    className="dropdown-menu"
                     style={{
                       position: "absolute",
                       top: "100%",
                       left: 0,
-                      marginTop: "6px",
+                      marginTop: "4px",
                       zIndex: 10,
-                      width: "280px",
-                      padding: "16px",
+                      width: "260px",
+                      padding: "14px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "14px",
+                      gap: "12px",
+                      background: "var(--surface-2)",
+                      border: "0.5px solid var(--border-strong)",
+                      borderRadius: "var(--radius-cards)",
                       boxShadow: "var(--shadow-xl)",
-                      background: "var(--surface-1)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-lg)"
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <h4 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Filter Network</h4>
+                      <h4 style={{ fontSize: "12px", fontWeight: 590, color: "var(--text-primary)", margin: 0 }}>Filter Clients</h4>
                       {isFilterActive && (
                         <button 
                           onClick={clearAllFilters}
-                          style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
+                          style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11px", cursor: "pointer" }}
                         >
                           Reset
                         </button>
                       )}
                     </div>
 
-                    {/* Status filter selection */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Account Status</label>
+                      <label style={{ fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</label>
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="input-redesign"
-                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)", cursor: "pointer" }}
+                        style={{ fontSize: "12px", height: "30px", padding: "0 8px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", cursor: "pointer" }}
                       >
                         <option value="all">All Statuses</option>
                         <option value="active">Active</option>
@@ -1335,14 +1308,12 @@ export default function ClientsPage() {
                       </select>
                     </div>
 
-                    {/* Rating filter selection */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Rating Score</label>
+                      <label style={{ fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase" }}>Rating</label>
                       <select
                         value={ratingFilter}
                         onChange={(e) => setRatingFilter(e.target.value)}
-                        className="input-redesign"
-                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)", cursor: "pointer" }}
+                        style={{ fontSize: "12px", height: "30px", padding: "0 8px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", cursor: "pointer" }}
                       >
                         <option value="all">All Ratings</option>
                         <option value="5">5 Stars</option>
@@ -1352,14 +1323,12 @@ export default function ClientsPage() {
                       </select>
                     </div>
 
-                    {/* Minimum Earned filter selection */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Total Earnings</label>
+                      <label style={{ fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase" }}>Minimum Earned</label>
                       <select
                         value={earnedFilter}
                         onChange={(e) => setEarnedFilter(e.target.value)}
-                        className="input-redesign"
-                        style={{ fontSize: "12px", height: "34px", padding: "0 8px", background: "var(--surface-2)", cursor: "pointer" }}
+                        style={{ fontSize: "12px", height: "30px", padding: "0 8px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)", cursor: "pointer" }}
                       >
                         <option value="all">Any Amount</option>
                         <option value="1000">Over $1,000</option>
@@ -1372,37 +1341,48 @@ export default function ClientsPage() {
               )}
             </div>
 
-            {/* Collapsible Sort popover */}
+            {/* Sort Popover */}
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => {
                   setSortOpen(!sortOpen);
                   setFiltersOpen(false);
                 }}
-                className="filter-popover-btn"
+                style={{
+                  background: "transparent",
+                  border: "0.5px solid var(--border)",
+                  color: "var(--text-secondary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  height: "32px",
+                  padding: "0 10px",
+                  fontSize: "12px",
+                  borderRadius: "var(--radius-inputs)",
+                  cursor: "pointer",
+                }}
               >
-                <ArrowUpDown size={13} />
+                <ArrowUpDown size={12} />
                 <span>Sort: {currentSortLabel}</span>
-                <ChevronDown size={12} style={{ opacity: 0.7 }} />
+                <ChevronDown size={11} style={{ opacity: 0.7 }} />
               </button>
 
               {sortOpen && (
                 <>
                   <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setSortOpen(false)} />
                   <div
-                    className="dropdown-menu"
                     style={{
                       position: "absolute",
                       top: "100%",
                       left: 0,
-                      marginTop: "6px",
+                      marginTop: "4px",
                       zIndex: 10,
-                      width: "220px",
-                      padding: "6px 0",
+                      width: "200px",
+                      padding: "4px 0",
+                      background: "var(--surface-2)",
+                      border: "0.5px solid var(--border-strong)",
+                      borderRadius: "var(--radius-inputs)",
                       boxShadow: "var(--shadow-xl)",
-                      background: "var(--surface-1)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)"
                     }}
                   >
                     {SORT_OPTIONS.map((opt) => (
@@ -1415,8 +1395,8 @@ export default function ClientsPage() {
                         style={{
                           width: "100%",
                           textAlign: "left",
-                          padding: "8px 16px",
-                          fontSize: "12.5px",
+                          padding: "7px 12px",
+                          fontSize: "12px",
                           background: "transparent",
                           border: "none",
                           cursor: "pointer",
@@ -1437,37 +1417,34 @@ export default function ClientsPage() {
 
             <div style={{ flex: 1 }} />
 
-            {/* View toggle tabs */}
-            <div className="filter-tabs" style={{ background: "var(--surface-2)", padding: "2px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", height: "36px", display: "flex", alignItems: "center" }}>
+            {/* View Mode Toggle */}
+            <div style={{ background: "var(--bg-base)", padding: "2px", borderRadius: "var(--radius-inputs)", border: "0.5px solid var(--border)", height: "32px", display: "flex", alignItems: "center" }}>
               {(["grid", "list"] as const).map((m) => (
                 <button
                   key={m}
                   id={`view-${m}`}
                   onClick={() => setViewMode(m)}
-                  className={`filter-tab${viewMode === m ? " active" : ""}`}
                   style={{
-                    padding: "6px 10px",
+                    padding: "4px 8px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     border: "none",
-                    background: viewMode === m ? "var(--surface-1)" : "transparent",
+                    background: viewMode === m ? "var(--surface-2)" : "transparent",
                     color: viewMode === m ? "var(--text-primary)" : "var(--text-muted)",
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "4px",
                     cursor: "pointer",
-                    transition: "all var(--dur-fast)",
-                    boxShadow: viewMode === m ? "var(--shadow-xs)" : "none"
                   }}
                 >
                   {m === "grid" ? (
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
                       <rect x="0" y="0" width="7" height="7" rx="1.5" />
                       <rect x="9" y="0" width="7" height="7" rx="1.5" />
                       <rect x="0" y="9" width="7" height="7" rx="1.5" />
                       <rect x="9" y="9" width="7" height="7" rx="1.5" />
                     </svg>
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
                       <rect x="0" y="1" width="16" height="2.5" rx="1.25" />
                       <rect x="0" y="6.75" width="16" height="2.5" rx="1.25" />
                       <rect x="0" y="12.5" width="16" height="2.5" rx="1.25" />
@@ -1480,27 +1457,27 @@ export default function ClientsPage() {
 
           {/* Active Filter Chips */}
           {isFilterActive && (
-            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600 }}>Active Filters:</span>
+            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Active:</span>
               {statusFilter !== "all" && (
-                <span className="tag-badge">
+                <span style={{ padding: "2px 7px", background: "var(--surface-2)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-badges)", fontSize: "11px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                   Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-                  <button onClick={() => setStatusFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "0 0 0 4px" }}><X size={10} /></button>
+                  <button onClick={() => setStatusFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0 }}><X size={10} /></button>
                 </span>
               )}
               {ratingFilter !== "all" && (
-                <span className="tag-badge">
+                <span style={{ padding: "2px 7px", background: "var(--surface-2)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-badges)", fontSize: "11px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                   Rating: {ratingFilter === "unrated" ? "Unrated" : `${ratingFilter}+ Stars`}
-                  <button onClick={() => setRatingFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "0 0 0 4px" }}><X size={10} /></button>
+                  <button onClick={() => setRatingFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0 }}><X size={10} /></button>
                 </span>
               )}
               {earnedFilter !== "all" && (
-                <span className="tag-badge">
+                <span style={{ padding: "2px 7px", background: "var(--surface-2)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-badges)", fontSize: "11px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                   Earned: &gt;${parseInt(earnedFilter, 10).toLocaleString()}
-                  <button onClick={() => setEarnedFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "0 0 0 4px" }}><X size={10} /></button>
+                  <button onClick={() => setEarnedFilter("all")} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0 }}><X size={10} /></button>
                 </span>
               )}
-              <button onClick={clearAllFilters} style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11.5px", cursor: "pointer", fontWeight: 600, marginLeft: "4px" }}>
+              <button onClick={clearAllFilters} style={{ border: "none", background: "none", color: "var(--color-brand)", fontSize: "11px", cursor: "pointer", marginLeft: "4px" }}>
                 Clear All
               </button>
             </div>
@@ -1509,16 +1486,16 @@ export default function ClientsPage() {
 
         {/* Content list/grid rendering */}
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} className="skeleton" style={{ height: "200px", borderRadius: "var(--radius-lg)" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="skeleton" style={{ height: "180px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
             ))}
           </div>
         ) : filteredClients.length === 0 ? (
           <EmptyState
             icon={<UserX />}
-            heading={search || isFilterActive ? "No clients match your filters" : "No clients yet"}
-            description={search || isFilterActive ? "Try adjusting your search query or filters" : "Add your first client to start managing projects"}
+            heading={search || isFilterActive ? "No matching clients" : "No clients added yet"}
+            description={search || isFilterActive ? "Adjust search query or reset filter settings" : "Create your first corporate client profile to track projects and revenue."}
             actionLabel={!search && !isFilterActive ? "Add Client" : undefined}
             onActionClick={openAdd}
           />
@@ -1527,7 +1504,7 @@ export default function ClientsPage() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: "20px",
+              gap: "14px",
             }}
           >
             {filteredClients.map((c) => (
@@ -1540,67 +1517,73 @@ export default function ClientsPage() {
             ))}
           </div>
         ) : (
-          <div className="glass-card" style={{ overflow: "hidden" }}>
+          /* HIGH DENSITY TABLE VIEW (0.5px Hairline Grid) */
+          <div className="glass-card" style={{ overflow: "hidden", borderRadius: "var(--radius-cards)", border: "0.5px solid var(--border)" }}>
             <div style={{ overflowX: "auto" }}>
-              <table className="data-table">
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                 <thead>
-                  <tr>
-                    {["Client", "Company", "Status", "Tags", "Projects", "Earned", "Rating", ""].map((col) => (
-                      <th key={col}>{col}</th>
-                    ))}
+                  <tr style={{ borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)" }}>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Client</th>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Company</th>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tags</th>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Projects</th>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Earned</th>
+                    <th style={{ padding: "10px 12px", fontSize: "10.5px", fontWeight: 590, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rating</th>
+                    <th style={{ padding: "10px 12px" }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClients.map((c, i) => {
+                  {filteredClients.map((c) => {
                     const cfg = STATUS_CONFIG[c.status];
                     return (
                       <tr
                         key={c._id}
                         style={{
-                          borderBottom:
-                            i < filteredClients.length - 1
-                              ? "1px solid var(--border-subtle)"
-                              : "none",
+                          borderBottom: "0.5px solid var(--border)",
                           transition: "background 0.15s",
                         }}
                         onMouseEnter={(e) =>
-                          ((e.currentTarget as HTMLTableRowElement).style.background = "var(--bg-elevated)")
+                          ((e.currentTarget as HTMLTableRowElement).style.background = "var(--surface-2)")
                         }
                         onMouseLeave={(e) =>
                           ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")
                         }
                       >
                         {/* Client */}
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <td style={{ padding: "10px 12px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <div
                               className="avatar"
                               style={{
-                                width: "34px",
-                                height: "34px",
-                                fontSize: "12px",
+                                width: "28px",
+                                height: "28px",
+                                fontSize: "11px",
+                                fontWeight: 590,
                                 background: avatarGradient(c.name),
+                                color: "var(--text-primary)",
+                                borderRadius: "var(--radius-inputs)",
                                 flexShrink: 0,
                               }}
                             >
                               {getInitials(c.name)}
                             </div>
                             <div>
-                              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+                              <p style={{ fontSize: "13px", fontWeight: 510, color: "var(--text-primary)", margin: 0 }}>
                                 {c.name}
                               </p>
-                              <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>{c.email}</p>
+                              <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>{c.email}</p>
                             </div>
                           </div>
                         </td>
                         {/* Company */}
-                        <td style={{ padding: "14px 16px" }}>
-                          <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
                             {c.company || "—"}
                           </span>
                         </td>
                         {/* Status */}
-                        <td style={{ padding: "14px 16px" }}>
+                        <td style={{ padding: "10px 12px" }}>
                           <Badge variant={getBadgeVariant(c.status)}>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                               {cfg.icon}
@@ -1609,17 +1592,17 @@ export default function ClientsPage() {
                           </Badge>
                         </td>
                         {/* Tags */}
-                        <td style={{ padding: "14px 16px" }}>
+                        <td style={{ padding: "10px 12px" }}>
                           <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                             {c.tags.slice(0, 2).map((t) => (
                               <span
                                 key={t}
                                 style={{
-                                  padding: "2px 7px",
-                                  background: "rgba(255,255,255,0.03)",
-                                  border: "1px solid var(--border)",
-                                  borderRadius: "var(--radius-full)",
-                                  fontSize: "11px",
+                                  padding: "2px 6px",
+                                  background: "var(--surface-2)",
+                                  border: "0.5px solid var(--border)",
+                                  borderRadius: "var(--radius-badges)",
+                                  fontSize: "10.5px",
                                   color: "var(--text-muted)",
                                 }}
                               >
@@ -1627,57 +1610,58 @@ export default function ClientsPage() {
                               </span>
                             ))}
                             {c.tags.length === 0 && (
-                              <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>—</span>
+                              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>—</span>
                             )}
                           </div>
                         </td>
                         {/* Projects */}
-                        <td style={{ padding: "14px 16px" }}>
-                          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{ fontSize: "12.5px", fontWeight: 510, fontVariantNumeric: "tabular-nums" }}>
                             {c.totalProjects}
                           </span>
                         </td>
                         {/* Earned */}
-                        <td style={{ padding: "14px 16px" }}>
-                          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--primary)" }}>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{ fontSize: "12.5px", fontWeight: 510, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>
                             ${c.totalEarned.toLocaleString()}
                           </span>
                         </td>
                         {/* Rating */}
-                        <td style={{ padding: "14px 16px" }}>
+                        <td style={{ padding: "10px 12px" }}>
                           {c.rating ? (
-                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "13px", color: "#f59e0b" }}>
-                              <Star size={12} fill="#f59e0b" />
+                            <span style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "12px", color: "#f59e0b" }}>
+                              <Star size={11} fill="#f59e0b" />
                               {c.rating}
                             </span>
                           ) : (
-                            <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>—</span>
+                            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>—</span>
                           )}
                         </td>
                         {/* Actions */}
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ display: "flex", gap: "4px" }}>
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                             <Link href={`/dashboard/clients/${c._id}`}>
-                              <Button variant="ghost" size="sm">
-                                <Eye size={13} />
+                              <Button variant="ghost" size="icon" style={{ width: "24px", height: "24px" }}>
+                                <Eye size={12} />
                               </Button>
                             </Link>
                             <Button
                               id={`list-edit-${c._id}`}
                               onClick={() => openEdit(c)}
                               variant="ghost"
-                              size="sm"
+                              size="icon"
+                              style={{ width: "24px", height: "24px" }}
                             >
-                              <Edit3 size={13} />
+                              <Edit3 size={12} />
                             </Button>
                             <Button
                               id={`list-delete-${c._id}`}
                               onClick={() => setDeleteTarget(c)}
                               variant="ghost"
-                              size="sm"
-                              style={{ color: "var(--color-danger)" }}
+                              size="icon"
+                              style={{ width: "24px", height: "24px", color: "var(--color-coral-red)" }}
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={12} />
                             </Button>
                           </div>
                         </td>
@@ -1704,7 +1688,6 @@ export default function ClientsPage() {
         onDeleted={handleDeleted}
       />
 
-      {/* Spin keyframe */}
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>

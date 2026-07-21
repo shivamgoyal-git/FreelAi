@@ -16,6 +16,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import UserAvatar from "./UserAvatar";
 import ProfileCompletion, { calculateProfileCompleteness } from "./ProfileCompletion";
 
@@ -37,6 +38,7 @@ export default function AccountDropdown({
   const [completeness, setCompleteness] = useState<number>(0);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
   // Load latest profile details for completeness rating
   useEffect(() => {
@@ -67,11 +69,13 @@ export default function AccountDropdown({
 
   const handleNavigate = (path: string) => {
     setMobileOpen(false);
+    setDropdownOpen(false);
     router.push(path);
   };
 
   const handleLogout = async () => {
     setMobileOpen(false);
+    setDropdownOpen(false);
     await signOut({ callbackUrl: "/login" });
   };
 
@@ -113,171 +117,198 @@ export default function AccountDropdown({
           <UserAvatar src={finalPhoto} name={finalName} initials={userInitial} size={34} />
         </div>
 
-        {mobileOpen && (
-          <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(4px)",
-            zIndex: 9999,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end"
-          }}>
-            <div style={{
-              background: "var(--surface-1)",
-              borderTopLeftRadius: "16px",
-              borderTopRightRadius: "16px",
-              padding: "20px",
-              maxHeight: "85vh",
-              overflowY: "auto",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              borderTop: "1px solid var(--border-strong)",
-              boxShadow: "0 -8px 24px rgba(0,0,0,0.15)"
-            }}>
-              
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "12px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)" }}>Account Menu</span>
-                <button onClick={() => setMobileOpen(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
-                  <X size={18} />
-                </button>
-              </div>
+        <AnimatePresence>
+          {mobileOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  background: "rgba(0, 0, 0, 0.5)",
+                  backdropFilter: "blur(4px)",
+                  zIndex: 9999,
+                }}
+              />
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                style={{
+                  position: "fixed",
+                  left: 0,
+                  bottom: 0,
+                  width: "100%",
+                  background: "var(--surface-1)",
+                  borderTopLeftRadius: "16px",
+                  borderTopRightRadius: "16px",
+                  padding: "20px",
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                  borderTop: "1px solid var(--border-strong)",
+                  boxShadow: "0 -8px 24px rgba(0,0,0,0.15)",
+                  zIndex: 10000,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "bold", textTransform: "uppercase", color: "var(--text-muted)" }}>Account Menu</span>
+                  <button onClick={() => setMobileOpen(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                    <X size={18} />
+                  </button>
+                </div>
 
-              {renderProfileCardMini()}
+                {renderProfileCardMini()}
 
-              {/* Mobile Menu Options */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "10px", fontWeight: "bold", color: "var(--text-muted)", margin: "8px 0 4px 8px", textTransform: "uppercase" }}>Quick Actions</span>
-                <button onClick={() => handleNavigate("/dashboard/profile")} style={mobileItemStyle}>
-                  <User size={15} /> My Profile
-                </button>
-                <button onClick={() => handleNavigate("/dashboard/portfolio")} style={mobileItemStyle}>
-                  <Briefcase size={15} /> Portfolio Manager
-                </button>
-                <button onClick={() => handleNavigate("/dashboard/settings/account")} style={mobileItemStyle}>
-                  <Settings size={15} /> Account Settings
-                </button>
-                <button onClick={() => handleNavigate("/dashboard/settings/security")} style={mobileItemStyle}>
-                  <Shield size={15} /> Security
-                </button>
-                <button disabled style={{ ...mobileItemStyle, opacity: 0.5, cursor: "not-allowed" }}>
-                  <CreditCard size={15} /> Billing <span style={badgeStyle}>Soon</span>
-                </button>
-                <button disabled style={{ ...mobileItemStyle, opacity: 0.5, cursor: "not-allowed" }}>
-                  <TrendingUp size={15} /> Upgrade Plan <span style={badgeStyle}>Soon</span>
-                </button>
+                {/* Mobile Menu Options */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "bold", color: "var(--text-muted)", margin: "8px 0 4px 8px", textTransform: "uppercase" }}>Quick Actions</span>
+                  <button onClick={() => handleNavigate("/dashboard/profile")} style={mobileItemStyle}>
+                    <User size={15} /> My Profile
+                  </button>
+                  <button onClick={() => handleNavigate("/dashboard/portfolio")} style={mobileItemStyle}>
+                    <Briefcase size={15} /> Portfolio Manager
+                  </button>
+                  <button onClick={() => handleNavigate("/dashboard/settings/account")} style={mobileItemStyle}>
+                    <Settings size={15} /> Account Settings
+                  </button>
+                  <button onClick={() => handleNavigate("/dashboard/settings/security")} style={mobileItemStyle}>
+                    <Shield size={15} /> Security
+                  </button>
+                  <button disabled style={{ ...mobileItemStyle, opacity: 0.5, cursor: "not-allowed" }}>
+                    <CreditCard size={15} /> Billing <span style={badgeStyle}>Soon</span>
+                  </button>
+                  <button disabled style={{ ...mobileItemStyle, opacity: 0.5, cursor: "not-allowed" }}>
+                    <TrendingUp size={15} /> Upgrade Plan <span style={badgeStyle}>Soon</span>
+                  </button>
 
-                <span style={{ fontSize: "10px", fontWeight: "bold", color: "var(--text-muted)", margin: "14px 0 4px 8px", textTransform: "uppercase" }}>AI Workspace</span>
-                <button onClick={() => handleNavigate("/dashboard/profile/ai-preferences")} style={mobileItemStyle}>
-                  <Sparkles size={15} /> AI Preferences
-                </button>
-                <button onClick={() => handleNavigate("/dashboard/proposals")} style={mobileItemStyle}>
-                  <Volume2 size={15} /> Proposal Templates
-                </button>
+                  <span style={{ fontSize: "10px", fontWeight: "bold", color: "var(--text-muted)", margin: "14px 0 4px 8px", textTransform: "uppercase" }}>AI Workspace</span>
+                  <button onClick={() => handleNavigate("/dashboard/profile/ai-preferences")} style={mobileItemStyle}>
+                    <Sparkles size={15} /> AI Preferences
+                  </button>
+                  <button onClick={() => handleNavigate("/dashboard/proposals")} style={mobileItemStyle}>
+                    <Volume2 size={15} /> Proposal Templates
+                  </button>
 
-                <div style={{ height: "1px", background: "var(--border)", margin: "12px 0" }} />
-                
-                <button onClick={handleLogout} style={{ ...mobileItemStyle, color: "var(--error)" }}>
-                  <LogOut size={15} /> Logout
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
+                  <div style={{ height: "1px", background: "var(--border)", margin: "12px 0" }} />
+                  
+                  <button onClick={handleLogout} style={{ ...mobileItemStyle, color: "var(--error)" }}>
+                    <LogOut size={15} /> Logout
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </>
     );
   }
 
-  // Desktop Radix DropdownMenu Layout
+  // Desktop Radix DropdownMenu Layout with Framer Motion spring transition
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenu.Trigger asChild style={{ outline: "none" }}>
-        <div>
+        <button style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "block" }}>
           <UserAvatar src={finalPhoto} name={finalName} initials={userInitial} size={34} />
-        </div>
+        </button>
       </DropdownMenu.Trigger>
 
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={8}
-          style={{
-            background: "var(--surface-1)",
-            border: "1px solid var(--border-strong)",
-            borderRadius: "var(--radius)",
-            width: "250px",
-            boxShadow: "var(--shadow-lg)",
-            padding: "4px",
-            zIndex: 9999,
-            outline: "none",
-            animation: "slideDown var(--dur-fast) ease"
-          }}
-        >
-          {renderProfileCardMini()}
+      <DropdownMenu.Portal forceMount>
+        <AnimatePresence>
+          {dropdownOpen && (
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={8}
+              forceMount
+              asChild
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                style={{
+                  background: "var(--surface-1)",
+                  border: "1px solid var(--border-strong)",
+                  borderRadius: "var(--radius)",
+                  width: "250px",
+                  boxShadow: "var(--shadow-lg)",
+                  padding: "4px",
+                  zIndex: 9999,
+                  outline: "none",
+                }}
+              >
+                {renderProfileCardMini()}
 
-          {/* Quick Actions Group */}
-          <div style={{ padding: "4px" }}>
-            <span style={{ fontSize: "9.5px", fontWeight: "bold", color: "var(--text-muted)", margin: "6px 8px 4px", display: "block", textTransform: "uppercase" }}>Quick Actions</span>
-            <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/profile")} style={itemStyle}>
-              <User size={13} />
-              <span style={{ flex: 1 }}>My Profile</span>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/portfolio")} style={itemStyle}>
-              <Briefcase size={13} />
-              <span style={{ flex: 1 }}>Portfolio Manager</span>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/settings/account")} style={itemStyle}>
-              <Settings size={13} />
-              <span style={{ flex: 1 }}>Account Settings</span>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/settings/security")} style={itemStyle}>
-              <Shield size={13} />
-              <span style={{ flex: 1 }}>Security</span>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item disabled style={{ ...itemStyle, opacity: 0.5 }}>
-              <CreditCard size={13} />
-              <span style={{ flex: 1 }}>Billing</span>
-              <span style={badgeStyle}>Soon</span>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item disabled style={{ ...itemStyle, opacity: 0.5 }}>
-              <TrendingUp size={13} />
-              <span style={{ flex: 1 }}>Upgrade Plan</span>
-              <span style={badgeStyle}>Soon</span>
-            </DropdownMenu.Item>
-          </div>
+                {/* Quick Actions Group */}
+                <div style={{ padding: "4px" }}>
+                  <span style={{ fontSize: "9.5px", fontWeight: "bold", color: "var(--text-muted)", margin: "6px 8px 4px", display: "block", textTransform: "uppercase" }}>Quick Actions</span>
+                  <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/profile")} style={itemStyle}>
+                    <User size={13} />
+                    <span style={{ flex: 1 }}>My Profile</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/portfolio")} style={itemStyle}>
+                    <Briefcase size={13} />
+                    <span style={{ flex: 1 }}>Portfolio Manager</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/settings/account")} style={itemStyle}>
+                    <Settings size={13} />
+                    <span style={{ flex: 1 }}>Account Settings</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/settings/security")} style={itemStyle}>
+                    <Shield size={13} />
+                    <span style={{ flex: 1 }}>Security</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item disabled style={{ ...itemStyle, opacity: 0.5 }}>
+                    <CreditCard size={13} />
+                    <span style={{ flex: 1 }}>Billing</span>
+                    <span style={badgeStyle}>Soon</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item disabled style={{ ...itemStyle, opacity: 0.5 }}>
+                    <TrendingUp size={13} />
+                    <span style={{ flex: 1 }}>Upgrade Plan</span>
+                    <span style={badgeStyle}>Soon</span>
+                  </DropdownMenu.Item>
+                </div>
 
-          <DropdownMenu.Separator style={{ height: "1px", background: "var(--border)", margin: "4px" }} />
+                <DropdownMenu.Separator style={{ height: "1px", background: "var(--border)", margin: "4px" }} />
 
-          {/* AI Workspace Group */}
-          <div style={{ padding: "4px" }}>
-            <span style={{ fontSize: "9.5px", fontWeight: "bold", color: "var(--text-muted)", margin: "4px 8px 4px", display: "block", textTransform: "uppercase" }}>AI Workspace</span>
-            <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/profile/ai-preferences")} style={itemStyle}>
-              <Sparkles size={13} />
-              <span style={{ flex: 1 }}>AI Preferences</span>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/proposals")} style={itemStyle}>
-              <Volume2 size={13} />
-              <span style={{ flex: 1 }}>Proposal Templates</span>
-            </DropdownMenu.Item>
-          </div>
+                {/* AI Workspace Group */}
+                <div style={{ padding: "4px" }}>
+                  <span style={{ fontSize: "9.5px", fontWeight: "bold", color: "var(--text-muted)", margin: "4px 8px 4px", display: "block", textTransform: "uppercase" }}>AI Workspace</span>
+                  <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/profile/ai-preferences")} style={itemStyle}>
+                    <Sparkles size={13} />
+                    <span style={{ flex: 1 }}>AI Preferences</span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item onSelect={() => handleNavigate("/dashboard/proposals")} style={itemStyle}>
+                    <Volume2 size={13} />
+                    <span style={{ flex: 1 }}>Proposal Templates</span>
+                  </DropdownMenu.Item>
+                </div>
 
-          <DropdownMenu.Separator style={{ height: "1px", background: "var(--border)", margin: "4px" }} />
+                <DropdownMenu.Separator style={{ height: "1px", background: "var(--border)", margin: "4px" }} />
 
-          {/* Session Group */}
-          <div style={{ padding: "4px" }}>
-            <DropdownMenu.Item onSelect={handleLogout} style={{ ...itemStyle, color: "var(--error)" }}>
-              <LogOut size={13} />
-              <span style={{ flex: 1 }}>Logout</span>
-            </DropdownMenu.Item>
-          </div>
-
-        </DropdownMenu.Content>
+                {/* Session Group */}
+                <div style={{ padding: "4px" }}>
+                  <DropdownMenu.Item onSelect={handleLogout} style={{ ...itemStyle, color: "var(--error)" }}>
+                    <LogOut size={13} />
+                    <span style={{ flex: 1 }}>Logout</span>
+                  </DropdownMenu.Item>
+                </div>
+              </motion.div>
+            </DropdownMenu.Content>
+          )}
+        </AnimatePresence>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
   );

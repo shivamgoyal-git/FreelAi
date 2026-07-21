@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, Sun, Moon } from "lucide-react";
+import { Menu, X, Sun, Moon, Sparkles } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/Button";
 
 const navLinks = [
-  { href: "#tour", label: "Product Tour" },
-  { href: "#audience", label: "For Freelancers" },
-  { href: "#ai-partner", label: "AI Business Partner" },
-  { href: "#journey", label: "Workflow" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "/", label: "Home" },
+  { href: "/#features", label: "Features" },
+  { href: "/docs", label: "Docs" },
 ];
 
 export default function Navbar() {
@@ -29,7 +27,12 @@ export default function Navbar() {
     <nav
       className="navbar"
       style={{
-        boxShadow: scrolled ? "0 1px 0 var(--border-default)" : "none",
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        background: "var(--surface-1)",
+        borderBottom: "0.5px solid var(--border)",
+        backdropFilter: "blur(8px)",
       }}
     >
       <div
@@ -38,7 +41,10 @@ export default function Navbar() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          height: "64px",
+          height: "58px",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "0 20px",
         }}
       >
         {/* Logo */}
@@ -47,18 +53,17 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "6px",
+            gap: "8px",
             textDecoration: "none",
           }}
         >
-          {/* Simple logo image */}
           <img
             src="/logo.png"
             alt="FreelAi Logo"
             style={{
-              width: "38px",
-              height: "38px",
-              margin: "-4px -6px -4px -4px",
+              width: "36px",
+              height: "36px",
+              margin: "-3px -4px -3px -3px",
               borderRadius: "8px",
               objectFit: "cover",
               flexShrink: 0,
@@ -66,9 +71,14 @@ export default function Navbar() {
           />
           <span
             className="font-heading"
-            style={{ fontSize: "18px", color: "var(--text-primary)", letterSpacing: "-0.02em" }}
+            style={{
+              fontSize: "16px",
+              fontWeight: 590,
+              color: "var(--text-primary)",
+              letterSpacing: "-0.015em",
+            }}
           >
-            Freel<span style={{ color: "var(--primary)" }}>Ai</span>
+            Freel<span style={{ color: "var(--color-brand)" }}>AI</span>
           </span>
         </Link>
 
@@ -78,18 +88,43 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "2px",
+            gap: "6px",
           }}
         >
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
-              className="btn btn-ghost btn-sm"
-              style={{ fontWeight: 500, fontSize: "14px" }}
+              onClick={(e) => {
+                if (link.href.includes("#")) {
+                  const hash = link.href.split("#")[1];
+                  const target = document.getElementById(hash);
+                  if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: "smooth" });
+                  }
+                }
+              }}
+              style={{
+                fontSize: "12.5px",
+                fontWeight: 510,
+                color: "var(--text-secondary)",
+                textDecoration: "none",
+                padding: "6px 12px",
+                borderRadius: "var(--radius-buttons)",
+                transition: "color var(--dur-fast), background var(--dur-fast)",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
+                (e.currentTarget as HTMLAnchorElement).style.background = "var(--surface-2)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
+                (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+              }}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -105,27 +140,21 @@ export default function Navbar() {
           <button
             onClick={toggle}
             style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "var(--radius)",
+              width: "32px",
+              height: "32px",
+              borderRadius: "var(--radius-buttons)",
               border: "0.5px solid var(--border)",
               background: "transparent",
-              color: "var(--text-secondary)",
+              color: "var(--text-muted)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              transition: "background 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--surface-2)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
+              transition: "background var(--dur-fast)",
             }}
             aria-label="Toggle theme"
           >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
           </button>
 
           <Link href="/signup">
@@ -133,7 +162,8 @@ export default function Navbar() {
               Get Started
             </Button>
           </Link>
-          {/* Mobile menu toggle */}
+
+          {/* Mobile menu button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             style={{
@@ -147,57 +177,10 @@ export default function Navbar() {
             className="mobile-menu-btn"
             aria-label="Toggle menu"
           >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </div>
-      {/* Mobile Dropdown */}
-      {mobileOpen && (
-        <div
-          style={{
-            borderTop: "1px solid var(--border-default)",
-            padding: "16px 24px 20px",
-            background: "var(--bg-surface)",
-          }}
-        >
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              style={{
-                display: "block",
-                padding: "11px 0",
-                color: "var(--text-secondary)",
-                textDecoration: "none",
-                fontWeight: 500,
-                fontSize: "14px",
-                borderBottom: "1px solid var(--border-subtle)",
-              }}
-            >
-              {link.label}
-            </a>
-          ))}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "18px" }}>
-            <Link href="/login">
-              <Button variant="secondary" onClick={() => setMobileOpen(false)} style={{ width: "100%", justifyContent: "center" }}>
-                Log In
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="primary" onClick={() => setMobileOpen(false)} style={{ width: "100%", justifyContent: "center" }}>
-                Get Started Free
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-menu-btn { display: block !important; }
-        }
-      `}</style>
     </nav>
   );
 }

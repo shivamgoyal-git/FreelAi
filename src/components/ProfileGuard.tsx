@@ -61,9 +61,15 @@ export default function ProfileGuard({ feature, children }: ProfileGuardProps) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "80vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px" }}>
-        <Loader2 size={24} color="var(--color-brand)" style={{ animation: "spin 1s linear infinite" }} />
-        <span style={{ fontSize: "12.5px", color: "var(--text-muted)", fontWeight: 500 }}>Verifying credentials...</span>
+      <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="skeleton" style={{ height: "24px", width: "180px", borderRadius: "var(--radius-inputs)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
+          <div className="skeleton" style={{ height: "32px", width: "120px", borderRadius: "var(--radius-inputs)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: "20px" }} className="grid-responsive-2">
+          <div className="skeleton" style={{ height: "420px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
+          <div className="skeleton" style={{ height: "420px", borderRadius: "var(--radius-cards)", background: "var(--surface-1)", border: "0.5px solid var(--border)" }} />
+        </div>
       </div>
     );
   }

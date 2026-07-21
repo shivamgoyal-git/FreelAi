@@ -5,6 +5,10 @@
 @import "../styles/animations.css";
 @import "../styles/utilities.css";
 
+html {
+  scroll-behavior: smooth;
+}
+
 .text-gradient {
   color: var(--text-primary);
   -webkit-text-fill-color: unset;
@@ -566,7 +570,7 @@
   border: none;
   outline: none;
   text-decoration: none;
-  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast);
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast);
   border-radius: var(--radius); /* 6px */
 }
 .btn-redesign:disabled {

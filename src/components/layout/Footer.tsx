@@ -8,7 +8,6 @@ import { Globe, Mail, ExternalLink } from "lucide-react";
 const footerLinks = {
   Platform: [
     { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
     { label: "Dashboard", href: "/dashboard" },
     { label: "Changelog", href: "#" },
   ],

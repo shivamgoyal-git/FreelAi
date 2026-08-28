@@ -24,10 +24,8 @@ export async function GET(req: NextRequest) {
       { clientId: clientId },
     ];
     if (client.name) {
-      clientQueryConditions.push({ clientName: client.name });
-    }
-    if (authCtx.role === "freelancer" && authCtx.userId) {
-      clientQueryConditions.push({ userId: authCtx.userId });
+      const escapedName = client.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      clientQueryConditions.push({ clientName: new RegExp(`^${escapedName}$`, "i") });
     }
 
     const filter: Record<string, unknown> = {

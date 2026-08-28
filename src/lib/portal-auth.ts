@@ -20,8 +20,7 @@ export interface ClientAuthContext {
 
 /**
  * Derives and verifies the client identity from the authenticated session.
- * Supports verified freelancer preview mode. If a freelancer accesses the portal
- * without a specific previewClientId, it defaults to their active/first client.
+ * Supports verified freelancer preview mode strictly scoped to the targeted client.
  */
 export async function getClientSession(
   previewClientId?: string | null
@@ -80,7 +79,6 @@ export async function getClientSession(
       client = await Client.findOne({ userId: user._id.toString() }).sort({ createdAt: -1 });
     }
 
-    // If freelancer doesn't have any client yet, create a default preview client profile
     if (!client) {
       client = await Client.create({
         userId: user._id.toString(),
@@ -118,7 +116,7 @@ export async function requireClient(previewClientId?: string | null): Promise<Cl
 }
 
 /**
- * Verifies that a project belongs to the authenticated client or freelancer preview.
+ * Verifies that a project belongs strictly to the authenticated client.
  */
 export async function requireClientProject(
   clientId: string,
@@ -133,15 +131,15 @@ export async function requireClientProject(
 
   const queryConditions: any[] = [
     { clientId: clientId },
-    { clientId: new mongoose.Types.ObjectId(clientId) },
   ];
 
-  if (authCtx?.client?.name) {
-    queryConditions.push({ clientName: authCtx.client.name });
+  if (mongoose.Types.ObjectId.isValid(clientId)) {
+    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
   }
 
-  if (authCtx?.role === "freelancer" && authCtx.userId) {
-    queryConditions.push({ userId: authCtx.userId });
+  if (authCtx?.client?.name) {
+    const escapedName = authCtx.client.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    queryConditions.push({ clientName: new RegExp(`^${escapedName}$`, "i") });
   }
 
   const project = await Project.findOne({
@@ -150,15 +148,6 @@ export async function requireClientProject(
   });
 
   if (!project) {
-    // If not found, also check if project exists by _id for this freelancer's workspace
-    if (authCtx?.userId) {
-      const fallbackProject = await Project.findOne({
-        _id: projectId,
-        userId: authCtx.userId,
-      });
-      if (fallbackProject) return fallbackProject;
-    }
-
     const error: any = new Error("Project not found or access denied");
     error.status = 404;
     throw error;
@@ -168,12 +157,11 @@ export async function requireClientProject(
 }
 
 /**
- * Verifies that a deliverable belongs to the authenticated client's projects.
+ * Verifies that a deliverable belongs strictly to the authenticated client's projects.
  */
 export async function requireClientDeliverable(
   clientId: string,
-  deliverableId: string,
-  authCtx?: ClientAuthContext
+  deliverableId: string
 ): Promise<IDeliverable> {
   if (!mongoose.Types.ObjectId.isValid(deliverableId)) {
     const error: any = new Error("Invalid deliverable ID");
@@ -181,17 +169,9 @@ export async function requireClientDeliverable(
     throw error;
   }
 
-  const queryConditions: any[] = [
-    { clientId: clientId },
-  ];
-
-  if (authCtx?.role === "freelancer" && authCtx.userId) {
-    queryConditions.push({ userId: authCtx.userId });
-  }
-
   const deliverable = await Deliverable.findOne({
     _id: deliverableId,
-    $or: queryConditions,
+    clientId: clientId,
   });
 
   if (!deliverable) {
@@ -204,7 +184,7 @@ export async function requireClientDeliverable(
 }
 
 /**
- * Verifies that an invoice belongs to the authenticated client.
+ * Verifies that an invoice belongs strictly to the authenticated client.
  */
 export async function requireClientInvoice(
   clientId: string,
@@ -225,10 +205,6 @@ export async function requireClientInvoice(
     queryConditions.push({ clientEmail: authCtx.client.email.toLowerCase().trim() });
   }
 
-  if (authCtx?.role === "freelancer" && authCtx.userId) {
-    queryConditions.push({ userId: authCtx.userId });
-  }
-
   const invoice = await Invoice.findOne({
     _id: invoiceId,
     $or: queryConditions,
@@ -244,13 +220,12 @@ export async function requireClientInvoice(
 }
 
 /**
- * Verifies that a proposal belongs to the authenticated client.
+ * Verifies that a proposal belongs strictly to the authenticated client.
  */
 export async function requireClientProposal(
   clientEmail: string,
   clientId: string,
-  proposalId: string,
-  authCtx?: ClientAuthContext
+  proposalId: string
 ): Promise<IProposal> {
   if (!mongoose.Types.ObjectId.isValid(proposalId)) {
     const error: any = new Error("Invalid proposal ID");
@@ -258,18 +233,12 @@ export async function requireClientProposal(
     throw error;
   }
 
-  const queryConditions: any[] = [
-    { clientEmail: clientEmail.toLowerCase().trim() },
-    { clientId: clientId },
-  ];
-
-  if (authCtx?.role === "freelancer" && authCtx.userId) {
-    queryConditions.push({ userId: authCtx.userId });
-  }
-
   const proposal = await Proposal.findOne({
     _id: proposalId,
-    $or: queryConditions,
+    $or: [
+      { clientEmail: clientEmail.toLowerCase().trim() },
+      { clientId: clientId },
+    ],
   });
 
   if (!proposal) {
@@ -282,12 +251,11 @@ export async function requireClientProposal(
 }
 
 /**
- * Verifies that a file belongs to the authenticated client and is visible.
+ * Verifies that a file belongs strictly to the authenticated client and is visible.
  */
 export async function requireClientFile(
   clientId: string,
-  fileId: string,
-  authCtx?: ClientAuthContext
+  fileId: string
 ): Promise<IProjectFile> {
   if (!mongoose.Types.ObjectId.isValid(fileId)) {
     const error: any = new Error("Invalid file ID");
@@ -295,17 +263,9 @@ export async function requireClientFile(
     throw error;
   }
 
-  const queryConditions: any[] = [
-    { clientId: clientId },
-  ];
-
-  if (authCtx?.role === "freelancer" && authCtx.userId) {
-    queryConditions.push({ userId: authCtx.userId });
-  }
-
   const file = await ProjectFile.findOne({
     _id: fileId,
-    $or: queryConditions,
+    clientId: clientId,
     isClientVisible: true,
   });
 

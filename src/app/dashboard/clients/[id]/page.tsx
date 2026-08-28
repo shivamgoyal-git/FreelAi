@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Loader2,
   Users,
+  MessageSquare,
   DollarSign,
   Briefcase,
   CheckCircle,
@@ -557,23 +558,30 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               )}
 
               {/* Quick Actions */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%" }}>
-                <a href={`mailto:${client.email}`} id="client-email-action" style={{ textDecoration: "none" }}>
-                  <Button variant="secondary" size="sm" leftIcon={<Mail size={12} />} style={{ width: "100%" }}>
-                    Email
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+                <Link href={`/dashboard/messages?clientId=${client._id}`} style={{ textDecoration: "none" }}>
+                  <Button variant="primary" size="sm" leftIcon={<MessageSquare size={13} />} style={{ width: "100%", justifyContent: "center" }}>
+                    Chat with Client
                   </Button>
-                </a>
-                {client.phone ? (
-                  <a href={`tel:${client.phone}`} id="client-phone-action" style={{ textDecoration: "none" }}>
-                    <Button variant="secondary" size="sm" leftIcon={<Phone size={12} />} style={{ width: "100%" }}>
-                      Call
+                </Link>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%" }}>
+                  <a href={`mailto:${client.email}`} id="client-email-action" style={{ textDecoration: "none" }}>
+                    <Button variant="secondary" size="sm" leftIcon={<Mail size={12} />} style={{ width: "100%" }}>
+                      Email
                     </Button>
                   </a>
-                ) : (
-                  <Button variant="secondary" size="sm" leftIcon={<Phone size={12} />} style={{ width: "100%", opacity: 0.4 }} disabled>
-                    Call
-                  </Button>
-                )}
+                  {client.phone ? (
+                    <a href={`tel:${client.phone}`} id="client-phone-action" style={{ textDecoration: "none" }}>
+                      <Button variant="secondary" size="sm" leftIcon={<Phone size={12} />} style={{ width: "100%" }}>
+                        Call
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button variant="secondary" size="sm" leftIcon={<Phone size={12} />} style={{ width: "100%", opacity: 0.4 }} disabled>
+                      Call
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 

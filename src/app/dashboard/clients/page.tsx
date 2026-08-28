@@ -635,6 +635,7 @@ function ClientCard({
   onEdit: (c: Client) => void;
   onDelete: (c: Client) => void;
 }) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const cfg = STATUS_CONFIG[client.status];
@@ -649,8 +650,22 @@ function ClientCard({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("[role='button']")
+    ) {
+      return;
+    }
+    router.push(`/dashboard/clients/${client._id}`);
+  };
+
   return (
     <div
+      onClick={handleCardClick}
       style={{
         background: "var(--surface-1)",
         border: "0.5px solid var(--border)",
@@ -659,11 +674,20 @@ function ClientCard({
         display: "flex",
         flexDirection: "column",
         gap: "14px",
-        transition: "border-color var(--dur-fast)",
+        transition: "all var(--dur-fast, 0.18s) ease",
         position: "relative",
+        cursor: "pointer",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-strong)")}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = "var(--border-strong)";
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "var(--shadow-md, 0 6px 20px rgba(0,0,0,0.25))";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "var(--border)";
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
     >
       {/* Top Row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
@@ -935,6 +959,7 @@ function ClientCard({
 
 // ── MAIN PAGE ─────────────────────────────────────────────────
 export default function ClientsPage() {
+  const router = useRouter();
   useSession();
   const [clients, setClients] = useState<Client[]>([]);
   const [total, setTotal] = useState(0);
@@ -1540,9 +1565,22 @@ export default function ClientsPage() {
                     return (
                       <tr
                         key={c._id}
+                        onClick={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (
+                            target.closest("button") ||
+                            target.closest("a") ||
+                            target.closest("input") ||
+                            target.closest("[role='button']")
+                          ) {
+                            return;
+                          }
+                          router.push(`/dashboard/clients/${c._id}`);
+                        }}
                         style={{
                           borderBottom: "0.5px solid var(--border)",
                           transition: "background 0.15s",
+                          cursor: "pointer",
                         }}
                         onMouseEnter={(e) =>
                           ((e.currentTarget as HTMLTableRowElement).style.background = "var(--surface-2)")

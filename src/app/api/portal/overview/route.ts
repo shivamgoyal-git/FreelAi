@@ -21,15 +21,13 @@ export async function GET(req: NextRequest) {
     const { client, clientId, freelancerUser } = authCtx;
     await connectDB();
 
-    // 1. Fetch Client's Projects (support string, ObjectId, clientName, or freelancer ownership)
+    // 1. Fetch Client's Projects (strictly scoped to this client)
     const projectQueryConditions: any[] = [
       { clientId: clientId },
     ];
     if (client.name) {
-      projectQueryConditions.push({ clientName: client.name });
-    }
-    if (authCtx.role === "freelancer" && authCtx.userId) {
-      projectQueryConditions.push({ userId: authCtx.userId });
+      const escapedName = client.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      projectQueryConditions.push({ clientName: new RegExp(`^${escapedName}$`, "i") });
     }
 
     const projects = await Project.find({ $or: projectQueryConditions }).sort({ updatedAt: -1 }).lean();
@@ -61,10 +59,8 @@ export async function GET(req: NextRequest) {
       return diffDays >= 0 && diffDays <= 14;
     }).length;
 
-    // 5. Fetch Recent Activity
-    const activities = await Activity.find({
-      $or: [{ clientId }, { userId: client.userId }],
-    })
+    // 5. Fetch Recent Activity strictly for this client
+    const activities = await Activity.find({ clientId })
       .sort({ createdAt: -1 })
       .limit(8)
       .lean();

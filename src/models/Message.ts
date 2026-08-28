@@ -2,9 +2,9 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 import type { MessageAttachment } from "@/types/portal";
 
 export interface IMessage extends Document {
-  projectId: mongoose.Types.ObjectId;
+  projectId?: mongoose.Types.ObjectId | null;
   clientId: mongoose.Types.ObjectId;
-  userId: string; // Freelancer owner
+  userId?: string; // Freelancer owner
   senderRole: "freelancer" | "client";
   senderId: string;
   senderName: string;
@@ -32,7 +32,8 @@ const MessageSchema = new Schema<IMessage>(
     projectId: {
       type: Schema.Types.ObjectId,
       ref: "Project",
-      required: [true, "projectId is required"],
+      required: false,
+      default: null,
       index: true,
     },
     clientId: {
@@ -43,7 +44,8 @@ const MessageSchema = new Schema<IMessage>(
     },
     userId: {
       type: String,
-      required: [true, "userId is required"],
+      required: false,
+      default: "",
       index: true,
     },
     senderRole: {
@@ -76,10 +78,12 @@ const MessageSchema = new Schema<IMessage>(
     readByClient: {
       type: Boolean,
       default: false,
+      index: true,
     },
     readByFreelancer: {
       type: Boolean,
       default: false,
+      index: true,
     },
   },
   {
@@ -87,8 +91,9 @@ const MessageSchema = new Schema<IMessage>(
   }
 );
 
+// Indexes for fast lookup
+MessageSchema.index({ clientId: 1, createdAt: 1 });
 MessageSchema.index({ projectId: 1, createdAt: 1 });
-MessageSchema.index({ clientId: 1, readByClient: 1 });
 MessageSchema.index({ userId: 1, readByFreelancer: 1 });
 
 const Message: Model<IMessage> =

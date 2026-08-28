@@ -17,6 +17,9 @@ export async function POST(
     }
 
     const { id } = await params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
+    }
     await connectDB();
 
     const client = await Client.findOne({ _id: id, userId: session.user.id });

@@ -20,18 +20,30 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     // Check overdue status on client's invoices
-    await checkAndUpdateOverdueInvoices(client.userId);
+    const ownerUserId = client.userId ? client.userId.toString() : authCtx.userId;
+    if (ownerUserId) {
+      await checkAndUpdateOverdueInvoices(ownerUserId);
+    }
+
+    const clientQueryConditions: any[] = [
+      { clientId: clientId },
+    ];
+    if (client.email) {
+      clientQueryConditions.push({ clientEmail: client.email.toLowerCase().trim() });
+    }
 
     const filter: Record<string, unknown> = {
-      clientId,
-      status: { $ne: "draft" }, // Do not expose draft invoices to clients
+      $and: [
+        { $or: clientQueryConditions },
+        { status: { $ne: "draft" } }, // Do not expose draft invoices to clients
+      ],
     };
 
     if (status && status !== "all") {
-      filter.status = status;
+      (filter.$and as any[]).push({ status });
     }
     if (projectId) {
-      filter.projectId = projectId;
+      (filter.$and as any[]).push({ projectId });
     }
 
     const invoices = await Invoice.find(filter)

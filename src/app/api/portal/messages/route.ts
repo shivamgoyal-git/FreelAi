@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientSession, requireClientProject } from "@/lib/portal-auth";
+import { getClientSession } from "@/lib/portal-auth";
 import connectDB from "@/lib/mongodb";
 import Message from "@/models/Message";
+import Project from "@/models/Project";
+import Client from "@/models/Client";
+import mongoose from "mongoose";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,23 +21,44 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { clientId, role } = authCtx;
     await connectDB();
 
-    const filter: Record<string, unknown> = { clientId };
-    if (projectId) {
-      filter.projectId = projectId;
+    let filter: any = {};
+
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      const project = await Project.findById(projectId).lean();
+      const projObjId = new mongoose.Types.ObjectId(projectId);
+
+      const conditions: any[] = [
+        { projectId: projObjId },
+        { projectId: projectId },
+      ];
+
+      if (project?.clientId) {
+        conditions.push(
+          { clientId: project.clientId },
+          { clientId: project.clientId.toString() }
+        );
+      }
+
+      filter = { $or: conditions };
+    } else {
+      const cId = authCtx.clientId;
+      const conditions: any[] = [{ clientId: cId }];
+      if (mongoose.Types.ObjectId.isValid(cId)) {
+        conditions.push({ clientId: new mongoose.Types.ObjectId(cId) });
+      }
+      filter = { $or: conditions };
     }
 
     const messages = await Message.find(filter)
-      .populate("projectId", "title")
       .sort({ createdAt: 1 })
       .lean();
 
-    // If client is reading, mark unread freelancer messages as read
-    if (role === "client" && projectId) {
+    // Mark unread freelancer messages as read if client is viewing
+    if (authCtx.role === "client" || authCtx.isPreview) {
       await Message.updateMany(
-        { projectId, senderRole: "freelancer", readByClient: false },
+        { ...filter, senderRole: "freelancer", readByClient: false },
         { $set: { readByClient: true } }
       );
     }
@@ -51,9 +78,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { projectId, content, attachments = [], previewClientId } = body;
 
-    if (!projectId || !content || !content.trim()) {
+    if (!content || !content.trim()) {
       return NextResponse.json(
-        { error: "projectId and content are required" },
+        { error: "Content is required" },
         { status: 400 }
       );
     }
@@ -63,45 +90,65 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { clientId, client, userId, role } = authCtx;
     await connectDB();
 
-    // Verify project belongs to this client
-    const project = await requireClientProject(clientId, projectId);
+    let targetClientId: any = authCtx.clientId;
+    let targetUserId = authCtx.client?.userId || authCtx.userId;
+    let clientName = authCtx.client?.name || "Client";
+    let clientAvatar = authCtx.client?.avatar || "";
+    let finalProjId: any = null;
+
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      const project = await Project.findById(projectId).lean();
+      if (project) {
+        finalProjId = project._id;
+        if (project.clientId) targetClientId = project.clientId;
+        if (project.userId) targetUserId = project.userId;
+      }
+    }
+
+    if (targetClientId && mongoose.Types.ObjectId.isValid(targetClientId)) {
+      const clientDoc = await Client.findById(targetClientId).lean();
+      if (clientDoc) {
+        clientName = clientDoc.name || clientName;
+        clientAvatar = clientDoc.avatar || clientAvatar;
+        if (clientDoc.userId) targetUserId = clientDoc.userId;
+      }
+    }
 
     const message = await Message.create({
-      projectId,
-      clientId,
-      userId: project.userId,
-      senderRole: role === "freelancer" ? "freelancer" : "client",
-      senderId: userId,
-      senderName: client.name,
-      senderAvatar: client.avatar || "",
+      projectId: finalProjId,
+      clientId: targetClientId,
+      userId: targetUserId ? targetUserId.toString() : "",
+      senderRole: "client",
+      senderId: authCtx.userId,
+      senderName: clientName,
+      senderAvatar: clientAvatar,
       content: content.trim(),
       attachments,
-      readByClient: role === "client",
-      readByFreelancer: role === "freelancer",
+      readByClient: true,
+      readByFreelancer: false,
     });
 
-    // If sent by client, notify freelancer
-    if (role === "client") {
+    if (targetUserId) {
       await sendNotification({
-        recipientId: project.userId,
+        recipientId: targetUserId.toString(),
         recipientRole: "freelancer",
         title: "New Client Message",
-        message: `${client.name}: "${content.trim().slice(0, 80)}${content.length > 80 ? "..." : ""}"`,
+        message: `${clientName}: "${content.trim().slice(0, 80)}${content.length > 80 ? "..." : ""}"`,
         type: "new_message",
-        link: `/dashboard/projects/${projectId}?tab=messages`,
-        projectId,
+        link: `/dashboard/messages?clientId=${targetClientId}`,
+        projectId: finalProjId ? finalProjId.toString() : undefined,
+        clientId: targetClientId ? targetClientId.toString() : undefined,
       });
 
       await recordActivity({
-        userId: project.userId,
+        userId: targetUserId.toString(),
         type: "message_sent",
         title: "Client Sent Message",
-        description: `${client.name} sent a message regarding "${project.title}".`,
-        projectId,
-        clientId,
+        description: `${clientName} sent a message.`,
+        projectId: finalProjId ? finalProjId.toString() : undefined,
+        clientId: targetClientId,
         actorRole: "client",
       });
     }

@@ -28,15 +28,19 @@ export async function GET(
     const project = await requireClientProject(clientId, id, authCtx);
 
     // Parallel fetch related resources for this project
+    const projectQueryId = mongoose.Types.ObjectId.isValid(id)
+      ? { $in: [id, new mongoose.Types.ObjectId(id)] }
+      : id;
+
     const [deliverables, files, messages, invoices, activities] =
       await Promise.all([
-        Deliverable.find({ projectId: id }).sort({ createdAt: -1 }).lean(),
-        ProjectFile.find({ projectId: id, isClientVisible: true })
+        Deliverable.find({ projectId: projectQueryId }).sort({ createdAt: -1 }).lean(),
+        ProjectFile.find({ projectId: projectQueryId, isClientVisible: true })
           .sort({ createdAt: -1 })
           .lean(),
-        Message.find({ projectId: id }).sort({ createdAt: 1 }).lean(),
-        Invoice.find({ projectId: id }).sort({ createdAt: -1 }).lean(),
-        Activity.find({ projectId: id }).sort({ createdAt: -1 }).limit(20).lean(),
+        Message.find({ projectId: projectQueryId }).sort({ createdAt: 1 }).lean(),
+        Invoice.find({ projectId: projectQueryId }).sort({ createdAt: -1 }).lean(),
+        Activity.find({ projectId: projectQueryId }).sort({ createdAt: -1 }).limit(20).lean(),
       ]);
 
     // Mark messages as read by client if user is client

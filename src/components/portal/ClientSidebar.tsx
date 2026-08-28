@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   FolderGit2,
@@ -31,6 +31,13 @@ export function ClientSidebar({
   freelancerEmail,
 }: ClientSidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const previewClientId = searchParams?.get("previewClientId") || "";
+
+  const buildHref = (baseHref: string) => {
+    if (!previewClientId) return baseHref;
+    return `${baseHref}?previewClientId=${previewClientId}`;
+  };
 
   const navItems = [
     { label: "Overview", href: "/portal", icon: LayoutDashboard, exact: true },
@@ -189,7 +196,7 @@ export function ClientSidebar({
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={buildHref(item.href)}
                   onClick={() => onClose && onClose()}
                   style={{
                     display: "flex",
@@ -256,7 +263,7 @@ export function ClientSidebar({
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={buildHref(item.href)}
                   onClick={() => onClose && onClose()}
                   style={{
                     display: "flex",

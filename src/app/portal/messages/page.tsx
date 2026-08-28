@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { FolderGit2 } from "lucide-react";
+import { FolderGit2, MessageSquare, Sparkles } from "lucide-react";
 import { MessageThread } from "@/components/portal/MessageThread";
 import { LoadingSkeleton } from "@/components/portal/LoadingSkeleton";
-import { EmptyState } from "@/components/portal/EmptyState";
 
 function ClientMessagesContent() {
   const searchParams = useSearchParams();
@@ -42,9 +41,11 @@ function ClientMessagesContent() {
         const projData = projRes.ok ? await projRes.json() : { projects: [] };
         const setData = setRes.ok ? await setRes.json() : {};
 
-        setProjects(projData.projects || []);
-        if (projData.projects?.length > 0 && !selectedProjectId) {
-          setSelectedProjectId(projData.projects[0]._id);
+        const projectList = projData.projects || [];
+        setProjects(projectList);
+
+        if (!selectedProjectId && projectList.length > 0) {
+          setSelectedProjectId(projectList[0]._id);
         }
 
         if (setData.client) {
@@ -63,7 +64,7 @@ function ClientMessagesContent() {
     fetchData();
   }, [previewClientId]);
 
-  const selectedProject = projects.find((p) => p._id === selectedProjectId) || projects[0];
+  const selectedProject = projects.find((p) => p._id === selectedProjectId) || projects[0] || null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -86,132 +87,115 @@ function ClientMessagesContent() {
 
       {loading ? (
         <LoadingSkeleton height="500px" borderRadius="12px" />
-      ) : projects.length === 0 ? (
-        <EmptyState
-          icon="message"
-          title="No active conversations"
-          description="Conversations will appear once you have an active project assigned."
-        />
       ) : (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "280px 1fr",
+            gridTemplateColumns: projects.length > 0 ? "280px 1fr" : "1fr",
             gap: "20px",
             minHeight: "560px",
           }}
           className="portal-messages-layout"
         >
-          {/* Projects Channel List */}
-          <div
-            style={{
-              background: "var(--color-carbon, #0f1011)",
-              border: "1px solid var(--color-graphite, #23252a)",
-              borderRadius: "12px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
+          {/* Projects Channel List (when projects exist) */}
+          {projects.length > 0 && (
             <div
               style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                color: "var(--color-ash, #62666d)",
-                textTransform: "uppercase",
-                padding: "4px 8px",
+                background: "var(--color-carbon, #0f1011)",
+                border: "1px solid var(--color-graphite, #23252a)",
+                borderRadius: "12px",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
               }}
             >
-              Project Threads
-            </div>
+              <div
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "var(--color-ash, #62666d)",
+                  textTransform: "uppercase",
+                  padding: "4px 8px",
+                }}
+              >
+                Project Threads
+              </div>
 
-            {projects.map((p) => {
-              const isSelected = selectedProject?._id === p._id;
-              return (
-                <button
-                  key={p._id}
-                  onClick={() => setSelectedProjectId(p._id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    background: isSelected
-                      ? "var(--color-obsidian, #161718)"
-                      : "transparent",
-                    border: isSelected
-                      ? "1px solid var(--color-graphite, #23252a)"
-                      : "1px solid transparent",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    width: "100%",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <FolderGit2
-                    size={16}
+              {projects.map((p) => {
+                const isSelected = selectedProject?._id === p._id;
+                return (
+                  <button
+                    key={p._id}
+                    onClick={() => setSelectedProjectId(p._id)}
                     style={{
-                      color: isSelected
-                        ? "var(--color-pulse-green, #27a644)"
-                        : "var(--color-fog, #8a8f98)",
-                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: isSelected
+                        ? "var(--color-obsidian, #161718)"
+                        : "transparent",
+                      border: isSelected
+                        ? "1px solid var(--color-graphite, #23252a)"
+                        : "1px solid transparent",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      width: "100%",
+                      transition: "all 0.15s ease",
                     }}
-                  />
-                  <div style={{ flex: 1, overflow: "hidden" }}>
-                    <div
+                  >
+                    <FolderGit2
+                      size={16}
                       style={{
-                        fontSize: "13px",
-                        fontWeight: isSelected ? 600 : 500,
-                        color: isSelected ? "#ffffff" : "var(--color-bone, #e5e5e6)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        color: isSelected
+                          ? "var(--color-pulse-green, #27a644)"
+                          : "var(--color-fog, #8a8f98)",
+                        flexShrink: 0,
                       }}
-                    >
-                      {p.title}
+                    />
+                    <div style={{ flex: 1, overflow: "hidden" }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: isSelected ? 600 : 500,
+                          color: isSelected ? "#ffffff" : "var(--color-bone, #e5e5e6)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {p.title}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--color-fog, #8a8f98)",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {p.status}
+                      </span>
                     </div>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: "var(--color-fog, #8a8f98)",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {p.status}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Active Chat Thread */}
           <div>
-            {selectedProject ? (
-              <MessageThread
-                projectId={selectedProject._id}
-                projectName={selectedProject.title}
-                freelancerName={freelancerInfo.name}
-                freelancerAvatar={freelancerInfo.avatar}
-                clientName={clientInfo.name}
-                clientAvatar={clientInfo.avatar}
-                previewClientId={previewClientId}
-              />
-            ) : (
-              <div
-                style={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--color-fog)",
-                }}
-              >
-                Select a project thread to start messaging.
-              </div>
-            )}
+            <MessageThread
+              key={`${selectedProject?._id || "direct"}-${previewClientId || ""}`}
+              projectId={selectedProject?._id || ""}
+              projectName={selectedProject?.title || "Direct Communication"}
+              freelancerName={freelancerInfo.name}
+              freelancerAvatar={freelancerInfo.avatar}
+              clientName={clientInfo.name}
+              clientAvatar={clientInfo.avatar}
+              previewClientId={previewClientId}
+            />
           </div>
         </div>
       )}

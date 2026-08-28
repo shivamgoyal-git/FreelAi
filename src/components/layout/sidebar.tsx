@@ -10,6 +10,7 @@ import {
   BarChart3,
   Settings,
   Users,
+  MessageSquare,
   Sparkles,
   ChevronLeft,
   ChevronRight,
@@ -34,6 +35,7 @@ const NAV_GROUPS = [
     label: "WORKSPACE",
     items: [
       { icon: Users, label: "Clients", href: "/dashboard/clients" },
+      { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
       { icon: Briefcase, label: "Projects", href: "/dashboard/projects" },
       { icon: Sparkles, label: "Proposals", href: "/dashboard/proposals" },
       { icon: DollarSign, label: "Invoices", href: "/dashboard/invoices" },

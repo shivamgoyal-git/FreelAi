@@ -4,6 +4,7 @@ import React from "react";
 import { Search, Bell, Sun, Moon, Menu } from "lucide-react";
 import AccountDropdown from "@/components/AccountDropdown";
 import { useTheme } from "@/hooks/useTheme";
+import { NotificationCenter } from "@/components/portal/NotificationCenter";
 
 interface TopNavProps {
   userName: string;
@@ -144,46 +145,8 @@ export default function TopNav({
           {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
-        {/* Notifications */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          style={{
-            background: "var(--surface-2)",
-            border: "0.5px solid var(--border-strong)",
-            borderRadius: "8px",
-            padding: "7px",
-            cursor: "pointer",
-            color: "var(--text-muted)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            position: "relative",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--color-brand)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)";
-          }}
-        >
-          <Bell size={15} />
-          {/* Notification red dot indicator */}
-          <span
-            style={{
-              position: "absolute",
-              top: "5px",
-              right: "5px",
-              width: "5px",
-              height: "5px",
-              borderRadius: "50%",
-              background: "var(--color-brand)",
-            }}
-          />
-        </button>
+        {/* Interactive Notification Center */}
+        <NotificationCenter />
 
         {/* Profile Dropdown */}
         <AccountDropdown

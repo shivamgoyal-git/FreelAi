@@ -523,6 +523,7 @@ function ClientProjectWorkspaceContent({ id }: { id: string }) {
         {/* MESSAGES TAB */}
         {activeTab === "messages" && (
           <MessageThread
+            key={`${project._id}-${previewClientId || ""}`}
             projectId={project._id}
             projectName={project.title}
             freelancerName={freelancer.name}

@@ -23,43 +23,60 @@ export function MessageThread({
   freelancerAvatar,
   clientName = "Client",
   clientAvatar,
-  initialMessages = [],
+  initialMessages,
   previewClientId,
 }: MessageThreadProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(initialMessages || []);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setMessages(initialMessages);
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+      setLoading(false);
+    }
   }, [initialMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Periodic polling for new messages
+  // Fetch messages immediately on mount and poll periodically
   useEffect(() => {
-    const fetchLatestMessages = async () => {
+    let isMounted = true;
+
+    const fetchLatestMessages = async (isInitial = false) => {
       try {
-        const url = `/api/portal/messages?projectId=${projectId}${
+        if (isInitial && (!messages || messages.length === 0)) {
+          setLoading(true);
+        }
+        const url = `/api/portal/messages?projectId=${projectId || ""}${
           previewClientId ? `&previewClientId=${previewClientId}` : ""
         }`;
         const res = await fetch(url);
-        if (res.ok) {
+        if (res.ok && isMounted) {
           const data = await res.json();
-          if (data.messages) {
+          if (Array.isArray(data.messages)) {
             setMessages(data.messages);
           }
         }
       } catch (err) {
-        console.error("Failed to poll messages:", err);
+        console.error("Failed to fetch messages:", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    const interval = setInterval(fetchLatestMessages, 10000); // 10s poll
-    return () => clearInterval(interval);
+    fetchLatestMessages(true);
+    const interval = setInterval(() => fetchLatestMessages(false), 4000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [projectId, previewClientId]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -101,9 +118,11 @@ export function MessageThread({
 
       if (res.ok) {
         const data = await res.json();
-        setMessages((prev) =>
-          prev.map((m) => (m._id === tempMessage._id ? data.message : m))
-        );
+        if (data.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m._id === tempMessage._id ? data.message : m))
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -181,7 +200,22 @@ export function MessageThread({
           gap: "14px",
         }}
       >
-        {messages.length === 0 ? (
+        {loading && messages.length === 0 ? (
+          <div
+            style={{
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+              color: "var(--color-fog, #8a8f98)",
+              fontSize: "12px",
+            }}
+          >
+            <Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} />
+            <span>Loading messages...</span>
+          </div>
+        ) : messages.length === 0 ? (
           <div
             style={{
               margin: "auto",
@@ -202,49 +236,52 @@ export function MessageThread({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: isClient ? "flex-end" : "flex-start",
-                  gap: "3px",
+                  width: "100%",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "11px",
-                    color: "var(--color-fog, #8a8f98)",
-                    padding: "0 4px",
-                  }}
-                >
-                  <span>{isClient ? "You" : m.senderName || freelancerName}</span>
-                  <span>•</span>
-                  <span>
-                    {new Date(m.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
 
                 <div
                   style={{
                     maxWidth: "75%",
-                    padding: "10px 14px",
+                    minWidth: "120px",
+                    padding: "10px 14px 8px 14px",
                     borderRadius: isClient
-                      ? "12px 12px 2px 12px"
-                      : "12px 12px 12px 2px",
+                      ? "16px 16px 3px 16px"
+                      : "16px 16px 16px 3px",
                     background: isClient
-                      ? "var(--color-pulse-green, #27a644)"
-                      : "var(--color-obsidian, #161718)",
-                    color: isClient ? "#ffffff" : "var(--color-bone, #e5e5e6)",
+                      ? "linear-gradient(135deg, #075e54 0%, #005c4b 100%)"
+                      : "var(--surface-2, #202c33)",
+                    color: isClient ? "#ffffff" : "#f1f5f9",
                     fontSize: "13.5px",
-                    lineHeight: 1.45,
+                    lineHeight: 1.5,
                     border: isClient
-                      ? "none"
-                      : "1px solid var(--color-graphite, #23252a)",
+                      ? "0.5px solid rgba(74, 222, 128, 0.45)"
+                      : "0.5px solid #2e353f",
+                    boxShadow: isClient
+                      ? "0 2px 10px rgba(0, 92, 75, 0.3)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.25)",
                     wordBreak: "break-word",
                   }}
                 >
-                  {m.content}
+                  <div style={{ marginBottom: "4px" }}>{m.content}</div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: "4px",
+                      fontSize: "10px",
+                      color: isClient ? "rgba(255, 255, 255, 0.7)" : "var(--color-fog, #8a8f98)",
+                    }}
+                  >
+                    <span>
+                      {new Date(m.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    {isClient && <CheckCheck size={13} color="#4ade80" />}
+                  </div>
                 </div>
               </div>
             );
@@ -270,33 +307,34 @@ export function MessageThread({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message to your freelancer..."
-            disabled={sending}
             style={{
               flex: 1,
               background: "var(--color-carbon, #0f1011)",
               border: "1px solid var(--color-graphite, #23252a)",
               borderRadius: "8px",
               padding: "10px 14px",
-              fontSize: "13.5px",
               color: "var(--color-paper, #ffffff)",
+              fontSize: "13.5px",
               outline: "none",
             }}
           />
           <Button
             type="submit"
             variant="primary"
-            size="sm"
-            disabled={sending || !input.trim()}
-            style={{ borderRadius: "8px", padding: "0 16px" }}
+            size="md"
+            disabled={!input.trim() || sending}
+            style={{
+              borderRadius: "8px",
+              gap: "6px",
+              padding: "10px 16px",
+            }}
           >
             {sending ? (
-              <Loader2 size={15} className="animate-spin" />
+              <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />
             ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span>Send</span>
-                <Send size={13} />
-              </div>
+              <Send size={15} />
             )}
+            <span>Send</span>
           </Button>
         </form>
       </div>

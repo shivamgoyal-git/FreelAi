@@ -48,12 +48,12 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, accentCo
         <p
           style={{
             fontSize: "var(--text-subheading)",
-            fontWeight: 510,
-            letterSpacing: "-0.022em",
+            fontWeight: 700,
+            letterSpacing: "-0.025em",
             color: "var(--text-primary)",
             lineHeight: "1.2",
             margin: 0,
-            fontFamily: "var(--font-sans), sans-serif",
+            fontFamily: "var(--font-heading)",
           }}
         >
           {value}

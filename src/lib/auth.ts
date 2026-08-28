@@ -50,6 +50,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           email: user.email,
           image: user.image,
+          role: user.role || "freelancer",
+          clientId: user.clientId ? user.clientId.toString() : undefined,
         };
       },
     }),
@@ -69,10 +71,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: user.name || "Google User",
             email: user.email,
             image: user.image || undefined,
+            role: "freelancer",
           });
         }
         // Override Google's UUID with the real MongoDB ObjectId string
         user.id = dbUser._id.toString();
+        user.role = dbUser.role || "freelancer";
+        user.clientId = dbUser.clientId ? dbUser.clientId.toString() : undefined;
       }
       return true;
     },
@@ -81,9 +86,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // On first sign-in, attach extra fields to the token
       if (user) {
         token.id = user.id;
+        token.role = user.role || "freelancer";
+        token.clientId = user.clientId;
       }
 
-      // Ensure we have the actual MongoDB ObjectId (Google OAuth uses UUID as default token.id)
+      // Ensure we have the actual MongoDB ObjectId and current role/clientId
       if (token.id) {
         await connectDB();
         const dbUser = token.email
@@ -93,6 +100,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.id = dbUser._id.toString(); // normalize to MongoDB _id
           token.picture = dbUser.image;
           token.name = dbUser.name;
+          token.role = dbUser.role || "freelancer";
+          token.clientId = dbUser.clientId ? dbUser.clientId.toString() : undefined;
         }
       }
 
@@ -102,6 +111,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
+        session.user.role = (token.role as "freelancer" | "client") || "freelancer";
+        session.user.clientId = token.clientId as string | undefined;
       }
       return session;
     },

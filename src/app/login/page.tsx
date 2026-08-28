@@ -98,9 +98,15 @@ function LoginContent() {
               objectFit: "cover",
             }}
           />
-          <span className="font-heading" style={{ fontSize: "18px", color: "var(--text-primary)" }}>
-            Freel<span style={{ color: "var(--primary)" }}>Ai</span>
-          </span>
+          <img
+            src="/wordmark.png"
+            alt="FreeLAI"
+            style={{
+              height: "20px",
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
         </Link>
 
         <h2 className="font-display" style={{ fontSize: "36px", color: "var(--text-primary)", marginBottom: "16px" }}>
@@ -162,23 +168,27 @@ function LoginContent() {
           {/* Mobile logo */}
           <Link
             href="/"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", marginBottom: "36px" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "8px", textDecoration: "none", marginBottom: "36px" }}
             className="mobile-logo"
           >
             <img
               src="/logo.png"
               alt="FreelAi Logo"
               style={{
-                width: "34px",
-                height: "34px",
-                margin: "-3px -5px -3px -3px",
-                borderRadius: "7px",
-                objectFit: "cover",
+                width: "28px",
+                height: "28px",
+                objectFit: "contain",
               }}
             />
-            <span className="font-heading" style={{ fontSize: "17px", color: "var(--text-primary)" }}>
-              Freel<span style={{ color: "var(--primary)" }}>Ai</span>
-            </span>
+            <img
+              src="/wordmark.png"
+              alt="FreeLAI"
+              style={{
+                height: "18px",
+                width: "auto",
+                objectFit: "contain",
+              }}
+            />
           </Link>
 
           <h1 className="font-heading" style={{ fontSize: "24px", marginBottom: "6px", color: "var(--text-primary)" }}>

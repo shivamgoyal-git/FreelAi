@@ -92,13 +92,13 @@ export default function FeaturesSection() {
           {/* Heading */}
           <h2
             style={{
-              fontSize: "clamp(30px, 4vw, 42px)",
-              fontWeight: 700,
-              lineHeight: 1.15,
-              letterSpacing: "-0.03em",
+              fontSize: "clamp(28px, 3.8vw, 40px)",
+              fontWeight: 750,
+              lineHeight: 1.18,
+              letterSpacing: "-0.025em",
               color: "var(--text-primary)",
               margin: 0,
-              fontFamily: "var(--font-inter-variable), sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Everything You Need to Run Your Business in{" "}
@@ -109,9 +109,11 @@ export default function FeaturesSection() {
           <p
             style={{
               fontSize: "15px",
-              lineHeight: 1.6,
+              lineHeight: 1.62,
+              letterSpacing: "-0.008em",
               color: "var(--text-secondary)",
               margin: 0,
+              fontFamily: "var(--font-body)",
             }}
           >
             FreelAI combines powerful tools with AI intelligence to help you save time, close more deals, and get paid faster.
@@ -193,11 +195,12 @@ export default function FeaturesSection() {
               {/* Title */}
               <h3
                 style={{
-                  fontSize: "15.5px",
-                  fontWeight: 600,
+                  fontSize: "16px",
+                  fontWeight: 650,
                   color: "var(--text-primary)",
                   margin: 0,
-                  letterSpacing: "-0.01em",
+                  letterSpacing: "-0.015em",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {feat.title}
@@ -206,10 +209,11 @@ export default function FeaturesSection() {
               {/* Description */}
               <p
                 style={{
-                  fontSize: "13px",
-                  lineHeight: 1.55,
-                  color: "var(--text-muted)",
+                  fontSize: "13.5px",
+                  lineHeight: 1.6,
+                  color: "var(--text-secondary)",
                   margin: 0,
+                  fontFamily: "var(--font-body)",
                 }}
               >
                 {feat.description}

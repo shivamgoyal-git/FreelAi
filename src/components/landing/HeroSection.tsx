@@ -46,14 +46,14 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           style={{
-            fontSize: "clamp(34px, 5.5vw, 56px)",
-            fontWeight: 700,
+            fontSize: "clamp(36px, 5.5vw, 58px)",
+            fontWeight: 800,
             lineHeight: 1.12,
             letterSpacing: "-0.03em",
             color: "var(--text-primary)",
             margin: 0,
-            maxWidth: "760px",
-            fontFamily: "var(--font-inter-variable), sans-serif",
+            maxWidth: "800px",
+            fontFamily: "var(--font-heading)",
           }}
         >
           Run Your Freelance Business{" "}
@@ -66,12 +66,14 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
           style={{
-            fontSize: "clamp(15px, 2vw, 17.5px)",
-            lineHeight: 1.6,
+            fontSize: "clamp(15.5px, 2vw, 17.5px)",
+            lineHeight: 1.62,
+            letterSpacing: "-0.008em",
             color: "var(--text-secondary)",
-            maxWidth: "620px",
+            maxWidth: "640px",
             margin: 0,
             fontWeight: 400,
+            fontFamily: "var(--font-body)",
           }}
         >
           Manage clients, projects, proposals, invoices, and more — all in one intelligent workspace built for freelancers.

@@ -14,19 +14,32 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const protectedRoutes = ["/dashboard"];
-      const authRoutes = ["/login", "/signup"];
+      const userRole = (auth?.user as { role?: string })?.role;
+      const isPortalRoute = nextUrl.pathname.startsWith("/portal");
+      const isDashboardRoute = nextUrl.pathname.startsWith("/dashboard");
+      const isInviteRoute = nextUrl.pathname.startsWith("/portal/invite");
+      const isAuthRoute =
+        nextUrl.pathname.startsWith("/login") ||
+        nextUrl.pathname.startsWith("/signup");
 
-      const isProtected = protectedRoutes.some((route) =>
-        nextUrl.pathname.startsWith(route)
-      );
-      const isAuthRoute = authRoutes.some((route) =>
-        nextUrl.pathname.startsWith(route)
-      );
+      // Invitations can be viewed publicly
+      if (isInviteRoute) return true;
 
-      if (isProtected && !isLoggedIn) return false; // NextAuth redirects to signIn page
+      // Portal requires login
+      if (isPortalRoute && !isLoggedIn) return false;
+
+      // Dashboard requires login
+      if (isDashboardRoute && !isLoggedIn) return false;
+
+      // If logged in as client and accessing dashboard -> redirect to portal
+      if (isLoggedIn && userRole === "client" && isDashboardRoute) {
+        return Response.redirect(new URL("/portal", nextUrl.origin));
+      }
+
+      // If logged in and accessing auth routes
       if (isAuthRoute && isLoggedIn) {
-        return Response.redirect(new URL("/dashboard", nextUrl.origin));
+        const dest = userRole === "client" ? "/portal" : "/dashboard";
+        return Response.redirect(new URL(dest, nextUrl.origin));
       }
 
       return true;

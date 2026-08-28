@@ -48,17 +48,21 @@ export default function Sidebar({
             src="/logo.png"
             alt="FreelAi Logo"
             style={{
-              width: "42px",
-              height: "42px",
-              margin: "-4px -6px -4px -4px",
-              borderRadius: "9px",
-              objectFit: "cover",
+              width: "34px",
+              height: "34px",
+              objectFit: "contain",
               flexShrink: 0,
             }}
           />
-          <span className="font-heading" style={{ fontSize: "17px", color: "var(--text-primary)" }}>
-            Freel<span style={{ color: "var(--color-brand)" }}>Ai</span>
-          </span>
+          <img
+            src="/wordmark.png"
+            alt="FreeLAI"
+            style={{
+              height: "19px",
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
         </Link>
       </div>
 

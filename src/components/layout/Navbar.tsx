@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
 
@@ -29,24 +30,23 @@ export default function Navbar() {
       const targetId = href.substring(1);
       const elem = document.getElementById(targetId);
       if (elem) {
-        elem.scrollIntoView({ behavior: "smooth" });
+        const top = elem.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top, behavior: "smooth" });
       }
     }
   };
 
   return (
-    <nav
+    <header
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 100,
-        background: scrolled
-          ? "var(--surface-1)"
-          : "rgba(var(--surface-1-rgb, 8, 9, 10), 0.85)",
-        backgroundColor: "var(--surface-1)",
-        borderBottom: "1px solid var(--border)",
-        backdropFilter: "blur(12px)",
-        transition: "all 0.2s ease",
+        zIndex: 50,
+        background: scrolled ? "rgba(5, 7, 5, 0.88)" : "transparent",
+        backdropFilter: scrolled ? "blur(16px)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(16px)" : "none",
+        borderBottom: scrolled ? "1px solid var(--border)" : "1px solid transparent",
+        transition: "all 0.25s ease",
       }}
     >
       <div
@@ -72,33 +72,30 @@ export default function Navbar() {
         >
           <div
             style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "7px",
-              background: "rgba(139, 207, 53, 0.12)",
-              border: "1px solid rgba(139, 207, 53, 0.4)",
+              width: "34px",
+              height: "34px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "var(--color-brand)",
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
-              <path d="M9 12l2 2 4-4" />
-            </svg>
+            <Image
+              src="/logo.png"
+              alt="FreeLAI Logo"
+              width={34}
+              height={34}
+              priority
+              style={{ objectFit: "contain" }}
+            />
           </div>
-          <span
-            style={{
-              fontSize: "18px",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              letterSpacing: "-0.02em",
-              fontFamily: "var(--font-inter-variable), sans-serif",
-            }}
-          >
-            Free<span style={{ color: "var(--color-brand)" }}>LAI</span>
-          </span>
+          <Image
+            src="/wordmark.png"
+            alt="FreeLAI"
+            width={95}
+            height={21}
+            priority
+            style={{ height: "20px", width: "auto", objectFit: "contain" }}
+          />
         </Link>
 
         {/* Center: Desktop Nav Links */}
@@ -217,6 +214,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </nav>
+    </header>
   );
 }

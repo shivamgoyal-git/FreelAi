@@ -47,12 +47,12 @@ export default function FinalCTASection() {
             <h2
               style={{
                 fontSize: "clamp(26px, 3.5vw, 36px)",
-                fontWeight: 700,
+                fontWeight: 750,
                 lineHeight: 1.2,
                 letterSpacing: "-0.025em",
                 color: "var(--text-primary)",
                 margin: 0,
-                fontFamily: "var(--font-inter-variable), sans-serif",
+                fontFamily: "var(--font-heading)",
               }}
             >
               Ready to Take Your Freelance Business to the{" "}

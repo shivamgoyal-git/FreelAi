@@ -153,21 +153,22 @@ export default function SignupPage() {
         >
           <img
             src="/logo.png"
-            alt="FreelAi Logo"
+            alt="FreeLAI Logo"
             style={{
-              width: "48px",
-              height: "48px",
-              margin: "-4px -6px -4px -4px",
-              borderRadius: "12px",
-              objectFit: "cover",
+              width: "36px",
+              height: "36px",
+              objectFit: "contain",
             }}
           />
-          <span
-            className="font-heading"
-            style={{ fontSize: "22px", color: "var(--text-primary)" }}
-          >
-            FreelAi
-          </span>
+          <img
+            src="/wordmark.png"
+            alt="FreeLAI"
+            style={{
+              height: "22px",
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
         </Link>
 
         <div style={{ marginBottom: "40px" }}>

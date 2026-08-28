@@ -1670,4 +1670,387 @@ select option {
   }
 }
 
+/* =================================================================
+   PRODUCT SHOWCASE — Premium Dashboard Mockup
+   Browser-frame floating mockup with cinematic bottom-fade mask
+   ================================================================= */
+
+/* ── Section container ── */
+.product-showcase-section {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── BROWSER FRAME MOCKUP (With Cinematic Bottom-Fade Mask) ── */
+.showcase-browser-frame {
+  position: relative;
+  z-index: 10;
+  border-radius: 22px 22px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  background: rgba(11, 13, 11, 0.96);
+  box-shadow: none;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 52%,
+    rgba(0, 0, 0, 0.9) 66%,
+    rgba(0, 0, 0, 0.5) 78%,
+    rgba(0, 0, 0, 0.15) 90%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 52%,
+    rgba(0, 0, 0, 0.9) 66%,
+    rgba(0, 0, 0, 0.5) 78%,
+    rgba(0, 0, 0, 0.15) 90%,
+    transparent 100%
+  );
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .showcase-browser-frame {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+/* ── TOP BROWSER CHROME ── */
+.showcase-browser-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 20px;
+  background: #080a08;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 21px 21px 0 0;
+  position: relative;
+}
+
+[data-theme="light"] .showcase-browser-topbar {
+  background: #f3f4f6;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.showcase-browser-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.showcase-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.showcase-dot-red { background: #ff5f57; }
+.showcase-dot-yellow { background: #febc2e; }
+.showcase-dot-green { background: #28c840; }
+
+.showcase-address-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 9999px;
+  padding: 4px 18px;
+}
+
+[data-theme="light"] .showcase-address-pill {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.showcase-canvas-fade-wrapper {
+  position: relative;
+  width: 100%;
+  max-height: 520px;
+  overflow: hidden;
+}
+
+.showcase-dashboard-canvas {
+  display: flex;
+  min-height: 580px;
+  width: 100%;
+  background: var(--bg-base);
+}
+
+/* ── APP SIDEBAR ── */
+.showcase-app-sidebar {
+  width: 210px;
+  min-width: 210px;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.showcase-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.showcase-brand-icon-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(139, 207, 53, 0.12);
+  border: 1px solid rgba(139, 207, 53, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.showcase-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.showcase-nav-heading {
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  padding: 0 10px 4px;
+}
+
+.showcase-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.showcase-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  position: relative;
+  transition: all 0.12s ease;
+}
+
+.showcase-nav-item.active {
+  background: rgba(139, 207, 53, 0.08);
+  color: var(--color-brand);
+  font-weight: 600;
+}
+
+.showcase-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: var(--color-brand);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ── APP MAIN CONTENT ── */
+.showcase-app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg-base);
+}
+
+.showcase-main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.showcase-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.showcase-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+/* ── PROFILE BANNER ── */
+.showcase-profile-banner {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.showcase-profile-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(139, 207, 53, 0.12);
+  border: 1px solid rgba(139, 207, 53, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.showcase-btn-complete-profile {
+  padding: 5px 12px;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ── KPI GRID ── */
+.showcase-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.showcase-kpi-box {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* ── MIDDLE GRID (Revenue | Activity | AI Copilot) ── */
+.showcase-middle-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1.1fr 1fr;
+  gap: 12px;
+}
+
+.showcase-card-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.showcase-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.showcase-copilot-tab {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 5px;
+}
+
+.showcase-copilot-tab.active {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.showcase-copilot-prompt-box {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* =================================================================
+   PRODUCT SHOWCASE — Responsive Breakpoints
+   ================================================================= */
+
+@media (max-width: 1200px) {
+  .showcase-app-sidebar {
+    width: 180px;
+    min-width: 180px;
+  }
+  .showcase-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .showcase-app-sidebar {
+    display: none;
+  }
+  .showcase-middle-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .showcase-canvas-fade-wrapper {
+    max-height: 480px;
+  }
+}
+
+@media (max-width: 640px) {
+  .showcase-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .showcase-middle-grid {
+    grid-template-columns: 1fr;
+  }
+  .showcase-profile-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .showcase-main-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .showcase-canvas-fade-wrapper {
+    max-height: 420px;
+  }
+}
+
 

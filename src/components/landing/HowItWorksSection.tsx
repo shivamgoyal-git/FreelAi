@@ -88,13 +88,13 @@ export default function HowItWorksSection() {
           {/* Heading */}
           <h2
             style={{
-              fontSize: "clamp(30px, 4vw, 42px)",
-              fontWeight: 700,
-              lineHeight: 1.15,
-              letterSpacing: "-0.03em",
+              fontSize: "clamp(28px, 3.8vw, 40px)",
+              fontWeight: 750,
+              lineHeight: 1.18,
+              letterSpacing: "-0.025em",
               color: "var(--text-primary)",
               margin: 0,
-              fontFamily: "var(--font-inter-variable), sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Begin Your Journey with{" "}

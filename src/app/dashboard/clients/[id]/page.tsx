@@ -29,6 +29,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { Client, ClientStatus, ClientFormData } from "@/types/client";
+import ClientDrawer from "@/components/shared/ClientDrawer";
+import ClientSummaryCard from "@/components/shared/ClientSummaryCard";
+import { ClientPortalCard } from "@/components/dashboard/ClientPortalCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import useBodyScrollLock from "@/hooks/useBodyScrollLock";
@@ -594,6 +597,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Client since {joinedDate}</span>
               </div>
             </div>
+
+            {/* Client Portal Access Card */}
+            <ClientPortalCard clientId={client._id} clientName={client.name} />
 
             {/* Tags Card */}
             {client.tags.length > 0 && (

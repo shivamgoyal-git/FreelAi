@@ -46,6 +46,7 @@ import ClientSelector from "@/components/shared/ClientSelector";
 import useBodyScrollLock from "@/hooks/useBodyScrollLock";
 import ClientDrawer from "@/components/shared/ClientDrawer";
 import ClientSummaryCard from "@/components/shared/ClientSummaryCard";
+import { ProjectDeliverablesManager } from "@/components/dashboard/ProjectDeliverablesManager";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -596,6 +597,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </>
               )}
             </div>
+
+            {/* Deliverables & Client Approvals */}
+            <ProjectDeliverablesManager projectId={project._id} clientId={project.clientId} />
 
             {/* Notes */}
             {project.notes && (

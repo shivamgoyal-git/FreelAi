@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Manrope, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
 
 const inter = Inter({
-  variable: "--font-sans",
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const manrope = Manrope({
+  variable: "--font-heading",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const dancingScript = Dancing_Script({
+  variable: "--font-cursive",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
@@ -36,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning data-theme="dark">
-      <body className={`${inter.variable} ${plusJakarta.variable} antialiased`}>
+      <body className={`${inter.variable} ${manrope.variable} ${dancingScript.variable} antialiased`}>
         <ThemeProvider>
           <SessionProvider>{children}</SessionProvider>
           <Toaster

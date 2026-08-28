@@ -8,27 +8,34 @@ const { auth } = NextAuth(authConfig);
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
+  const userRole = (req.auth?.user as { role?: string })?.role;
 
-  // Routes that require authentication
-  const protectedRoutes = ["/dashboard"];
-  // Routes that should redirect logged-in users away
-  const authRoutes = ["/login", "/signup"];
+  const isPortalRoute = pathname.startsWith("/portal");
+  const isDashboardRoute = pathname.startsWith("/dashboard");
+  const isInviteRoute = pathname.startsWith("/portal/invite");
+  const isAuthRoute =
+    pathname.startsWith("/login") || pathname.startsWith("/signup");
 
-  const isProtected = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+  if (isInviteRoute) {
+    return NextResponse.next();
+  }
 
   // Redirect unauthenticated users away from protected routes
-  if (isProtected && !isLoggedIn) {
+  if ((isPortalRoute || isDashboardRoute) && !isLoggedIn) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
+  // If logged in as client and trying to access freelancer dashboard -> redirect to portal
+  if (isDashboardRoute && isLoggedIn && userRole === "client") {
+    return NextResponse.redirect(new URL("/portal", req.nextUrl.origin));
+  }
+
   // Redirect authenticated users away from login/signup
   if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+    const dest = userRole === "client" ? "/portal" : "/dashboard";
+    return NextResponse.redirect(new URL(dest, req.nextUrl.origin));
   }
 
   return NextResponse.next();

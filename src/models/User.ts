@@ -5,6 +5,8 @@ export interface IUser extends Document {
   email: string;
   image?: string;
   password?: string; // Optional — not set for Google OAuth users
+  role: "freelancer" | "client";
+  clientId?: mongoose.Types.ObjectId | string;
   onboardingCompleted?: boolean;
   createdAt: Date;
 }
@@ -31,6 +33,16 @@ const UserSchema = new Schema<IUser>(
       type: String,
       minlength: [8, "Password must be at least 8 characters"],
       select: false, // Never returned in queries unless explicitly requested
+    },
+    role: {
+      type: String,
+      enum: ["freelancer", "client"],
+      default: "freelancer",
+    },
+    clientId: {
+      type: Schema.Types.ObjectId,
+      ref: "Client",
+      default: null,
     },
     onboardingCompleted: {
       type: Boolean,

@@ -18,7 +18,12 @@
   --color-lavender: #8b5cf6;
 
   /* Typography Fonts */
-  --font-inter-variable: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-heading: var(--font-heading), 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: var(--font-body), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-body);
+  --font-jakarta: var(--font-heading);
+  --font-inter-variable: var(--font-body);
+  --font-cursive: var(--font-cursive), 'Dancing Script', 'Caveat', cursive;
   --font-berkeley-mono: 'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Typography Scales */

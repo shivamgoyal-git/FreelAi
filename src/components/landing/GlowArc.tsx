@@ -32,15 +32,11 @@ export default function GlowArc() {
       {/* Ambient center atmosphere illumination (soft radial light behind horizon) */}
       <div className="glow-arc-ambient-atmosphere" />
 
-      {/* Horizon Star Field (subtle atmospheric depth) */}
-      <div className="star-point" style={{ top: "34px", left: "18%", width: "2.5px", height: "2.5px" }} />
+      {/* Horizon Star Field (above and along glowing line only) */}
       <div className="star-point" style={{ top: "18px", left: "32%", width: "2px", height: "2px", animationDelay: "1.2s" }} />
-      <div className="star-point" style={{ top: "15px", right: "30%", width: "2.5px", height: "2.5px", animationDelay: "0.7s" }} />
-      <div className="star-point" style={{ top: "30px", right: "16%", width: "2px", height: "2px", animationDelay: "1.9s" }} />
-      <div className="star-point" style={{ top: "68px", left: "8%", width: "2px", height: "2px", animationDelay: "2.4s" }} />
-      <div className="star-point" style={{ top: "62px", right: "7%", width: "2px", height: "2px", animationDelay: "1.5s" }} />
-      <div className="star-point" style={{ top: "45px", left: "42%", width: "1.5px", height: "1.5px", animationDelay: "0.5s" }} />
-      <div className="star-point" style={{ top: "40px", right: "44%", width: "1.5px", height: "1.5px", animationDelay: "1.7s" }} />
+      <div className="star-point" style={{ top: "14px", right: "30%", width: "2px", height: "2px", animationDelay: "0.7s" }} />
+      <div className="star-point" style={{ top: "24px", left: "20%", width: "1.5px", height: "1.5px" }} />
+      <div className="star-point" style={{ top: "22px", right: "18%", width: "1.5px", height: "1.5px", animationDelay: "1.9s" }} />
 
       <svg
         viewBox="0 0 1920 220"

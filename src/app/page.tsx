@@ -17,7 +17,7 @@ export default function LandingPage() {
         background: "var(--bg-base)",
         minHeight: "100vh",
         color: "var(--text-primary)",
-        fontFamily: "var(--font-inter-variable), sans-serif",
+        fontFamily: "var(--font-body), sans-serif",
         position: "relative",
         overflowX: "hidden",
       }}

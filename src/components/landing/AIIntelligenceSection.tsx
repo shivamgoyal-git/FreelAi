@@ -58,13 +58,13 @@ export default function AIIntelligenceSection() {
           {/* Heading */}
           <h2
             style={{
-              fontSize: "clamp(30px, 4vw, 42px)",
-              fontWeight: 700,
-              lineHeight: 1.15,
-              letterSpacing: "-0.03em",
+              fontSize: "clamp(28px, 3.8vw, 40px)",
+              fontWeight: 750,
+              lineHeight: 1.18,
+              letterSpacing: "-0.025em",
               color: "var(--text-primary)",
               margin: 0,
-              fontFamily: "var(--font-inter-variable), sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Your Business, Backed by{" "}
@@ -75,9 +75,11 @@ export default function AIIntelligenceSection() {
           <p
             style={{
               fontSize: "15px",
-              lineHeight: 1.6,
+              lineHeight: 1.62,
+              letterSpacing: "-0.008em",
               color: "var(--text-secondary)",
               margin: 0,
+              fontFamily: "var(--font-body)",
             }}
           >
             Powerful analytics and AI insights to help you make smarter decisions and achieve more.
@@ -109,13 +111,13 @@ export default function AIIntelligenceSection() {
             }}
           >
             <div>
-              <span style={{ fontSize: "12.5px", fontWeight: 500, color: "var(--text-muted)" }}>
+              <span style={{ fontSize: "12.5px", fontWeight: 500, color: "var(--text-muted)", fontFamily: "var(--font-body)" }}>
                 Earnings Overview
               </span>
-              <div style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em", marginTop: "4px" }}>
+              <div style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.025em", marginTop: "4px", fontFamily: "var(--font-heading)" }}>
                 ₹2,48,500
               </div>
-              <span style={{ fontSize: "11.5px", color: "var(--color-brand)", fontWeight: 500, display: "inline-block", marginTop: "2px" }}>
+              <span style={{ fontSize: "11.5px", color: "var(--color-brand)", fontWeight: 500, display: "inline-block", marginTop: "2px", fontFamily: "var(--font-body)" }}>
                 ↑ 12.5% this month
               </span>
             </div>

@@ -1,50 +1,161 @@
-/* Typography Rules (design.md) */
+/* ============================================================
+   GLOBAL TYPOGRAPHY SYSTEM (FreeLAI)
+   Heading: Manrope | Body & UI: Inter
+   ============================================================ */
 
+:root {
+  --font-heading: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+/* Global Body & UI Base */
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  font-feature-settings: "cv01" on, "ss03" on, "zero" on;
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv02" on, "cv03" on, "cv04" on, "cv11" on, "ss01" on, "calt" on, "kern" on;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-  letter-spacing: -0.010em;
+  text-rendering: optimizeLegibility;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
 }
 
-body, button, input, select, textarea {
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-feature-settings: "cv01" on, "ss03" on, "zero" on;
+/* Global UI Form & Layout Elements Default to Inter */
+body,
+button,
+input,
+textarea,
+select,
+table,
+th,
+td,
+nav,
+aside,
+dialog,
+form,
+footer,
+.sidebar,
+.card,
+.modal,
+.tooltip,
+.dropdown,
+.popover {
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Alternate glyph scales for Linear typographic brand */
-.font-display {
-  font-family: var(--font-sans), sans-serif;
-  font-weight: 510;
-  letter-spacing: -0.022em;
-  line-height: 1.0;
-}
-
-.font-heading {
-  font-family: var(--font-sans), sans-serif;
-  font-weight: 510;
-  letter-spacing: -0.022em;
-  line-height: 1.13;
-}
-
-.font-mono-meta {
-  font-family: var(--font-berkeley-mono), monospace;
-  font-weight: 400;
-  letter-spacing: -0.013em;
-  font-feature-settings: "cv01" on, "ss03" on;
-}
-
-/* Weight caps: Linear system deliberately avoids weights above 590 (bold) */
-h1, h2, h3, h4, h5, h6 {
+/* Headings: Manrope */
+h1, h2, h3, h4, h5, h6,
+.font-display,
+.font-heading,
+.dashboard-page-title,
+.section-heading,
+.metric-widget-value,
+.kpi-number,
+.stat-number {
+  font-family: var(--font-heading), sans-serif;
   color: var(--text-primary);
-  font-weight: 510;
-  letter-spacing: -0.022em;
+  text-rendering: optimizeLegibility;
+}
+
+h1, .font-display {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+
+h2 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.28;
+}
+
+h4 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.32;
+}
+
+h5, h6 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.35;
+}
+
+/* Subheadings & Body */
+.font-subheading {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.35;
+}
+
+/* Signature Cursive Logo Wordmark */
+.font-cursive-logo {
+  font-family: var(--font-cursive), 'Dancing Script', 'Caveat', cursive;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+/* Monospace & Tabular Code/Metadata */
+.font-mono-meta, .font-mono {
+  font-family: var(--font-berkeley-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  font-feature-settings: "tnum" on, "zero" on;
+}
+
+/* Large KPI & Financial Numbers (Manrope) */
+.metric-widget-value,
+.kpi-value,
+.stat-value {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-feature-settings: "tnum" on, "zero" on;
+  color: var(--text-primary);
+}
+
+/* Buttons: Inter 600 */
+button, .btn, a.btn {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Navigation Links: Inter 500 / 600 */
+nav a, .nav-link, .sidebar-link {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+}
+
+nav a.active, .nav-link.active, .sidebar-link.active {
+  font-weight: 600;
+}
+
+/* Standard Paragraphs & Descriptions */
+p, .text-body, .description, .helper-text {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.62;
+  letter-spacing: -0.008em;
 }
 
 strong, b {
-  font-weight: 590;
+  font-weight: 600;
+  color: var(--text-primary);
 }

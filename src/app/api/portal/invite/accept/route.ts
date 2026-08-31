@@ -27,23 +27,36 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const invitation = await ClientInvitation.findOne({
-      token,
-      status: "pending",
-    });
+    const invitation = await ClientInvitation.findOne({ token });
 
     if (!invitation) {
       return NextResponse.json(
-        { error: "Invalid or expired invitation token" },
+        { error: "Invalid invitation token." },
         { status: 400 }
       );
     }
 
-    if (new Date(invitation.expiresAt) < new Date()) {
-      invitation.status = "expired";
-      await invitation.save();
+    if (invitation.status === "accepted") {
       return NextResponse.json(
-        { error: "This invitation has expired" },
+        { error: "This invitation has already been accepted. Please log in." },
+        { status: 400 }
+      );
+    }
+
+    if (invitation.status === "revoked") {
+      return NextResponse.json(
+        { error: "This invitation has been revoked by the freelancer." },
+        { status: 400 }
+      );
+    }
+
+    if (invitation.status === "expired" || new Date(invitation.expiresAt) < new Date()) {
+      if (invitation.status !== "expired") {
+        invitation.status = "expired";
+        await invitation.save();
+      }
+      return NextResponse.json(
+        { error: "This invitation has expired. Please request a new invitation." },
         { status: 400 }
       );
     }

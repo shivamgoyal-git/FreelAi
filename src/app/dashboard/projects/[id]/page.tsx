@@ -48,6 +48,7 @@ import ClientDrawer from "@/components/shared/ClientDrawer";
 import ClientSummaryCard from "@/components/shared/ClientSummaryCard";
 import { ProjectDeliverablesManager } from "@/components/dashboard/ProjectDeliverablesManager";
 import { ProjectMessagesManager } from "@/components/dashboard/ProjectMessagesManager";
+import { ClientPortalCard } from "@/components/dashboard/ClientPortalCard";
 
 const getBadgeVariant = (status: string) => {
   switch (status) {
@@ -645,6 +646,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Client Portal Card */}
+            {project.clientId && (
+              <ClientPortalCard
+                clientId={project.clientId}
+                clientName={project.clientName || "Client"}
+                projectId={project._id}
+              />
             )}
 
             {/* Quick Actions */}

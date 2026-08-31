@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       const projects = await Project.find({
         userId: session.user.id,
         $or: [
-          { clientId: client._id },
+          { clientId: client._id.toString() },
           { clientName: client.name },
         ],
       }).lean();
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
       // Find the first active project for this client if exists
       const proj = await Project.findOne({
         userId: session.user.id,
-        $or: [{ clientId: client._id }, { clientName: client.name }],
+        $or: [{ clientId: client._id.toString() }, { clientName: client.name }],
       }).sort({ updatedAt: -1 });
 
       if (proj) finalProjectId = proj._id;

@@ -230,6 +230,11 @@ export default function ClientInviteAcceptPage({
           <p style={{ fontSize: "13px", color: "var(--color-fog)", margin: 0 }}>
             {inviteData.freelancerName} has invited you to collaborate on FreeAI.
           </p>
+          {inviteData.company && (
+            <p style={{ fontSize: "12px", color: "var(--color-fog)", marginTop: "4px" }}>
+              Company / Client: <strong style={{ color: "var(--color-paper)" }}>{inviteData.company}</strong>
+            </p>
+          )}
         </div>
 
         {error && (

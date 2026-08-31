@@ -129,6 +129,8 @@ export async function requireClientProject(
     throw error;
   }
 
+  await connectDB();
+
   const queryConditions: any[] = [
     { clientId: clientId },
   ];
@@ -169,9 +171,16 @@ export async function requireClientDeliverable(
     throw error;
   }
 
+  await connectDB();
+
+  const queryConditions: any[] = [{ clientId: clientId }];
+  if (mongoose.Types.ObjectId.isValid(clientId)) {
+    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
+  }
+
   const deliverable = await Deliverable.findOne({
     _id: deliverableId,
-    clientId: clientId,
+    $or: queryConditions,
   });
 
   if (!deliverable) {
@@ -197,9 +206,15 @@ export async function requireClientInvoice(
     throw error;
   }
 
+  await connectDB();
+
   const queryConditions: any[] = [
     { clientId: clientId },
   ];
+
+  if (mongoose.Types.ObjectId.isValid(clientId)) {
+    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
+  }
 
   if (authCtx?.client?.email) {
     queryConditions.push({ clientEmail: authCtx.client.email.toLowerCase().trim() });
@@ -233,12 +248,20 @@ export async function requireClientProposal(
     throw error;
   }
 
+  await connectDB();
+
+  const queryConditions: any[] = [
+    { clientEmail: clientEmail.toLowerCase().trim() },
+    { clientId: clientId },
+  ];
+
+  if (mongoose.Types.ObjectId.isValid(clientId)) {
+    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
+  }
+
   const proposal = await Proposal.findOne({
     _id: proposalId,
-    $or: [
-      { clientEmail: clientEmail.toLowerCase().trim() },
-      { clientId: clientId },
-    ],
+    $or: queryConditions,
   });
 
   if (!proposal) {
@@ -263,9 +286,16 @@ export async function requireClientFile(
     throw error;
   }
 
+  await connectDB();
+
+  const queryConditions: any[] = [{ clientId: clientId }];
+  if (mongoose.Types.ObjectId.isValid(clientId)) {
+    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
+  }
+
   const file = await ProjectFile.findOne({
     _id: fileId,
-    clientId: clientId,
+    $or: queryConditions,
     isClientVisible: true,
   });
 

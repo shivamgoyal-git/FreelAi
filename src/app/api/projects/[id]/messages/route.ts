@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    let clientId = project.clientId;
+    let clientId: any = project.clientId;
     if (!clientId && project.clientName) {
       const matchedClient = await Client.findOne({
         userId: session.user.id,
@@ -94,9 +94,15 @@ export async function POST(req: NextRequest, { params }: Params) {
       if (matchedClient) clientId = matchedClient._id;
     }
 
+    if (!clientId) {
+      // Find any client for this user as fallback or require client
+      const fallbackClient = await Client.findOne({ userId: session.user.id });
+      if (fallbackClient) clientId = fallbackClient._id;
+    }
+
     const message = await Message.create({
-      projectId: id,
-      clientId: clientId || null,
+      projectId: new mongoose.Types.ObjectId(id),
+      clientId: clientId ? new mongoose.Types.ObjectId(clientId.toString()) : undefined,
       userId: session.user.id,
       senderRole: "freelancer",
       senderId: session.user.id,

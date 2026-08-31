@@ -22,6 +22,7 @@ export async function sendNotification({
   link?: string;
   projectId?: string | mongoose.Types.ObjectId;
   invoiceId?: string | mongoose.Types.ObjectId;
+  clientId?: string | mongoose.Types.ObjectId;
 }) {
   try {
     await connectDB();

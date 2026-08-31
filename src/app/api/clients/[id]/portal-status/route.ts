@@ -4,6 +4,7 @@ import connectDB from "@/lib/mongodb";
 import Client from "@/models/Client";
 import ClientInvitation from "@/models/ClientInvitation";
 import User from "@/models/User";
+import mongoose from "mongoose";
 
 export async function GET(
   req: NextRequest,
@@ -26,44 +27,82 @@ export async function GET(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Check if client User account already exists
+    // Check if client User account already exists or an invitation has been accepted
     const clientUser = await User.findOne({
       $or: [{ clientId: client._id }, { email: client.email.toLowerCase().trim() }],
       role: "client",
     });
 
-    if (clientUser) {
+    const acceptedInvitation = await ClientInvitation.findOne({
+      clientId: client._id,
+      status: "accepted",
+    });
+
+    if (clientUser || acceptedInvitation) {
       return NextResponse.json({
         status: "active",
-        user: {
-          id: clientUser._id.toString(),
-          name: clientUser.name,
-          email: clientUser.email,
-        },
+        clientEmail: client.email,
+        user: clientUser
+          ? {
+              id: clientUser._id.toString(),
+              name: clientUser.name,
+              email: clientUser.email,
+            }
+          : undefined,
       });
     }
 
-    // Check for pending invitation
-    const activeInvitation = await ClientInvitation.findOne({
+    // Find the latest invitation for this client
+    const latestInvitation = await ClientInvitation.findOne({
       clientId: client._id,
-      status: "pending",
-      expiresAt: { $gt: new Date() },
     }).sort({ createdAt: -1 });
 
-    if (activeInvitation) {
-      const origin = req.nextUrl.origin;
-      return NextResponse.json({
-        status: "invitation_pending",
-        invitation: {
-          token: activeInvitation.token,
-          inviteUrl: `${origin}/portal/invite/${activeInvitation.token}`,
-          expiresAt: activeInvitation.expiresAt,
-          createdAt: activeInvitation.createdAt,
-        },
-      });
+    if (latestInvitation) {
+      const origin = req.nextUrl.origin || process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+      if (latestInvitation.status === "pending") {
+        if (new Date(latestInvitation.expiresAt) > new Date()) {
+          return NextResponse.json({
+            status: "invitation_pending",
+            clientEmail: client.email,
+            invitation: {
+              token: latestInvitation.token,
+              inviteUrl: `${origin}/portal/invite/${latestInvitation.token}`,
+              recipient: latestInvitation.email,
+              expiresAt: latestInvitation.expiresAt,
+              createdAt: latestInvitation.createdAt,
+            },
+          });
+        } else {
+          // Token has expired
+          latestInvitation.status = "expired";
+          await latestInvitation.save();
+          return NextResponse.json({
+            status: "invitation_expired",
+            clientEmail: client.email,
+          });
+        }
+      }
+
+      if (latestInvitation.status === "expired") {
+        return NextResponse.json({
+          status: "invitation_expired",
+          clientEmail: client.email,
+        });
+      }
+
+      if (latestInvitation.status === "revoked") {
+        return NextResponse.json({
+          status: "invitation_revoked",
+          clientEmail: client.email,
+        });
+      }
     }
 
-    return NextResponse.json({ status: "not_invited" });
+    return NextResponse.json({
+      status: "not_invited",
+      clientEmail: client.email,
+    });
   } catch (error: any) {
     console.error("[GET /api/clients/[id]/portal-status] Error:", error);
     return NextResponse.json(
@@ -84,6 +123,10 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
+    }
+
     await connectDB();
 
     await ClientInvitation.updateMany(

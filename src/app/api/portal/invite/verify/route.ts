@@ -19,28 +19,32 @@ export async function GET(req: NextRequest) {
 
     if (!invitation) {
       return NextResponse.json(
-        { error: "Invalid invitation link" },
+        { error: "Invalid or nonexistent invitation link.", code: "not_found" },
         { status: 404 }
       );
     }
 
     if (invitation.status === "accepted") {
       return NextResponse.json(
-        { error: "This invitation has already been used. Please log in." },
+        { error: "This invitation has already been accepted. Please log in.", code: "already_accepted" },
         { status: 400 }
       );
     }
 
     if (invitation.status === "revoked") {
       return NextResponse.json(
-        { error: "This invitation has been revoked by the freelancer." },
+        { error: "This invitation has been revoked by the freelancer.", code: "revoked" },
         { status: 400 }
       );
     }
 
-    if (new Date(invitation.expiresAt) < new Date()) {
+    if (invitation.status === "expired" || new Date(invitation.expiresAt) < new Date()) {
+      if (invitation.status !== "expired") {
+        invitation.status = "expired";
+        await invitation.save();
+      }
       return NextResponse.json(
-        { error: "This invitation has expired. Please request a new invitation." },
+        { error: "This invitation has expired. Please request a new invitation.", code: "expired" },
         { status: 400 }
       );
     }
@@ -50,7 +54,7 @@ export async function GET(req: NextRequest) {
 
     if (!client) {
       return NextResponse.json(
-        { error: "Associated client record not found" },
+        { error: "Associated client record not found", code: "client_not_found" },
         { status: 404 }
       );
     }
@@ -60,7 +64,7 @@ export async function GET(req: NextRequest) {
       email: invitation.email,
       clientName: client.name,
       company: client.company || "",
-      freelancerName: freelancer?.name || "Freelancer",
+      freelancerName: freelancer?.name || "Your Freelancer",
       expiresAt: invitation.expiresAt,
     });
   } catch (error: any) {

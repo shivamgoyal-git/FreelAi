@@ -607,7 +607,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Client Portal Access Card */}
-            <ClientPortalCard clientId={client._id} clientName={client.name} />
+            <ClientPortalCard clientId={client._id} clientName={client.name} clientEmail={client.email} />
 
             {/* Tags Card */}
             {client.tags.length > 0 && (

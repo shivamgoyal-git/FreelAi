@@ -6,6 +6,7 @@ import ProjectFile from "@/models/ProjectFile";
 import Message from "@/models/Message";
 import Invoice from "@/models/Invoice";
 import Activity from "@/models/Activity";
+import mongoose from "mongoose";
 
 export async function GET(
   req: NextRequest,

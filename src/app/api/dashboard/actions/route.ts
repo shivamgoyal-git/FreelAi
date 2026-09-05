@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
 import { logActivity } from "@/lib/activity";
 
 export async function POST(req: NextRequest) {
@@ -8,8 +7,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  await connectDB();
 
   try {
     const { action, promptText } = await req.json();
@@ -22,7 +19,6 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id;
 
     if (action === "proposal") {
-      // 1. Simulate a beautiful AI Proposal output
       const generatedProposal = `### AI-Generated Proposal for: "${trimmedPrompt}"
 
 **Executive Summary**
@@ -41,7 +37,6 @@ We propose a comprehensive end-to-end design and development solution tailored t
 
 *Generated instantly by FreelAi Copilot.*`;
 
-      // Log the activity
       await logActivity(
         userId,
         "proposal_generated",
@@ -56,7 +51,6 @@ We propose a comprehensive end-to-end design and development solution tailored t
       });
 
     } else if (action === "prompt") {
-      // 2. Simulate Antigravity AI Helper response
       const responses = [
         `### Antigravity AI Assistant Response
 
@@ -85,10 +79,8 @@ Based on your prompt: **"${trimmedPrompt}"**, here is the suggested pricing brea
 * **Value-Based Fixed Pricing**: For well-defined deliverables like brand guidelines, charge a flat fee scaled to the client's business size (e.g. $2,500-$4,000).`
       ];
 
-      // Select a response based on the prompt's content length or key terms
       const selectedResponse = responses[trimmedPrompt.length % responses.length];
 
-      // Log the activity
       await logActivity(
         userId,
         "antigravity_prompt",

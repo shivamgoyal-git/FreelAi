@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Deliverable from "@/models/Deliverable";
-import Invoice from "@/models/Invoice";
-import Activity from "@/models/Activity";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +20,13 @@ export async function POST(req: NextRequest) {
     }
 
     const { clientId, client, freelancerUser } = authCtx;
-    await connectDB();
 
     // 1. Fetch strictly client-scoped data
     const [projects, deliverables, invoices, activities] = await Promise.all([
-      Project.find({ clientId }).lean(),
-      Deliverable.find({ clientId }).lean(),
-      Invoice.find({ clientId, status: { $ne: "draft" } }).lean(),
-      Activity.find({ clientId }).sort({ createdAt: -1 }).limit(10).lean(),
+      prisma.project.findMany({ where: { clientId }, include: { milestones: true } }),
+      prisma.deliverable.findMany({ where: { clientId } }),
+      prisma.invoice.findMany({ where: { clientId, status: { not: "draft" } } }),
+      prisma.activity.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 10 }),
     ]);
 
     const activeProjects = projects.filter(
@@ -50,14 +45,14 @@ export async function POST(req: NextRequest) {
       freelancerName: freelancerUser?.name || "Your Freelancer",
       activeProjectsCount: activeProjects.length,
       projects: projects.map((p) => ({
-        id: p._id.toString(),
+        id: p.id,
         title: p.title,
         status: p.status,
         progress: `${p.progress}%`,
         budget: `${p.currency || "INR"} ${p.budget?.toLocaleString()}`,
         paid: `${p.currency || "INR"} ${p.paid?.toLocaleString()}`,
         dueDate: p.dueDate || "Not set",
-        milestones: p.milestones?.map((m: any) => ({
+        milestones: p.milestones?.map((m) => ({
           title: m.title,
           completed: m.completed,
           dueDate: m.dueDate,
@@ -115,8 +110,7 @@ INSTRUCTIONS:
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
-          const reply =
-            geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (reply) {
             return NextResponse.json({ reply: reply.trim() });
           }
@@ -126,7 +120,7 @@ INSTRUCTIONS:
       }
     }
 
-    // Local deterministic reasoning fallback (ensures 100% reliable responses)
+    // Local deterministic reasoning fallback
     const qLower = message.toLowerCase();
     let reply = "";
 
@@ -149,7 +143,7 @@ INSTRUCTIONS:
     } else if (qLower.includes("milestone") || qLower.includes("deadline") || qLower.includes("next")) {
       const milestonesList: string[] = [];
       projects.forEach((p) => {
-        const upcoming = p.milestones?.filter((m: any) => !m.completed) || [];
+        const upcoming = p.milestones?.filter((m) => !m.completed) || [];
         if (upcoming.length > 0) {
           milestonesList.push(
             `• **${p.title}**: Next milestone is **${upcoming[0].title}**${

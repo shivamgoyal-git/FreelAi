@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import AppSidebar from "./sidebar";
 import TopNav from "./top-nav";
 import CommandPalette from "@/components/shared/command-palette";
-import StatusBar from "./status-bar";
+import FeelAssistantWidget from "@/components/ai/FeelAssistantWidget";
 
 interface AppContainerProps {
   children: React.ReactNode;
@@ -21,28 +21,8 @@ export const AppContainer: React.FC<AppContainerProps> = ({
   userImage,
   userEmail,
 }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-
-  useEffect(() => {
-    setSidebarCollapsed(localStorage.getItem("sidebar-collapsed") === "true");
-
-    // Listen for sidebar toggle changes (from the sidebar component)
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "sidebar-collapsed") {
-        setSidebarCollapsed(e.newValue === "true");
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
-  const handleSidebarToggle = () => {
-    const next = !sidebarCollapsed;
-    setSidebarCollapsed(next);
-    localStorage.setItem("sidebar-collapsed", String(next));
-  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -55,10 +35,6 @@ export const AppContainer: React.FC<AppContainerProps> = ({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const sidebarWidth = sidebarCollapsed
-    ? "var(--sidebar-collapsed-width)"
-    : "var(--sidebar-width)";
-
   return (
     <>
       <a href="#main-content" className="skip-nav">Skip to content</a>
@@ -69,17 +45,14 @@ export const AppContainer: React.FC<AppContainerProps> = ({
         userImage={userImage}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={handleSidebarToggle}
       />
 
       <div
         style={{
-          marginLeft: sidebarWidth,
+          marginLeft: "var(--sidebar-collapsed-width, 56px)",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          transition: "margin-left var(--dur-slow) var(--ease-spring)",
         }}
       >
         <TopNav
@@ -96,7 +69,7 @@ export const AppContainer: React.FC<AppContainerProps> = ({
       </div>
 
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
-      <StatusBar />
+      <FeelAssistantWidget />
     </>
   );
 };

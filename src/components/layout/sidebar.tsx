@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,14 +12,9 @@ import {
   Users,
   MessageSquare,
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
   Image as ImageIcon,
   User,
   X,
-  Bot,
-  Layers,
-  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -42,14 +37,6 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "AI TOOLS",
-    items: [
-      { icon: Bot, label: "AI Copilot", href: "/dashboard#ai-copilot" },
-      { icon: Layers, label: "Templates", href: "/dashboard/proposals" },
-      { icon: Zap, label: "Automations", href: "/dashboard/settings" },
-    ],
-  },
-  {
     label: "YOU",
     items: [
       { icon: User, label: "Profile", href: "/dashboard/profile" },
@@ -65,8 +52,6 @@ interface AppSidebarProps {
   userImage?: string | null;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 export default function AppSidebar({
@@ -75,10 +60,10 @@ export default function AppSidebar({
   userImage,
   mobileOpen = false,
   onMobileClose,
-  collapsed = false,
-  onToggleCollapse,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -86,181 +71,293 @@ export default function AppSidebar({
     return pathname.startsWith(href);
   };
 
-  const width = collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)";
-
-  const handleCloseClick = () => {
-    if (mobileOpen && onMobileClose) {
-      onMobileClose();
-    } else if (onToggleCollapse) {
-      onToggleCollapse();
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
     }
+    setIsHovered(true);
   };
 
-  const renderSidebarContent = () => (
-    <>
-      {/* Logo Header */}
-      <div
-        style={{
-          padding: collapsed ? "16px 8px" : "18px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
-          gap: "10px",
-          flexShrink: 0,
-        }}
-      >
-        <Link
-          href="/"
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 140);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const renderSidebarContent = (expanded: boolean) => (
+    <div
+      style={{
+        width: "252px",
+        minWidth: "252px",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Top Header & Navigation */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        {/* Logo Header */}
+        <div
           style={{
+            height: "60px",
+            padding: "0 12px",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            textDecoration: "none",
-            overflow: "hidden",
+            gap: "10px",
+            flexShrink: 0,
+            borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.05))",
           }}
         >
-          <img
-            src="/logo.png"
-            alt="FreeLAI Logo"
+          <Link
+            href="/"
             style={{
-              width: "34px",
-              height: "34px",
-              objectFit: "contain",
-              flexShrink: 0,
-            }}
-          />
-          {!collapsed && (
-            <img
-              src="/wordmark.png"
-              alt="FreeLAI"
-              style={{
-                height: "19px",
-                width: "auto",
-                objectFit: "contain",
-              }}
-            />
-          )}
-        </Link>
-
-        {!collapsed && !mobileOpen && (
-          <button
-            onClick={handleCloseClick}
-            aria-label="Close sidebar"
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
               display: "flex",
-              padding: "4px",
+              alignItems: "center",
+              gap: "10px",
+              textDecoration: "none",
+              overflow: "hidden",
             }}
           >
-            <X size={15} />
-          </button>
-        )}
-      </div>
-
-      {/* Navigation Sections */}
-      <nav
-        style={{
-          flex: 1,
-          padding: "6px 8px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-          overflowY: "auto",
-        }}
-      >
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <p
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src="/logo.png"
+                alt="FreeLAI Logo"
                 style={{
-                  fontSize: "9.5px",
-                  fontWeight: 650,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  padding: "4px 8px",
-                  margin: 0,
+                  width: "28px",
+                  height: "28px",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                opacity: expanded ? 1 : 0,
+                transform: expanded ? "translateX(0)" : "translateX(-8px)",
+                transition: "opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1)",
+                display: "flex",
+                alignItems: "center",
+                whiteSpace: "nowrap",
+                pointerEvents: expanded ? "auto" : "none",
+              }}
+            >
+              <img
+                src="/wordmark.png"
+                alt="FreeLAI"
+                style={{
+                  height: "19px",
+                  width: "auto",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+          </Link>
+        </div>
+
+        {/* Navigation Sections */}
+        <nav
+          style={{
+            flex: 1,
+            padding: "8px 8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <div
+                style={{
+                  height: "18px",
+                  opacity: expanded ? 1 : 0,
+                  transform: expanded ? "translateY(0)" : "translateY(-4px)",
+                  transition: "opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1)",
+                  overflow: "hidden",
+                  pointerEvents: "none",
                 }}
               >
-                {group.label}
-              </p>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1px", marginTop: "1px" }}>
-              {group.items.map((item) => {
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    title={collapsed ? item.label : undefined}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "9px",
-                      padding: collapsed ? "8px 0" : "6px 8px",
-                      justifyContent: collapsed ? "center" : "flex-start",
-                      borderRadius: "6px",
-                      textDecoration: "none",
-                      fontSize: "12px",
-                      fontWeight: active ? 550 : 400,
-                      color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                      background: active ? "var(--surface-2)" : "transparent",
-                      borderLeft: active ? "2px solid var(--color-brand)" : "2px solid transparent",
-                      transition: "all 0.12s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.background = "var(--surface-2)";
-                        e.currentTarget.style.color = "var(--text-primary)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "var(--text-secondary)";
-                      }
-                    }}
-                  >
-                    <item.icon
-                      size={14}
-                      style={{
-                        color: active ? "var(--color-brand)" : "inherit",
-                        flexShrink: 0,
-                      }}
-                    />
-                    {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
+                <p
+                  style={{
+                    fontSize: "9px",
+                    fontWeight: 700,
+                    color: "var(--text-muted, #71717a)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.09em",
+                    padding: "2px 10px",
+                    margin: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {group.label}
+                </p>
+              </div>
 
-      {/* Bottom Pro Card & User */}
-      <div style={{ padding: collapsed ? "8px" : "10px", flexShrink: 0 }}>
-        {!collapsed && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                {group.items.map((item) => {
+                  const active = isActive(item.href);
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      title={!expanded ? item.label : undefined}
+                      onClick={(e) => {
+                        if (item.href === "#feel-assistant") {
+                          e.preventDefault();
+                          window.dispatchEvent(new CustomEvent("open-feel-assistant"));
+                        }
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        height: "36px",
+                        borderRadius: "8px",
+                        textDecoration: "none",
+                        fontSize: "12.5px",
+                        fontWeight: active ? 600 : 450,
+                        color: active ? "var(--text-primary, #ffffff)" : "var(--text-secondary, #a1a1aa)",
+                        background: active ? "var(--surface-2, rgba(255, 255, 255, 0.08))" : "transparent",
+                        transition: "background 0.15s ease, color 0.15s ease",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.background = "var(--surface-2, rgba(255, 255, 255, 0.05))";
+                          e.currentTarget.style.color = "var(--text-primary, #ffffff)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "var(--text-secondary, #a1a1aa)";
+                        }
+                      }}
+                    >
+                      {/* Active Indicator Bar */}
+                      {active && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: 0,
+                            top: "6px",
+                            bottom: "6px",
+                            width: "3px",
+                            borderRadius: "0 3px 3px 0",
+                            background: "var(--color-brand, #22c55e)",
+                            boxShadow: "0 0 10px var(--color-brand, #22c55e)",
+                          }}
+                        />
+                      )}
+
+                      {/* Icon Container (Fixed 40px width centered in collapsed rail) */}
+                      <div
+                        style={{
+                          width: "40px",
+                          minWidth: "40px",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <item.icon
+                          size={17}
+                          style={{
+                            color: active ? "var(--color-brand, #22c55e)" : "inherit",
+                            transition: "color 0.15s ease",
+                          }}
+                        />
+                      </div>
+
+                      {/* Text Label */}
+                      <span
+                        style={{
+                          opacity: expanded ? 1 : 0,
+                          transform: expanded ? "translateX(0)" : "translateX(-6px)",
+                          transition: "opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
+                          paddingRight: "10px",
+                          pointerEvents: expanded ? "auto" : "none",
+                        }}
+                      >
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      {/* Bottom Pro Card & User Section */}
+      <div
+        style={{
+          padding: "10px 8px 12px 8px",
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          borderTop: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.05))",
+        }}
+      >
+        {/* Pro Card */}
+        <div
+          style={{
+            maxHeight: expanded ? "150px" : "0px",
+            opacity: expanded ? 1 : 0,
+            transform: expanded ? "translateY(0)" : "translateY(8px)",
+            overflow: "hidden",
+            transition: "max-height 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1)",
+            pointerEvents: expanded ? "auto" : "none",
+          }}
+        >
           <div
             style={{
               padding: "12px",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
+              background: "linear-gradient(135deg, rgba(99, 102, 241, 0.09) 0%, rgba(34, 197, 94, 0.07) 100%)",
+              border: "1px solid rgba(99, 102, 241, 0.2)",
               borderRadius: "8px",
-              marginBottom: "8px",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-              <Sparkles size={12} style={{ color: "var(--color-brand)" }} />
-              <p style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+              <Sparkles size={12} style={{ color: "var(--color-brand, #22c55e)" }} />
+              <p style={{ fontSize: "11.5px", fontWeight: 650, color: "var(--text-primary)", margin: 0 }}>
                 FreeLAI Pro
               </p>
             </div>
             <p style={{ fontSize: "10.5px", color: "var(--text-muted)", margin: "0 0 8px 0", lineHeight: 1.35 }}>
-              Unlock unlimited AI proposals and automated invoicing.
+              Unlock unlimited AI proposals & automated invoicing.
             </p>
             <Link
               href="/dashboard/settings"
@@ -272,78 +369,103 @@ export default function AppSidebar({
                 padding: "5px 10px",
                 fontSize: "11px",
                 fontWeight: 600,
-                background: "var(--color-brand)",
-                color: "var(--color-on-brand)",
+                background: "var(--color-brand, #22c55e)",
+                color: "#000000",
                 borderRadius: "5px",
                 textDecoration: "none",
                 transition: "filter 0.12s ease",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.06)")}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.08)")}
               onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
             >
               Upgrade Plan →
             </Link>
           </div>
-        )}
+        </div>
 
         {/* User profile strip */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: collapsed ? 0 : "8px",
-            padding: collapsed ? "4px" : "5px 8px",
-            borderRadius: "6px",
-            background: "var(--surface-2)",
+            height: "42px",
+            borderRadius: "8px",
+            background: "var(--surface-2, rgba(255, 255, 255, 0.04))",
             border: "1px solid var(--border)",
-            justifyContent: collapsed ? "center" : "flex-start",
+            overflow: "hidden",
+            position: "relative",
           }}
         >
+          {/* Avatar Container (Fixed 40px width centered in collapsed mode) */}
           <div
             style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "50%",
-              background: "var(--color-brand)",
-              color: "var(--color-on-brand)",
+              width: "40px",
+              minWidth: "40px",
+              height: "100%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "10.5px",
-              fontWeight: 700,
               flexShrink: 0,
-              overflow: "hidden",
             }}
           >
-            {userImage ? (
-              <img src={userImage} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              userInitial
-            )}
-          </div>
-          {!collapsed && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 550,
-                  color: "var(--text-primary)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  margin: 0,
-                }}
-              >
-                {userName}
-              </p>
-              <p style={{ fontSize: "9.5px", color: "var(--text-muted)", margin: 0 }}>
-                Pro Freelancer
-              </p>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                background: "var(--color-brand, #22c55e)",
+                color: "#000000",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "11px",
+                fontWeight: 700,
+                overflow: "hidden",
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
+              }}
+            >
+              {userImage ? (
+                <img src={userImage} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                userInitial
+              )}
             </div>
-          )}
+          </div>
+
+          {/* User Name and Role */}
+          <div
+            style={{
+              opacity: expanded ? 1 : 0,
+              transform: expanded ? "translateX(0)" : "translateX(-6px)",
+              transition: "opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1)",
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              flex: 1,
+              minWidth: 0,
+              paddingRight: "8px",
+              pointerEvents: expanded ? "auto" : "none",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "11.5px",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                margin: 0,
+              }}
+            >
+              {userName}
+            </p>
+            <p style={{ fontSize: "10px", color: "var(--text-muted)", margin: 0, whiteSpace: "nowrap" }}>
+              Pro Freelancer
+            </p>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -362,7 +484,7 @@ export default function AppSidebar({
                 position: "fixed",
                 inset: 0,
                 background: "rgba(0,0,0,0.6)",
-                backdropFilter: "blur(3px)",
+                backdropFilter: "blur(4px)",
                 zIndex: 999,
               }}
             />
@@ -376,8 +498,8 @@ export default function AppSidebar({
                 top: 0,
                 left: 0,
                 bottom: 0,
-                width: "var(--sidebar-width)",
-                background: "var(--surface-1)",
+                width: "var(--sidebar-width, 252px)",
+                background: "var(--surface-1, #0f1117)",
                 borderRight: "1px solid var(--border)",
                 display: "flex",
                 flexDirection: "column",
@@ -400,7 +522,7 @@ export default function AppSidebar({
                   <X size={16} />
                 </button>
               </div>
-              {renderSidebarContent()}
+              {renderSidebarContent(true)}
             </motion.aside>
           </>
         )}
@@ -413,11 +535,12 @@ export default function AppSidebar({
           top: 0,
           left: 0,
           bottom: 0,
-          width,
-          zIndex: 50,
-          transition: "width var(--dur-slow) var(--ease-spring)",
+          width: "var(--sidebar-collapsed-width, 56px)",
+          zIndex: isHovered ? 150 : 50,
           pointerEvents: "none",
         }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <motion.aside
           initial={{ x: -280, opacity: 0 }}
@@ -428,48 +551,24 @@ export default function AppSidebar({
             top: 0,
             left: 0,
             bottom: 0,
-            right: 0,
-            background: "var(--surface-1)",
+            width: isHovered ? "var(--sidebar-width, 252px)" : "var(--sidebar-collapsed-width, 56px)",
+            background: "var(--surface-1, #0f1117)",
             borderRight: "1px solid var(--border)",
             display: "flex",
             flexDirection: "column",
-            overflowX: "hidden",
+            overflow: "hidden",
             pointerEvents: "auto",
+            boxShadow: isHovered
+              ? "8px 0 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08)"
+              : "none",
+            willChange: "width, box-shadow",
+            transform: "translateZ(0)",
+            transition:
+              "width 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s cubic-bezier(0.2, 0, 0, 1)",
           }}
         >
-          {renderSidebarContent()}
+          {renderSidebarContent(isHovered)}
         </motion.aside>
-
-        {/* Collapse toggle button */}
-        {!mobileOpen && onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            style={{
-              position: "absolute",
-              top: "50%",
-              right: "-11px",
-              width: "22px",
-              height: "22px",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              zIndex: 60,
-              transform: "translateY(-50%)",
-              transition: "background var(--dur-fast)",
-              pointerEvents: "auto",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-3)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-          >
-            {collapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
-          </button>
-        )}
       </div>
     </>
   );

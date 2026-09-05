@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
+import { ProposalsService } from "@/services/proposals.service";
 
 // ── GET /api/proposals — list with search & filter ──────────────────
 export async function GET(req: NextRequest) {
@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -20,33 +19,36 @@ export async function GET(req: NextRequest) {
     const favoriteOnly = searchParams.get("favorite") === "true";
     const platform = searchParams.get("platform") || "";
 
-    const filter: Record<string, unknown> = { userId };
+    const where: any = { userId };
     
     if (status && status !== "all") {
-      filter.status = status;
+      where.status = status;
     }
     
     if (platform && platform !== "all") {
-      filter.platform = platform;
+      where.platform = platform;
     }
 
     if (favoriteOnly) {
-      filter.isFavorite = true;
+      where.isFavorite = true;
     }
 
     if (q) {
-      filter.$or = [
-        { title: { $regex: q, $options: "i" } },
-        { clientName: { $regex: q, $options: "i" } },
-        { jobPost: { $regex: q, $options: "i" } },
+      where.OR = [
+        { title: { contains: q, mode: "insensitive" } },
+        { clientName: { contains: q, mode: "insensitive" } },
+        { jobPost: { contains: q, mode: "insensitive" } },
       ];
     }
 
-    const proposals = await Proposal.find(filter)
-      .sort({ updatedAt: -1 })
-      .lean();
+    const proposals = await prisma.proposal.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+    });
 
-    return NextResponse.json({ proposals });
+    return NextResponse.json({
+      proposals: proposals.map((p) => ({ ...p, _id: p.id })),
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to load proposals";
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -61,12 +63,11 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const body = await req.json();
     const {
-      proposalId, // if provided, we append a version
+      proposalId,
       clientName,
       platform,
       jobPost,
@@ -85,36 +86,50 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (proposalId) {
-      // Append a new version to an existing proposal
-      const proposal = await Proposal.findOne({ _id: proposalId, userId });
+      const proposal = await prisma.proposal.findFirst({
+        where: { id: proposalId, userId },
+      });
       if (!proposal) {
         return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
       }
 
-      const nextVersionNumber = proposal.versions.length + 1;
-      proposal.versions.push({
-        versionNumber: nextVersionNumber,
-        sections,
-        pricingBreakdown,
-        aiAnalysis,
-        scoreBreakdown,
-        detectedPainPoints,
-        aiSuggestions,
-        promptVersion,
-        createdAt: new Date(),
+      const existingVersions = Array.isArray(proposal.versions) ? (proposal.versions as any[]) : [];
+      const nextVersionNumber = existingVersions.length + 1;
+      const newVersions = [
+        ...existingVersions,
+        {
+          versionNumber: nextVersionNumber,
+          sections,
+          pricingBreakdown,
+          aiAnalysis,
+          scoreBreakdown,
+          detectedPainPoints,
+          aiSuggestions,
+          promptVersion,
+          createdAt: new Date(),
+        },
+      ];
+
+      const val = pricingBreakdown?.standard?.price || budget || proposal.value;
+
+      const updated = await prisma.proposal.update({
+        where: { id: proposalId },
+        data: {
+          versions: newVersions,
+          activeVersionIndex: newVersions.length - 1,
+          value: Number(val) || 0,
+          budget: Number(budget) || proposal.budget,
+          timeline: timeline || proposal.timeline,
+          tone: tone || proposal.tone,
+          portfolios: portfolios.length > 0 ? portfolios : proposal.portfolios,
+        },
       });
 
-      proposal.activeVersionIndex = proposal.versions.length - 1;
-      proposal.value = pricingBreakdown.standard.price || budget || 0;
-      proposal.budget = budget || proposal.budget;
-      proposal.timeline = timeline || proposal.timeline;
-      proposal.tone = tone || proposal.tone;
-      proposal.portfolios = portfolios.length > 0 ? portfolios : proposal.portfolios;
-
-      await proposal.save();
-      return NextResponse.json({ success: true, proposal });
+      return NextResponse.json({
+        success: true,
+        proposal: { ...updated, _id: updated.id },
+      });
     } else {
-      // Create a brand new proposal with Version 1
       if (!clientName || !jobPost || !sections || !pricingBreakdown) {
         return NextResponse.json(
           { error: "Client name, job post, sections, and pricing details are required" },
@@ -124,18 +139,17 @@ export async function POST(req: NextRequest) {
 
       const title = `Proposal for ${clientName} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
       
-      const newProposal = await Proposal.create({
-        userId,
+      const newProposal = await ProposalsService.createProposal(userId, {
         title,
         status: "draft",
-        value: pricingBreakdown.standard.price || budget || 0,
+        value: pricingBreakdown.standard?.price || budget || 0,
         currency: "USD",
         isFavorite: false,
         clientName,
         platform,
         jobPost,
         portfolios,
-        budget,
+        budget: Number(budget) || 0,
         timeline,
         tone,
         templateId: templateId || null,

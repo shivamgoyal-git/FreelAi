@@ -2,9 +2,9 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
-import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
+import { UserRole } from "@prisma/client";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -26,11 +26,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("Email and password are required");
         }
 
-        await connectDB();
-
-        const user = await User.findOne({ email: credentials.email }).select(
-          "+password"
-        );
+        const normalizedEmail = (credentials.email as string).toLowerCase().trim();
+        const user = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+        });
 
         if (!user || !user.password) {
           throw new Error("No account found with this email");
@@ -46,12 +45,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         return {
-          id: user._id.toString(),
+          id: user.id,
           name: user.name,
           email: user.email,
           image: user.image,
           role: user.role || "freelancer",
-          clientId: user.clientId ? user.clientId.toString() : undefined,
+          clientId: user.clientId || undefined,
         };
       },
     }),
@@ -59,49 +58,64 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   callbacks: {
     async signIn({ user, account }) {
-      // Handle Google sign-in — upsert user in MongoDB and store the MongoDB _id
       if (account?.provider === "google") {
         if (!user.email) {
           throw new Error("No email returned from Google");
         }
-        await connectDB();
-        let dbUser = await User.findOne({ email: user.email });
+        const normalizedEmail = user.email.toLowerCase().trim();
+        let dbUser = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+        });
+
         if (!dbUser) {
-          dbUser = await User.create({
-            name: user.name || "Google User",
-            email: user.email,
-            image: user.image || undefined,
-            role: "freelancer",
+          dbUser = await prisma.user.create({
+            data: {
+              name: user.name || "Google User",
+              email: normalizedEmail,
+              image: user.image || null,
+              role: UserRole.freelancer,
+            },
+          });
+
+          // Create default workspace for new Google user
+          await prisma.workspace.create({
+            data: {
+              name: `${dbUser.name}'s Workspace`,
+              slug: `ws-${dbUser.id.slice(-8)}`,
+              ownerId: dbUser.id,
+            },
           });
         }
-        // Override Google's UUID with the real MongoDB ObjectId string
-        user.id = dbUser._id.toString();
-        user.role = dbUser.role || "freelancer";
-        user.clientId = dbUser.clientId ? dbUser.clientId.toString() : undefined;
+
+        user.id = dbUser.id;
+        user.role = dbUser.role;
+        user.clientId = dbUser.clientId || undefined;
       }
       return true;
     },
 
     async jwt({ token, user }) {
-      // On first sign-in, attach extra fields to the token
       if (user) {
         token.id = user.id;
         token.role = user.role || "freelancer";
         token.clientId = user.clientId;
       }
 
-      // Ensure we have the actual MongoDB ObjectId and current role/clientId
       if (token.id) {
-        await connectDB();
         const dbUser = token.email
-          ? await User.findOne({ email: token.email })
-          : await User.findById(token.id).catch(() => null);
+          ? await prisma.user.findUnique({
+              where: { email: (token.email as string).toLowerCase().trim() },
+            })
+          : await prisma.user.findUnique({
+              where: { id: token.id as string },
+            });
+
         if (dbUser) {
-          token.id = dbUser._id.toString(); // normalize to MongoDB _id
+          token.id = dbUser.id;
           token.picture = dbUser.image;
           token.name = dbUser.name;
           token.role = dbUser.role || "freelancer";
-          token.clientId = dbUser.clientId ? dbUser.clientId.toString() : undefined;
+          token.clientId = dbUser.clientId || undefined;
         }
       }
 

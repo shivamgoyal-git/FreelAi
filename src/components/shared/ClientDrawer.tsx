@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import useBodyScrollLock from "@/hooks/useBodyScrollLock";
+import CountrySelect from "@/components/ui/CountrySelect";
 
 interface Client {
   _id: string;
@@ -259,12 +260,11 @@ export default function ClientDrawer({ open, onClose, onClientCreated }: { open:
 
             <div className="form-group-redesign">
               <label className="label-redesign" htmlFor="client-country">Country (Optional)</label>
-              <input
+              <CountrySelect
                 id="client-country"
-                className="input-redesign"
                 value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g. India"
+                onChange={(c) => setCountry(c)}
+                placeholder="Select Country..."
               />
             </div>
 

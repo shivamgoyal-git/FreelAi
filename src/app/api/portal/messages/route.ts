@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Message from "@/models/Message";
-import Project from "@/models/Project";
-import Client from "@/models/Client";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
 export const dynamic = "force-dynamic";
@@ -21,49 +17,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
+    let where: any = {};
 
-    let filter: any = {};
-
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      const project = await Project.findById(projectId).lean();
-      const projObjId = new mongoose.Types.ObjectId(projectId);
-
-      const conditions: any[] = [
-        { projectId: projObjId },
-        { projectId: projectId },
-      ];
-
+    if (projectId) {
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      const conditions: any[] = [{ projectId }];
       if (project?.clientId) {
-        conditions.push(
-          { clientId: project.clientId },
-          { clientId: project.clientId.toString() }
-        );
+        conditions.push({ clientId: project.clientId });
       }
-
-      filter = { $or: conditions };
+      where = { OR: conditions };
     } else {
-      const cId = authCtx.clientId;
-      const conditions: any[] = [{ clientId: cId }];
-      if (mongoose.Types.ObjectId.isValid(cId)) {
-        conditions.push({ clientId: new mongoose.Types.ObjectId(cId) });
-      }
-      filter = { $or: conditions };
+      where = { clientId: authCtx.clientId };
     }
 
-    const messages = await Message.find(filter)
-      .sort({ createdAt: 1 })
-      .lean();
+    const messages = await prisma.message.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+    });
 
-    // Mark unread freelancer messages as read if client is viewing
     if (authCtx.role === "client" || authCtx.isPreview) {
-      await Message.updateMany(
-        { ...filter, senderRole: "freelancer", readByClient: false },
-        { $set: { readByClient: true } }
-      );
+      await prisma.message.updateMany({
+        where: { ...where, senderRole: "freelancer", readByClient: false },
+        data: { readByClient: true },
+      });
     }
 
-    return NextResponse.json({ messages });
+    return NextResponse.json({
+      messages: messages.map((m) => ({
+        ...m,
+        _id: m.id,
+        attachments: Array.isArray(m.attachments) ? m.attachments : [],
+      })),
+    });
   } catch (error: any) {
     console.error("[GET /api/portal/messages] Error:", error);
     return NextResponse.json(
@@ -90,25 +75,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
-
-    let targetClientId: any = authCtx.clientId;
+    let targetClientId: string = authCtx.clientId;
     let targetUserId = authCtx.client?.userId || authCtx.userId;
     let clientName = authCtx.client?.name || "Client";
     let clientAvatar = authCtx.client?.avatar || "";
-    let finalProjId: any = null;
+    let finalProjId: string | null = null;
 
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      const project = await Project.findById(projectId).lean();
+    if (projectId) {
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
       if (project) {
-        finalProjId = project._id;
+        finalProjId = project.id;
         if (project.clientId) targetClientId = project.clientId;
         if (project.userId) targetUserId = project.userId;
       }
     }
 
-    if (targetClientId && mongoose.Types.ObjectId.isValid(targetClientId)) {
-      const clientDoc = await Client.findById(targetClientId).lean();
+    if (targetClientId) {
+      const clientDoc = await prisma.client.findUnique({ where: { id: targetClientId } });
       if (clientDoc) {
         clientName = clientDoc.name || clientName;
         clientAvatar = clientDoc.avatar || clientAvatar;
@@ -116,44 +99,53 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const message = await Message.create({
-      projectId: finalProjId,
-      clientId: targetClientId,
-      userId: targetUserId ? targetUserId.toString() : "",
-      senderRole: "client",
-      senderId: authCtx.userId,
-      senderName: clientName,
-      senderAvatar: clientAvatar,
-      content: content.trim(),
-      attachments,
-      readByClient: true,
-      readByFreelancer: false,
+    const message = await prisma.message.create({
+      data: {
+        projectId: finalProjId,
+        clientId: targetClientId,
+        userId: targetUserId || "",
+        senderRole: "client",
+        senderId: authCtx.userId,
+        senderName: clientName,
+        senderAvatar: clientAvatar,
+        content: content.trim(),
+        attachments: Array.isArray(attachments) ? attachments : [],
+        readByClient: true,
+        readByFreelancer: false,
+      },
     });
 
     if (targetUserId) {
       await sendNotification({
-        recipientId: targetUserId.toString(),
+        recipientId: targetUserId,
         recipientRole: "freelancer",
         title: "New Client Message",
         message: `${clientName}: "${content.trim().slice(0, 80)}${content.length > 80 ? "..." : ""}"`,
         type: "new_message",
         link: `/dashboard/messages?clientId=${targetClientId}`,
-        projectId: finalProjId ? finalProjId.toString() : undefined,
-        clientId: targetClientId ? targetClientId.toString() : undefined,
+        projectId: finalProjId || undefined,
+        clientId: targetClientId,
       });
 
       await recordActivity({
-        userId: targetUserId.toString(),
+        userId: targetUserId,
         type: "message_sent",
         title: "Client Sent Message",
         description: `${clientName} sent a message.`,
-        projectId: finalProjId ? finalProjId.toString() : undefined,
+        projectId: finalProjId || undefined,
         clientId: targetClientId,
         actorRole: "client",
       });
     }
 
-    return NextResponse.json({ success: true, message }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      message: {
+        ...message,
+        _id: message.id,
+        attachments: Array.isArray(message.attachments) ? message.attachments : [],
+      },
+    }, { status: 201 });
   } catch (error: any) {
     console.error("[POST /api/portal/messages] Error:", error);
     return NextResponse.json(

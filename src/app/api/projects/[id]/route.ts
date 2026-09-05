@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Client from "@/models/Client";
+import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 
 type Params = { params: Promise<{ id: string }> };
@@ -13,28 +11,31 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await connectDB();
   const { id } = await params;
+  if (!id) return NextResponse.json({ error: "Invalid project ID" }, { status: 400 });
 
-  const project = await Project.findOne({ _id: id, userId: session.user.id }).lean();
+  const project = await prisma.project.findFirst({
+    where: { id, userId: session.user.id },
+    include: {
+      client: { select: { name: true, company: true } },
+      milestones: true,
+    },
+  });
+
   if (!project)
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  let clientName = project.clientName || "";
-  let clientCompany = "";
-
-  if (project.clientId) {
-    const client = await Client.findOne({ _id: project.clientId, userId: session.user.id }).select("name company").lean();
-    if (client) {
-      clientName = client.name;
-      clientCompany = client.company || "";
-    }
-  }
-
   const populatedProject = {
     ...project,
-    clientName,
-    clientCompany,
+    _id: project.id,
+    clientName: project.client?.name || project.clientName || "",
+    clientCompany: project.client?.company || "",
+    milestones: project.milestones.map((m) => ({
+      id: m.id,
+      title: m.title,
+      dueDate: m.dueDate,
+      completed: m.completed,
+    })),
   };
 
   return NextResponse.json({ project: populatedProject });
@@ -46,68 +47,97 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await connectDB();
   const { id } = await params;
+  if (!id) return NextResponse.json({ error: "Invalid project ID" }, { status: 400 });
 
   try {
     const body = await req.json();
     delete body.userId;
     delete body._id;
+    delete body.id;
 
-    const existingProject = await Project.findOne({ _id: id, userId: session.user.id });
+    const existingProject = await prisma.project.findFirst({
+      where: { id, userId: session.user.id },
+    });
     if (!existingProject)
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     const originalPaid = existingProject.paid;
     const originalStatus = existingProject.status;
 
-    const project = await Project.findOneAndUpdate(
-      { _id: id, userId: session.user.id },
-      { $set: body },
-      { new: true, runValidators: true }
-    ).lean();
+    if (Array.isArray(body.milestones)) {
+      await prisma.milestone.deleteMany({ where: { projectId: id } });
+      for (let i = 0; i < body.milestones.length; i++) {
+        const m = body.milestones[i];
+        await prisma.milestone.create({
+          data: {
+            id: m.id || `m-${id}-${i}-${Date.now()}`,
+            projectId: id,
+            title: m.title || "Milestone",
+            dueDate: m.dueDate || "",
+            completed: !!m.completed,
+          },
+        });
+      }
+    }
 
-    if (!project)
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const updated = await prisma.project.update({
+      where: { id },
+      data: {
+        ...(body.title && { title: body.title }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.clientId !== undefined && { clientId: body.clientId }),
+        ...(body.clientName !== undefined && { clientName: body.clientName }),
+        ...(body.category && { category: body.category }),
+        ...(body.status && { status: body.status }),
+        ...(body.priority && { priority: body.priority }),
+        ...(body.budget !== undefined && { budget: Number(body.budget) }),
+        ...(body.currency !== undefined && { currency: body.currency }),
+        ...(body.paid !== undefined && { paid: Number(body.paid) }),
+        ...(body.progress !== undefined && { progress: Number(body.progress) }),
+        ...(body.startDate !== undefined && { startDate: body.startDate }),
+        ...(body.dueDate !== undefined && { dueDate: body.dueDate }),
+        ...(body.tags && { tags: body.tags }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+      },
+      include: {
+        client: { select: { name: true, company: true } },
+        milestones: true,
+      },
+    });
 
     // Activity Logger integrations:
-    // 1. If paid amount increased, log invoice paid
     if (body.paid !== undefined && body.paid > originalPaid) {
       const difference = body.paid - originalPaid;
       await logActivity(
         session.user.id,
         "invoice_paid",
         "Invoice paid",
-        `Received payment of $${difference.toLocaleString()} for "${project.title}" (Total paid: $${project.paid.toLocaleString()}).`
+        `Received payment of $${difference.toLocaleString()} for "${updated.title}" (Total paid: $${updated.paid.toLocaleString()}).`
       );
     }
 
-    // 2. If status changed to completed, log invoice paid (if there was remaining balance) or complete status
     if (body.status === "completed" && originalStatus !== "completed") {
-      const remaining = project.budget - project.paid;
+      const remaining = updated.budget - updated.paid;
       await logActivity(
         session.user.id,
         "invoice_paid",
         "Project completed",
-        `"${project.title}" has been completed! Final budget of $${project.budget.toLocaleString()} cleared (Outstanding balance: $${remaining.toLocaleString()}).`
+        `"${updated.title}" has been completed! Final budget of $${updated.budget.toLocaleString()} cleared (Outstanding balance: $${remaining.toLocaleString()}).`
       );
     }
 
-    let clientName = project.clientName || "";
-    let clientCompany = "";
-
-    if (project.clientId) {
-      const client = await Client.findOne({ _id: project.clientId, userId: session.user.id }).select("name company").lean();
-      if (client) {
-        clientName = client.name;
-        clientCompany = client.company || "";
-      }
-    }
-
     const populatedProject = {
-      ...project,
-      clientName,
-      clientCompany,
+      ...updated,
+      _id: updated.id,
+      clientName: updated.client?.name || updated.clientName || "",
+      clientCompany: updated.client?.company || "",
+      milestones: updated.milestones.map((m) => ({
+        id: m.id,
+        title: m.title,
+        dueDate: m.dueDate,
+        completed: m.completed,
+      })),
     };
 
     return NextResponse.json({ project: populatedProject });
@@ -123,11 +153,13 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await connectDB();
   const { id } = await params;
+  if (!id) return NextResponse.json({ error: "Invalid project ID" }, { status: 400 });
 
-  const deleted = await Project.findOneAndDelete({ _id: id, userId: session.user.id });
-  if (!deleted)
+  const deleted = await prisma.project.deleteMany({
+    where: { id, userId: session.user.id },
+  });
+  if (deleted.count === 0)
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   return NextResponse.json({ success: true });

@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Loader2, Briefcase, FileText, DollarSign, Heart, Sparkles, Activity, ShieldCheck, HelpCircle } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  Loader2,
+  Briefcase,
+  FileText,
+  DollarSign,
+  Heart,
+  Sparkles,
+  Activity,
+  ShieldCheck,
+  X,
+  ExternalLink,
+  ChevronRight,
+  TrendingUp,
+  AlertCircle,
+} from "lucide-react";
 
 interface Client {
   _id: string;
@@ -28,10 +43,22 @@ interface ClientMetrics {
   };
 }
 
-export default function ClientSummaryCard({ clientId, client }: { clientId: string; client: Client }) {
+export default function ClientSummaryCard({
+  clientId,
+  client,
+}: {
+  clientId: string;
+  client: Client;
+}) {
   const [metrics, setMetrics] = useState<ClientMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -64,19 +91,23 @@ export default function ClientSummaryCard({ clientId, client }: { clientId: stri
     return (
       <div
         style={{
-          padding: "20px",
+          padding: "10px 14px",
           background: "var(--bg-surface)",
           border: "1px solid var(--border)",
-          borderRadius: "var(--radius-lg)",
+          borderRadius: "var(--radius)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          gap: "10px",
-          marginTop: "12px",
+          gap: "8px",
         }}
       >
-        <Loader2 size={16} className="loading-spinner" style={{ animation: "spin 1s linear infinite" }} />
-        <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Analyzing client relationship...</span>
+        <Loader2
+          size={14}
+          className="loading-spinner"
+          style={{ animation: "spin 1s linear infinite", color: "var(--color-brand)" }}
+        />
+        <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+          Analyzing relationship insights for {client.name}...
+        </span>
       </div>
     );
   }
@@ -84,202 +115,578 @@ export default function ClientSummaryCard({ clientId, client }: { clientId: stri
   if (error || !metrics) return null;
 
   const initials = client.name.charAt(0).toUpperCase();
+  const nextAction = metrics.insights?.recommendedNextAction || "Review client status and project scope.";
 
   return (
-    <div
-      style={{
-        marginTop: "16px",
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-lg)",
-        overflow: "hidden",
-        boxShadow: "var(--shadow-sm)",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* ── CLIENT DETAILS HEADER ── */}
+    <>
+      {/* ── COMPACT INLINE INTELLIGENCE STRIP ── */}
       <div
         style={{
-          padding: "16px 20px",
-          borderBottom: "1px solid var(--border)",
+          padding: "10px 14px",
+          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(34, 197, 94, 0.04) 100%)",
+          border: "1px solid rgba(99, 102, 241, 0.2)",
+          borderRadius: "var(--radius-inputs, 10px)",
           display: "flex",
           alignItems: "center",
-          gap: "14px",
+          justifyContent: "space-between",
+          gap: "12px",
+          transition: "all 0.2s ease",
         }}
       >
-        {client.avatar ? (
-          <img
-            src={client.avatar}
-            alt={client.name}
-            style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }}
-          />
-        ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
           <div
             style={{
-              width: "42px",
-              height: "42px",
+              width: "28px",
+              height: "28px",
               borderRadius: "50%",
-              background: "var(--primary-dim)",
-              color: "var(--primary)",
+              background: "rgba(99, 102, 241, 0.12)",
+              color: "var(--color-brand, #6366f1)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "16px",
-              fontWeight: 700,
+              flexShrink: 0,
             }}
           >
-            {initials}
+            <Sparkles size={14} />
           </div>
-        )}
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <h4 className="font-heading" style={{ fontSize: "15px", color: "var(--text-primary)" }}>
-            {client.name}
-          </h4>
-          <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-            {client.company ? `${client.company} • ` : ""}
-            {client.email}
-            {client.phone ? ` • ${client.phone}` : ""}
-          </p>
-        </div>
-        {metrics.insights.trusted && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              padding: "4px 8px",
-              borderRadius: "20px",
-              background: "rgba(99, 102, 241, 0.08)",
-              border: "1px solid rgba(99, 102, 241, 0.15)",
-              color: "var(--primary)",
-              fontSize: "11px",
-              fontWeight: 600,
-            }}
-          >
-            <ShieldCheck size={12} />
-            <span>Trusted</span>
-          </div>
-        )}
-      </div>
 
-      {/* ── METRICS GRID & HIGHLIGHTS ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-          background: "rgba(255, 255, 255, 0.01)",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ padding: "16px 20px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.02em" }}>Active Projects</span>
-          <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <Briefcase size={16} style={{ color: "var(--primary)" }} /> {metrics.activeProjects}
-          </span>
-        </div>
-
-        <div style={{ padding: "16px 20px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.02em" }}>Owed Invoices</span>
-          <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <FileText size={16} style={{ color: metrics.outstandingInvoices > 0 ? "var(--warning)" : "var(--text-muted)" }} />
-            {metrics.outstandingInvoices}
-            {metrics.outstandingBalance > 0 && (
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 400 }}>
-                (${metrics.outstandingBalance.toLocaleString()})
+          <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "1px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 650,
+                  color: "var(--text-primary)",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                AI Partner Insight
               </span>
-            )}
-          </span>
-        </div>
+              {metrics.insights.trusted && (
+                <span
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--success, #22c55e)",
+                    background: "rgba(34, 197, 94, 0.1)",
+                    padding: "1px 6px",
+                    borderRadius: "10px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "3px",
+                  }}
+                >
+                  <ShieldCheck size={10} /> Trusted
+                </span>
+              )}
+              <span
+                style={{
+                  fontSize: "10px",
+                  color: "var(--text-muted)",
+                  background: "var(--bg-elevated)",
+                  padding: "1px 6px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                Win Rate: {metrics.insights.proposalWinRate}
+              </span>
+            </div>
 
-        <div style={{ padding: "16px 20px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.02em" }}>Lifetime Revenue</span>
-          <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--success)", display: "flex", alignItems: "center", gap: "4px" }}>
-            <DollarSign size={16} /> {metrics.lifetimeRevenue.toLocaleString()}
-          </span>
-        </div>
-
-        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.02em" }}>Relationship score</span>
-          <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <Heart size={16} style={{ color: "var(--color-brand)" }} /> {metrics.aiRelationshipScore}%
-          </span>
-        </div>
-      </div>
-
-      {/* ── AI CO-PILOT ASSISTANT INSIGHTS ── */}
-      <div
-        style={{
-          padding: "16px 20px",
-          background: "rgba(99, 102, 241, 0.03)",
-          borderBottom: "1px solid var(--border)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Sparkles size={14} style={{ color: "var(--primary)" }} />
-          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>AI Partner Insights</span>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Payment Reliability</span>
-            <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)" }}>{metrics.insights.paymentReliability}</span>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                margin: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "340px",
+              }}
+            >
+              {nextAction}
+            </p>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Proposal Win Rate</span>
-            <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)" }}>{metrics.insights.proposalWinRate}</span>
-          </div>
         </div>
 
-        <div
+        {/* Action button to open full popup */}
+        <button
+          type="button"
+          onClick={() => setShowPopup(true)}
           style={{
-            padding: "10px 12px",
-            borderRadius: "var(--radius)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "6px 11px",
+            fontSize: "11.5px",
+            fontWeight: 600,
+            borderRadius: "7px",
             background: "var(--bg-elevated)",
             border: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-            marginTop: "4px",
+            color: "var(--text-primary)",
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--color-brand)";
+            e.currentTarget.style.background = "rgba(99, 102, 241, 0.08)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.background = "var(--bg-elevated)";
           }}
         >
-          <span style={{ fontSize: "10px", fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Recommended Next Action</span>
-          <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 500 }}>
-            {metrics.insights.recommendedNextAction}
-          </span>
-        </div>
+          <span>View Insights & Activity</span>
+          <ChevronRight size={13} style={{ color: "var(--text-muted)" }} />
+        </button>
       </div>
 
-      {/* ── RECENT ACTIVITY TIMELINE ── */}
-      <div style={{ padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <Activity size={14} style={{ color: "var(--text-muted)" }} />
-          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>Recent Activity</span>
-        </div>
+      {/* ── MODAL POPUP DIALOG FOR FULL DETAILS ── */}
+      {showPopup &&
+        mounted &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              backdropFilter: "blur(6px)",
+              zIndex: 350,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "16px",
+              animation: "fadeIn 0.2s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowPopup(false);
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "560px",
+                maxHeight: "88vh",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-lg, 14px)",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                animation: "scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderBottom: "1px solid var(--border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "var(--bg-base)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  {client.avatar ? (
+                    <img
+                      src={client.avatar}
+                      alt={client.name}
+                      style={{
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "50%",
+                        background: "rgba(99, 102, 241, 0.15)",
+                        color: "var(--color-brand, #6366f1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {initials}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <h3
+                        className="font-heading"
+                        style={{ fontSize: "16px", color: "var(--text-primary)", margin: 0 }}
+                      >
+                        {client.name}
+                      </h3>
+                      {metrics.insights.trusted && (
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 600,
+                            color: "var(--success, #22c55e)",
+                            background: "rgba(34, 197, 94, 0.1)",
+                            padding: "2px 7px",
+                            borderRadius: "12px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                          }}
+                        >
+                          <ShieldCheck size={11} /> Trusted
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "2px 0 0" }}>
+                      {client.company ? `${client.company} • ` : ""}
+                      {client.email}
+                    </p>
+                  </div>
+                </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {metrics.activities.map((act, index) => (
-            <div key={index} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "3px" }}>
-                <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--primary)" }} />
-                {index !== metrics.activities.length - 1 && (
-                  <div style={{ width: "1px", height: "24px", background: "var(--border)", margin: "4px 0" }} />
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPopup(false)}
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    width: "30px",
+                    height: "30px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+                >
+                  <X size={15} />
+                </button>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-primary)" }}>{act.title}</span>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{act.description}</span>
-                <span style={{ fontSize: "10px", color: "var(--text-subtle)", marginTop: "2px" }}>
-                  {new Date(act.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </span>
+
+              {/* Body */}
+              <div
+                style={{
+                  padding: "20px",
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "18px",
+                }}
+              >
+                {/* ── METRICS GRID ── */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "10px",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "var(--bg-base)",
+                      borderRadius: "10px",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 500 }}>
+                      Active Projects
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Briefcase size={14} style={{ color: "var(--color-brand)" }} />
+                      {metrics.activeProjects}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "var(--bg-base)",
+                      borderRadius: "10px",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 500 }}>
+                      Owed Invoices
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <FileText
+                        size={14}
+                        style={{
+                          color: metrics.outstandingInvoices > 0 ? "var(--warning)" : "var(--text-muted)",
+                        }}
+                      />
+                      {metrics.outstandingInvoices}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "var(--bg-base)",
+                      borderRadius: "10px",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 500 }}>
+                      Lifetime Earned
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: "var(--success, #22c55e)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      ${metrics.lifetimeRevenue.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "var(--bg-base)",
+                      borderRadius: "10px",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: 500 }}>
+                      Score
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Heart size={14} style={{ color: "#ec4899" }} />
+                      {metrics.aiRelationshipScore}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* ── AI PARTNER INSIGHTS ── */}
+                <div
+                  style={{
+                    padding: "16px",
+                    borderRadius: "12px",
+                    background: "rgba(99, 102, 241, 0.04)",
+                    border: "1px solid rgba(99, 102, 241, 0.15)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Sparkles size={15} style={{ color: "var(--color-brand, #6366f1)" }} />
+                    <span style={{ fontSize: "13px", fontWeight: 650, color: "var(--text-primary)" }}>
+                      AI Partner Insights
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px",
+                      background: "var(--bg-base)",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: "10.5px", color: "var(--text-muted)", display: "block" }}>
+                        Payment Reliability
+                      </span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        {metrics.insights.paymentReliability}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "10.5px", color: "var(--text-muted)", display: "block" }}>
+                        Proposal Win Rate
+                      </span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        {metrics.insights.proposalWinRate}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Recommended Action Card */}
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      background: "var(--bg-elevated)",
+                      border: "1px solid rgba(99, 102, 241, 0.2)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "var(--color-brand, #6366f1)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      RECOMMENDED NEXT ACTION
+                    </span>
+                    <span style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 550 }}>
+                      {metrics.insights.recommendedNextAction}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ── RECENT ACTIVITY TIMELINE ── */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                    <Activity size={14} style={{ color: "var(--text-muted)" }} />
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
+                      Recent Activity
+                    </span>
+                  </div>
+
+                  {metrics.activities.length === 0 ? (
+                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
+                      No recent activity logged for this client yet.
+                    </p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {metrics.activities.map((act, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: "flex",
+                            gap: "12px",
+                            alignItems: "flex-start",
+                            padding: "8px 10px",
+                            borderRadius: "8px",
+                            background: "var(--bg-base)",
+                            border: "1px solid var(--border)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              background: "var(--success, #22c55e)",
+                              marginTop: "5px",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                            <span style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)" }}>
+                              {act.title}
+                            </span>
+                            {act.description && (
+                              <span style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px" }}>
+                                {act.description}
+                              </span>
+                            )}
+                            <span style={{ fontSize: "10.5px", color: "var(--text-subtle)", marginTop: "4px" }}>
+                              {new Date(act.createdAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "12px 20px",
+                  borderTop: "1px solid var(--border)",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  background: "var(--bg-base)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowPopup(false)}
+                  style={{
+                    padding: "7px 16px",
+                    borderRadius: "8px",
+                    background: "var(--color-brand, #6366f1)",
+                    border: "none",
+                    color: "#ffffff",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Done
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }

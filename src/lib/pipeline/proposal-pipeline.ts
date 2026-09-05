@@ -25,8 +25,7 @@ import { ProposalCopilot, type CopilotAnalysis } from "./stage11-copilot";
 import { AiContextService } from "../ai-context-service";
 import { ProposalScorer, type ProposalScorerResult } from "../proposal-scorer";
 import type { AiRequestMetadata } from "../ai-core";
-import connectDB from "../mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "../prisma";
 
 // ─── INPUT / OUTPUT TYPES ────────────────────────────────────────────────────
 
@@ -89,8 +88,6 @@ export async function runProposalPipeline(input: PipelineInput): Promise<Pipelin
 
   console.log(`\n[Pipeline] ── Starting generation ${generationId} ──`);
   console.log(`[Pipeline] Client: ${input.clientName} | Platform: ${input.platform} | Mock: ${isMockMode}`);
-
-  await connectDB();
 
   let totalGeminiCalls = 0;
   let validationAttempts = 1;
@@ -296,13 +293,15 @@ ${proposalText}
  */
 async function fetchPastProposalBodies(userId: string, limit: number): Promise<string[]> {
   try {
-    const proposals = await Proposal.find({ userId })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean();
+    const proposals = await prisma.proposal.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
 
     return proposals.flatMap((p: any) => {
-      const latest = p.versions?.[p.activeVersionIndex || 0];
+      const versions = Array.isArray(p.versions) ? p.versions : [];
+      const latest = versions[p.activeVersionIndex || 0];
       return latest?.proposalBody ? [latest.proposalBody] : [];
     });
   } catch {

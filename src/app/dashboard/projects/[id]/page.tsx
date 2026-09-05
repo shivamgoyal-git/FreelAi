@@ -238,9 +238,46 @@ function EditModal({ open, project, onClose, onSaved }: { open:boolean; project:
                   </div>
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px" }}>
-                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-budget">Budget ($)</label><input id="d-budget" className="input-redesign" type="number" min={0} value={form.budget} onChange={(e) => set("budget",Number(e.target.value))}/></div>
-                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-paid">Paid ($)</label><input id="d-paid" className="input-redesign" type="number" min={0} value={form.paid} onChange={(e) => set("paid",Number(e.target.value))}/></div>
-                  <div className="form-group-redesign"><label className="label-redesign" htmlFor="d-progress">Progress (%)</label><input id="d-progress" className="input-redesign" type="number" min={0} max={100} value={form.progress} onChange={(e) => set("progress",Number(e.target.value))}/></div>
+                  <div className="form-group-redesign">
+                    <label className="label-redesign" htmlFor="d-budget">Budget ($)</label>
+                    <input
+                      id="d-budget"
+                      className="input-redesign"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={form.budget === 0 ? "" : form.budget}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => set("budget", e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="form-group-redesign">
+                    <label className="label-redesign" htmlFor="d-paid">Paid ($)</label>
+                    <input
+                      id="d-paid"
+                      className="input-redesign"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={form.paid === 0 ? "" : form.paid}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => set("paid", e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="form-group-redesign">
+                    <label className="label-redesign" htmlFor="d-progress">Progress (%)</label>
+                    <input
+                      id="d-progress"
+                      className="input-redesign"
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder="0"
+                      value={form.progress === 0 ? "" : form.progress}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => set("progress", e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
+                  </div>
                 </div>
                 <div className="form-group-redesign">
                    <label className="label-redesign" htmlFor="d-due">Due Date</label>

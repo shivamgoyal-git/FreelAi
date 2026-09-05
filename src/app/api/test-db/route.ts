@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    await connectDB();
+    const userCount = await prisma.user.count();
     return NextResponse.json(
-      { success: true, message: "✅ MongoDB connected successfully!" },
+      {
+        success: true,
+        message: "✅ Supabase PostgreSQL connected successfully via Prisma!",
+        userCount,
+      },
       { status: 200 }
     );
   } catch (error) {

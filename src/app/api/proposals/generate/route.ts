@@ -1,26 +1,10 @@
-/**
- * POST /api/proposals/generate
- *
- * Phase 11 v4 — Simplified route that delegates entirely to the multi-stage pipeline.
- *
- * This route is now responsible ONLY for:
- *  - Authentication + profile gate
- *  - DB connection + version management
- *  - Calling runProposalPipeline()
- *  - Saving the result and returning the response
- *
- * All proposal generation logic lives in src/lib/pipeline/proposal-pipeline.ts
- */
-
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
 import { requireFreelancerProfile } from "@/lib/profile-gate";
 import { runProposalPipeline } from "@/lib/pipeline/proposal-pipeline";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
-  // ─── Auth ─────────────────────────────────────────────────────────────────
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,8 +12,6 @@ export async function POST(req: NextRequest) {
 
   const profileGateResponse = await requireFreelancerProfile(session.user.id);
   if (profileGateResponse) return profileGateResponse;
-
-  await connectDB();
 
   try {
     const {
@@ -77,9 +59,11 @@ export async function POST(req: NextRequest) {
     // ─── Version tracking ──────────────────────────────────────────────────
     let versionIndex = 0;
     if (proposalId) {
-      const existingDoc = await Proposal.findOne({ _id: proposalId, userId });
-      if (existingDoc) {
-        versionIndex = existingDoc.versions.length;
+      const existingDoc = await prisma.proposal.findFirst({
+        where: { id: proposalId, userId },
+      });
+      if (existingDoc && Array.isArray(existingDoc.versions)) {
+        versionIndex = (existingDoc.versions as any[]).length;
       }
     }
 
@@ -87,12 +71,10 @@ export async function POST(req: NextRequest) {
 
     const isDev = process.env.NODE_ENV === "development" || generationMetadata.isMockMode;
 
-    // ─── Build response payload (matches existing UI contract) ────────────
     const responsePayload = {
       proposalBody,
       rawProposalBodyWithOrigins: pipelineResult.rawProposalBody,
 
-      // Sections (proposal is unified; kept for UI compat)
       sections: {
         executiveSummary: proposalBody,
         scopeOfWork: "Merged in Proposal Body",
@@ -100,7 +82,6 @@ export async function POST(req: NextRequest) {
         callToAction: "Merged in Proposal Body",
       },
 
-      // Pricing tiers
       pricingBreakdown: {
         basic: {
           price: Number(budget) ? Math.round(Number(budget) * 0.7) : 0,
@@ -119,7 +100,6 @@ export async function POST(req: NextRequest) {
         },
       },
 
-      // AI analysis scores
       aiAnalysis: {
         readability: scorerResult.scores.readability.score >= 80 ? "Easy" : scorerResult.scores.readability.score >= 60 ? "Medium" : "Complex",
         personalization: scorerResult.scores.personalization.score,
@@ -131,7 +111,6 @@ export async function POST(req: NextRequest) {
         communicationStyle: jobIntelligence.communicationStyle,
       },
 
-      // Score breakdown
       scoreBreakdown: {
         overall: validationResult.confidence.score,
         clarity: scorerResult.scores.readability.score,
@@ -140,7 +119,6 @@ export async function POST(req: NextRequest) {
         valueProposition: scorerResult.scores.relevance.score,
       },
 
-      // Intelligence data
       detectedPainPoints: jobIntelligence.painPoints,
       aiSuggestions: [
         scorerResult.scores.ctaQuality.reason,
@@ -159,7 +137,6 @@ export async function POST(req: NextRequest) {
       winChecklist: scorerResult.winChecklist,
       winChecklistPercentage: scorerResult.winChecklistPercentage,
 
-      // Pipeline v4 extras
       copilotAnalysis,
       missingInfoQuestions: pipelineResult.missingInfoResult.questions,
       blueprint: isDev ? pipelineResult.blueprint : undefined,
@@ -173,8 +150,6 @@ export async function POST(req: NextRequest) {
       },
       promptVersion: generationMetadata.pipelineVersion,
     };
-
-    console.log(`[generate] Responded. Pipeline: ${generationMetadata.pipelineVersion} | Gemini calls: ${generationMetadata.totalGeminiCalls} | Words: ${generationMetadata.wordCount}`);
 
     return NextResponse.json(responsePayload);
   } catch (err: unknown) {

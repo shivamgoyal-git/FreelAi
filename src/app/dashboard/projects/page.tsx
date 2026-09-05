@@ -444,15 +444,43 @@ function ProjectFormModal({
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px" }}>
                   <div className="form-group-redesign">
                     <label className="label-redesign" htmlFor="proj-budget">Budget ($)</label>
-                    <input id="proj-budget" className="input-redesign" type="number" min={0} value={form.budget} onChange={(e) => set("budget", Number(e.target.value))} />
+                    <input
+                      id="proj-budget"
+                      className="input-redesign"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={form.budget === 0 ? "" : form.budget}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => set("budget", e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
                   </div>
                   <div className="form-group-redesign">
                     <label className="label-redesign" htmlFor="proj-paid">Amount Paid ($)</label>
-                    <input id="proj-paid" className="input-redesign" type="number" min={0} value={form.paid} onChange={(e) => set("paid", Number(e.target.value))} />
+                    <input
+                      id="proj-paid"
+                      className="input-redesign"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={form.paid === 0 ? "" : form.paid}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => set("paid", e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
                   </div>
                   <div className="form-group-redesign">
                     <label className="label-redesign" htmlFor="proj-progress">Progress (%)</label>
-                    <input id="proj-progress" className="input-redesign" type="number" min={0} max={100} value={form.progress} onChange={(e) => set("progress", Number(e.target.value))} />
+                    <input
+                      id="proj-progress"
+                      className="input-redesign"
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder="0"
+                      value={form.progress === 0 ? "" : form.progress}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => set("progress", e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
                   </div>
                 </div>
 

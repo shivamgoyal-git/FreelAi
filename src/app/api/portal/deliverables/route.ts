@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Deliverable from "@/models/Deliverable";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,18 +15,28 @@ export async function GET(req: NextRequest) {
     }
 
     const { clientId } = authCtx;
-    await connectDB();
 
-    const filter: Record<string, unknown> = { clientId };
-    if (projectId) filter.projectId = projectId;
-    if (status && status !== "all") filter.status = status;
+    const where: any = { clientId };
+    if (projectId) where.projectId = projectId;
+    if (status && status !== "all") where.status = status;
 
-    const deliverables = await Deliverable.find(filter)
-      .populate("projectId", "title")
-      .sort({ createdAt: -1 })
-      .lean();
+    const deliverables = await prisma.deliverable.findMany({
+      where,
+      include: {
+        project: { select: { title: true } },
+        versions: { orderBy: { createdAt: "desc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    return NextResponse.json({ deliverables });
+    return NextResponse.json({
+      deliverables: deliverables.map((d) => ({
+        ...d,
+        _id: d.id,
+        projectId: d.project ? { title: d.project.title, _id: d.projectId } : d.projectId,
+        versions: d.versions.map((v) => ({ ...v, _id: v.id })),
+      })),
+    });
   } catch (error: any) {
     console.error("[GET /api/portal/deliverables] Error:", error);
     return NextResponse.json(

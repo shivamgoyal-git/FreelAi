@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Deliverable from "@/models/Deliverable";
+import { prisma } from "@/lib/prisma";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
 export async function GET(
@@ -16,9 +14,9 @@ export async function GET(
     }
 
     const { id } = await params;
-    await connectDB();
-
-    const project = await Project.findOne({ _id: id, userId: session.user.id });
+    const project = await prisma.project.findFirst({
+      where: { id, userId: session.user.id },
+    });
     if (!project) {
       return NextResponse.json(
         { error: "Project not found or access denied" },
@@ -26,11 +24,21 @@ export async function GET(
       );
     }
 
-    const deliverables = await Deliverable.find({ projectId: id })
-      .sort({ createdAt: -1 })
-      .lean();
+    const deliverables = await prisma.deliverable.findMany({
+      where: { projectId: id },
+      include: {
+        versions: { orderBy: { createdAt: "desc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    return NextResponse.json({ deliverables });
+    return NextResponse.json({
+      deliverables: deliverables.map((d) => ({
+        ...d,
+        _id: d.id,
+        versions: d.versions.map((v) => ({ ...v, _id: v.id })),
+      })),
+    });
   } catch (error: any) {
     console.error("[GET /api/projects/[id]/deliverables] Error:", error);
     return NextResponse.json(
@@ -71,9 +79,9 @@ export async function POST(
       );
     }
 
-    await connectDB();
-
-    const project = await Project.findOne({ _id: id, userId: session.user.id });
+    const project = await prisma.project.findFirst({
+      where: { id, userId: session.user.id },
+    });
     if (!project) {
       return NextResponse.json(
         { error: "Project not found or access denied" },
@@ -88,32 +96,53 @@ export async function POST(
       );
     }
 
-    const deliverable = await Deliverable.create({
-      projectId: project._id,
-      clientId: project.clientId,
-      userId: session.user.id,
-      title: title.trim(),
-      version: version.trim() || "v1",
-      description: description.trim(),
-      milestoneId: milestoneId || "",
-      fileUrl: fileUrl.trim(),
-      fileName: fileName.trim(),
-      fileSize: fileSize.trim() || "1.2 MB",
-      fileType: fileType.trim() || "figma",
-      externalUrl: externalUrl.trim(),
-      status: "pending_review",
-      uploadedBy: "freelancer",
+    const ws = await prisma.workspace.findFirst({ where: { ownerId: session.user.id } });
+
+    const deliverable = await prisma.deliverable.create({
+      data: {
+        projectId: project.id,
+        clientId: project.clientId,
+        userId: session.user.id,
+        workspaceId: ws?.id,
+        title: title.trim(),
+        version: version.trim() || "v1",
+        description: description.trim(),
+        milestoneId: milestoneId || null,
+        fileUrl: fileUrl.trim(),
+        fileName: fileName.trim(),
+        fileSize: fileSize.trim() || "1.2 MB",
+        fileType: fileType.trim() || "figma",
+        externalUrl: externalUrl.trim(),
+        status: "pending_review",
+        uploadedBy: "freelancer",
+        versions: {
+          create: {
+            id: `v-${Date.now()}`,
+            versionNumber: version.trim() || "v1",
+            fileUrl: fileUrl.trim(),
+            fileName: fileName.trim(),
+            fileSize: fileSize.trim() || "1.2 MB",
+            fileType: fileType.trim() || "figma",
+            externalUrl: externalUrl.trim(),
+            uploadedBy: "freelancer",
+            status: "pending_review",
+          },
+        },
+      },
+      include: {
+        versions: true,
+      },
     });
 
     // Notify Client
     await sendNotification({
-      recipientId: project.clientId.toString(),
+      recipientId: project.clientId,
       recipientRole: "client",
       title: "New Deliverable Ready for Review",
       message: `Your freelancer uploaded "${title}" (${version}) for "${project.title}". Please review and approve.`,
       type: "deliverable_uploaded",
-      link: `/portal/projects/${project._id}?tab=deliverables`,
-      projectId: project._id,
+      link: `/portal/projects/${project.id}?tab=deliverables`,
+      projectId: project.id,
     });
 
     // Record Activity
@@ -122,12 +151,22 @@ export async function POST(
       type: "deliverable_uploaded",
       title: "Deliverable Uploaded",
       description: `Uploaded deliverable "${title}" (${version}) for project "${project.title}".`,
-      projectId: project._id,
+      projectId: project.id,
       clientId: project.clientId,
       actorRole: "freelancer",
     });
 
-    return NextResponse.json({ success: true, deliverable }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        deliverable: {
+          ...deliverable,
+          _id: deliverable.id,
+          versions: deliverable.versions.map((v) => ({ ...v, _id: v.id })),
+        },
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error("[POST /api/projects/[id]/deliverables] Error:", error);
     return NextResponse.json(

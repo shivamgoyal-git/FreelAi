@@ -266,11 +266,29 @@ function EditModal({
             </div>
             <div className="form-group-redesign">
               <label className="label-redesign" htmlFor="edit-projects">Projects</label>
-              <input id="edit-projects" className="input-redesign" type="number" min={0} value={form.totalProjects} onChange={(e) => set("totalProjects", Number(e.target.value))} />
+              <input
+                id="edit-projects"
+                className="input-redesign"
+                type="number"
+                min={0}
+                placeholder="0"
+                value={form.totalProjects === 0 ? "" : form.totalProjects}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => set("totalProjects", e.target.value === "" ? 0 : Number(e.target.value))}
+              />
             </div>
             <div className="form-group-redesign">
               <label className="label-redesign" htmlFor="edit-earned">Total Earned ($)</label>
-              <input id="edit-earned" className="input-redesign" type="number" min={0} value={form.totalEarned} onChange={(e) => set("totalEarned", Number(e.target.value))} />
+              <input
+                id="edit-earned"
+                className="input-redesign"
+                type="number"
+                min={0}
+                placeholder="0"
+                value={form.totalEarned === 0 ? "" : form.totalEarned}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => set("totalEarned", e.target.value === "" ? 0 : Number(e.target.value))}
+              />
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>

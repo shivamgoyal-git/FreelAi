@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Client from "@/models/Client";
-import Project from "@/models/Project";
-import Proposal from "@/models/Proposal";
-import Invoice from "@/models/Invoice";
-import PortfolioProject from "@/models/PortfolioProject";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -21,67 +16,94 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    await connectDB();
     const userId = session.user.id;
+    const q = query.trim();
 
-    // Build regex search pattern
-    const searchRegex = new RegExp(query, "i");
-
-    // Search different models in parallel
     const [clients, projects, proposals, invoices, portfolioItems] = await Promise.all([
-      Client.find({ userId, $or: [{ name: searchRegex }, { company: searchRegex }] }).limit(3),
-      Project.find({ userId, title: searchRegex }).limit(3),
-      Proposal.find({ userId, $or: [{ title: searchRegex }, { clientName: searchRegex }] }).limit(3),
-      Invoice.find({ userId, invoiceNumber: searchRegex }).limit(3),
-      PortfolioProject.find({ userId, title: searchRegex }).limit(3),
+      prisma.client.findMany({
+        where: {
+          userId,
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { company: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 3,
+      }),
+      prisma.project.findMany({
+        where: {
+          userId,
+          title: { contains: q, mode: "insensitive" },
+        },
+        take: 3,
+      }),
+      prisma.proposal.findMany({
+        where: {
+          userId,
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { clientName: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 3,
+      }),
+      prisma.invoice.findMany({
+        where: {
+          userId,
+          invoiceNumber: { contains: q, mode: "insensitive" },
+        },
+        take: 3,
+      }),
+      prisma.portfolioProject.findMany({
+        where: {
+          userId,
+          title: { contains: q, mode: "insensitive" },
+        },
+        take: 3,
+      }),
     ]);
 
     const results: any[] = [];
 
-    // Map clients
     clients.forEach((c) => {
       results.push({
-        id: c._id.toString(),
+        id: c.id,
         type: "Client",
         label: c.name + (c.company ? ` (${c.company})` : ""),
         href: `/dashboard/clients`,
       });
     });
 
-    // Map projects
     projects.forEach((p) => {
       results.push({
-        id: p._id.toString(),
+        id: p.id,
         type: "Project",
         label: p.title,
         href: `/dashboard/projects`,
       });
     });
 
-    // Map proposals
     proposals.forEach((pr) => {
       results.push({
-        id: pr._id.toString(),
+        id: pr.id,
         type: "Proposal",
         label: pr.title + (pr.clientName ? ` for ${pr.clientName}` : ""),
         href: `/dashboard/proposals`,
       });
     });
 
-    // Map invoices
     invoices.forEach((inv) => {
       results.push({
-        id: inv._id.toString(),
+        id: inv.id,
         type: "Invoice",
         label: `${inv.invoiceNumber} - Total $${inv.total.toLocaleString()}`,
         href: `/dashboard/invoices`,
       });
     });
 
-    // Map portfolio items
     portfolioItems.forEach((pt) => {
       results.push({
-        id: pt._id.toString(),
+        id: pt.id,
         type: "Portfolio Item",
         label: pt.title,
         href: `/dashboard/portfolio`,

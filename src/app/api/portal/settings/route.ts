@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Client from "@/models/Client";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,7 +15,10 @@ export async function GET(req: NextRequest) {
     const { client, freelancerUser } = authCtx;
 
     return NextResponse.json({
-      client,
+      client: {
+        ...client,
+        _id: client.id,
+      },
       freelancer: {
         name: freelancerUser?.name || "Freelancer",
         email: freelancerUser?.email || "",
@@ -44,29 +45,30 @@ export async function PATCH(req: NextRequest) {
     }
 
     const { clientId, userId, role } = authCtx;
-    await connectDB();
 
-    const updateFields: Record<string, string> = {};
+    const updateFields: any = {};
     if (name) updateFields.name = name.trim();
     if (phone !== undefined) updateFields.phone = phone.trim();
     if (company !== undefined) updateFields.company = company.trim();
     if (location !== undefined) updateFields.location = location.trim();
     if (website !== undefined) updateFields.website = website.trim();
 
-    const updatedClient = await Client.findByIdAndUpdate(
-      clientId,
-      { $set: updateFields },
-      { new: true }
-    );
+    const updatedClient = await prisma.client.update({
+      where: { id: clientId },
+      data: updateFields,
+    });
 
     if (role === "client" && name) {
-      await User.findByIdAndUpdate(userId, { $set: { name: name.trim() } });
+      await prisma.user.update({
+        where: { id: userId },
+        data: { name: name.trim() },
+      });
     }
 
     return NextResponse.json({
       success: true,
       message: "Profile updated successfully",
-      client: updatedClient,
+      client: { ...updatedClient, _id: updatedClient.id },
     });
   } catch (error: any) {
     console.error("[PATCH /api/portal/settings] Error:", error);

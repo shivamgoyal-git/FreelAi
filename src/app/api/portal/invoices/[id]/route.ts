@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession, requireClientInvoice } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
@@ -18,15 +17,18 @@ export async function GET(
     }
 
     const { clientId, client, freelancerUser } = authCtx;
-    await connectDB();
 
     // Verify invoice belongs to client (IDOR protection)
     await requireClientInvoice(clientId, id);
 
-    const invoice = await Invoice.findById(id)
-      .populate("projectId", "title category")
-      .populate("clientId", "name email company phone location website")
-      .lean();
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        project: { select: { id: true, title: true, category: true } },
+        client: { select: { id: true, name: true, email: true, company: true, phone: true, location: true, website: true } },
+        items: true,
+      },
+    });
 
     if (!invoice || invoice.status === "draft") {
       return NextResponse.json(
@@ -35,8 +37,15 @@ export async function GET(
       );
     }
 
+    const populated = {
+      ...invoice,
+      _id: invoice.id,
+      projectId: invoice.project ? { ...invoice.project, _id: invoice.project.id } : invoice.projectId,
+      clientId: invoice.client ? { ...invoice.client, _id: invoice.client.id } : invoice.clientId,
+    };
+
     return NextResponse.json({
-      invoice,
+      invoice: populated,
       client,
       freelancer: {
         name: freelancerUser?.name || "Freelancer",

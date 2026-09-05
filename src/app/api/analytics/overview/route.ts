@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
-import Client from "@/models/Client";
-import Project from "@/models/Project";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 import { getDateRange } from "@/utils/analyticsHelper";
 
 export async function GET(req: NextRequest) {
@@ -14,7 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -24,212 +19,149 @@ export async function GET(req: NextRequest) {
 
     const { startDate, endDate, prevStartDate, prevEndDate } = getDateRange(range, start, end);
 
-    // Run parallel aggregation pipelines
-    const [invoiceData, clientData, projectData, proposalData] = await Promise.all([
-      Invoice.aggregate([
-        {
-          $facet: {
-            current: [
-              { $match: { userId, status: { $ne: "cancelled" }, issueDate: { $gte: startDate, $lte: endDate } } },
-              {
-                $group: {
-                  _id: null,
-                  totalRevenue: { $sum: "$amountPaid" },
-                  outstandingRevenue: { $sum: "$remainingAmount" },
-                  totalBilled: { $sum: "$total" },
-                  avgInvoiceValue: { $avg: "$total" },
-                  totalInvoices: { $sum: 1 },
-                },
-              },
-            ],
-            previous: [
-              { $match: { userId, status: { $ne: "cancelled" }, issueDate: { $gte: prevStartDate, $lte: prevEndDate } } },
-              {
-                $group: {
-                  _id: null,
-                  totalRevenue: { $sum: "$amountPaid" },
-                  totalBilled: { $sum: "$total" },
-                  avgInvoiceValue: { $avg: "$total" },
-                },
-              },
-            ],
-            paymentTime: [
-              { $match: { userId, status: "paid", issueDate: { $gte: startDate, $lte: endDate } } },
-              {
-                $project: {
-                  durationMs: { $subtract: ["$updatedAt", "$issueDate"] },
-                },
-              },
-              {
-                $group: {
-                  _id: null,
-                  avgDurationMs: { $avg: "$durationMs" },
-                },
-              },
-            ],
-          },
+    const [
+      currInvoices,
+      prevInvoices,
+      activeClients,
+      prevActiveClients,
+      currProjects,
+      prevProjects,
+      currProposals,
+      prevProposals,
+    ] = await Promise.all([
+      prisma.invoice.findMany({
+        where: {
+          userId,
+          status: { not: "cancelled" },
+          issueDate: { gte: startDate, lte: endDate },
         },
-      ]),
-
-      Client.aggregate([
-        {
-          $facet: {
-            totalActive: [
-              { $match: { userId, status: "active" } },
-              { $count: "count" },
-            ],
-            previousActive: [
-              { $match: { userId, status: "active", createdAt: { $lte: prevEndDate } } },
-              { $count: "count" },
-            ],
-          },
+      }),
+      prisma.invoice.findMany({
+        where: {
+          userId,
+          status: { not: "cancelled" },
+          issueDate: { gte: prevStartDate, lte: prevEndDate },
         },
-      ]),
-
-      Project.aggregate([
-        {
-          $facet: {
-            current: [
-              { $match: { userId, status: { $ne: "cancelled" }, createdAt: { $gte: startDate, $lte: endDate } } },
-              {
-                $group: {
-                  _id: null,
-                  totalProjects: { $sum: 1 },
-                  completedProjects: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
-                  avgBudget: { $avg: "$budget" },
-                  totalBudget: { $sum: "$budget" },
-                },
-              },
-            ],
-            previous: [
-              { $match: { userId, status: { $ne: "cancelled" }, createdAt: { $gte: prevStartDate, $lte: prevEndDate } } },
-              {
-                $group: {
-                  _id: null,
-                  totalProjects: { $sum: 1 },
-                  completedProjects: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
-                  avgBudget: { $avg: "$budget" },
-                },
-              },
-            ],
-          },
+      }),
+      prisma.client.count({ where: { userId, status: "active" } }),
+      prisma.client.count({ where: { userId, status: "active", createdAt: { lte: prevEndDate } } }),
+      prisma.project.findMany({
+        where: {
+          userId,
+          status: { not: "cancelled" },
+          createdAt: { gte: startDate, lte: endDate },
         },
-      ]),
-
-      Proposal.aggregate([
-        {
-          $facet: {
-            current: [
-              { $match: { userId, createdAt: { $gte: startDate, $lte: endDate } } },
-              {
-                $group: {
-                  _id: null,
-                  totalProposals: { $sum: 1 },
-                  wonProposals: { $sum: { $cond: [{ $eq: ["$status", "won"] }, 1, 0] } },
-                  lostProposals: { $sum: { $cond: [{ $eq: ["$status", "lost"] }, 1, 0] } },
-                  sentProposals: { $sum: { $cond: [{ $eq: ["$status", "sent"] }, 1, 0] } },
-                },
-              },
-            ],
-            previous: [
-              { $match: { userId, createdAt: { $gte: prevStartDate, $lte: prevEndDate } } },
-              {
-                $group: {
-                  _id: null,
-                  totalProposals: { $sum: 1 },
-                  wonProposals: { $sum: { $cond: [{ $eq: ["$status", "won"] }, 1, 0] } },
-                  lostProposals: { $sum: { $cond: [{ $eq: ["$status", "lost"] }, 1, 0] } },
-                  sentProposals: { $sum: { $cond: [{ $eq: ["$status", "sent"] }, 1, 0] } },
-                },
-              },
-            ],
-          },
+      }),
+      prisma.project.findMany({
+        where: {
+          userId,
+          status: { not: "cancelled" },
+          createdAt: { gte: prevStartDate, lte: prevEndDate },
         },
-      ]),
+      }),
+      prisma.proposal.findMany({
+        where: {
+          userId,
+          createdAt: { gte: startDate, lte: endDate },
+        },
+      }),
+      prisma.proposal.findMany({
+        where: {
+          userId,
+          createdAt: { gte: prevStartDate, lte: prevEndDate },
+        },
+      }),
     ]);
 
-    // Extract invoice stats
-    const currInv = invoiceData[0]?.current[0] || { totalRevenue: 0, outstandingRevenue: 0, totalBilled: 0, avgInvoiceValue: 0, totalInvoices: 0 };
-    const prevInv = invoiceData[0]?.previous[0] || { totalRevenue: 0, totalBilled: 0, avgInvoiceValue: 0 };
-    const payTime = invoiceData[0]?.paymentTime[0]?.avgDurationMs || 0;
+    // Current Invoice Stats
+    let totalRevenue = 0;
+    let outstandingRevenue = 0;
+    let totalBilled = 0;
+    let paidDurationSum = 0;
+    let paidInvoicesCount = 0;
 
-    // Extract client stats
-    const activeClientsCount = clientData[0]?.totalActive[0]?.count || 0;
-    const prevActiveClientsCount = clientData[0]?.previousActive[0]?.count || 0;
+    currInvoices.forEach((inv) => {
+      totalRevenue += inv.amountPaid;
+      outstandingRevenue += inv.remainingAmount;
+      totalBilled += inv.total;
+      if (inv.status === "paid") {
+        paidDurationSum += new Date(inv.updatedAt).getTime() - new Date(inv.issueDate).getTime();
+        paidInvoicesCount += 1;
+      }
+    });
 
-    // Extract project stats
-    const currProj = projectData[0]?.current[0] || { totalProjects: 0, completedProjects: 0, avgBudget: 0, totalBudget: 0 };
-    const prevProj = projectData[0]?.previous[0] || { totalProjects: 0, completedProjects: 0, avgBudget: 0 };
+    const avgInvoiceValue = currInvoices.length > 0 ? totalBilled / currInvoices.length : 0;
+    const avgPaymentTimeDays = paidInvoicesCount > 0 ? (paidDurationSum / paidInvoicesCount) / (1000 * 60 * 60 * 24) : 0;
 
-    // Extract proposal stats
-    const currProp = proposalData[0]?.current[0] || { totalProposals: 0, wonProposals: 0, lostProposals: 0, sentProposals: 0 };
-    const prevProp = proposalData[0]?.previous[0] || { totalProposals: 0, wonProposals: 0, lostProposals: 0, sentProposals: 0 };
+    // Previous Invoice Stats
+    let prevTotalRevenue = 0;
+    let prevTotalBilled = 0;
+    prevInvoices.forEach((inv) => {
+      prevTotalRevenue += inv.amountPaid;
+      prevTotalBilled += inv.total;
+    });
+    const prevAvgInvoiceValue = prevInvoices.length > 0 ? prevTotalBilled / prevInvoices.length : 0;
 
-    // Calculate core metrics
-    const totalRevenue = currInv.totalRevenue;
-    const outstandingRevenue = currInv.outstandingRevenue;
-    const activeClients = activeClientsCount;
-    const completedProjects = currProj.completedProjects;
-    const avgProjectValue = currProj.avgBudget;
+    // Projects stats
+    const completedProjects = currProjects.filter((p) => p.status === "completed").length;
+    const prevCompletedProjects = prevProjects.filter((p) => p.status === "completed").length;
+    const currTotalBudget = currProjects.reduce((sum, p) => sum + p.budget, 0);
+    const prevTotalBudget = prevProjects.reduce((sum, p) => sum + p.budget, 0);
+    const avgProjectValue = currProjects.length > 0 ? currTotalBudget / currProjects.length : 0;
+    const prevAvgProjectValue = prevProjects.length > 0 ? prevTotalBudget / prevProjects.length : 0;
 
-    // Win Rate Calculation (won / (won + lost + sent))
-    const currDenom = currProp.wonProposals + currProp.lostProposals + currProp.sentProposals;
-    const winRate = currDenom > 0 ? (currProp.wonProposals / currDenom) * 100 : 0;
+    // Proposals stats
+    const currWon = currProposals.filter((p) => p.status === "won").length;
+    const currLost = currProposals.filter((p) => p.status === "lost").length;
+    const currSent = currProposals.filter((p) => p.status === "sent").length;
+    const currDenom = currWon + currLost + currSent;
+    const winRate = currDenom > 0 ? (currWon / currDenom) * 100 : 0;
 
-    const prevDenom = prevProp.wonProposals + prevProp.lostProposals + prevProp.sentProposals;
-    const prevWinRate = prevDenom > 0 ? (prevProp.wonProposals / prevDenom) * 100 : 0;
+    const prevWon = prevProposals.filter((p) => p.status === "won").length;
+    const prevLost = prevProposals.filter((p) => p.status === "lost").length;
+    const prevSent = prevProposals.filter((p) => p.status === "sent").length;
+    const prevDenom = prevWon + prevLost + prevSent;
+    const prevWinRate = prevDenom > 0 ? (prevWon / prevDenom) * 100 : 0;
 
-    // Collection Rate (paid / billed)
-    const collectionRate = currInv.totalBilled > 0 ? (currInv.totalRevenue / currInv.totalBilled) * 100 : 0;
-    const prevCollectionRate = prevInv.totalBilled > 0 ? (prevInv.totalRevenue / prevInv.totalBilled) * 100 : 0;
+    // Collection rate
+    const collectionRate = totalBilled > 0 ? (totalRevenue / totalBilled) * 100 : 0;
+    const prevCollectionRate = prevTotalBilled > 0 ? (prevTotalRevenue / prevTotalBilled) * 100 : 0;
 
-    // Average Invoice Value
-    const avgInvoiceValue = currInv.avgInvoiceValue;
-
-    // Average Payment Time (Days)
-    const avgPaymentTimeDays = payTime > 0 ? payTime / (1000 * 60 * 60 * 24) : 0;
-
-    // Growth calculation helper
     const calcGrowth = (curr: number, prev: number) => {
       if (prev === 0) return curr > 0 ? 100 : 0;
       return ((curr - prev) / prev) * 100;
     };
 
-    const revenueGrowth = calcGrowth(totalRevenue, prevInv.totalRevenue);
-    const clientsGrowth = calcGrowth(activeClients, prevActiveClientsCount);
-    const completedProjectsGrowth = calcGrowth(completedProjects, prevProj.completedProjects);
-    const avgProjectValueGrowth = calcGrowth(avgProjectValue, prevProj.avgBudget);
-    const winRateGrowth = winRate - prevWinRate; // absolute difference for rates
-    const collectionRateGrowth = collectionRate - prevCollectionRate; // absolute difference
-    const avgInvoiceValueGrowth = calcGrowth(avgInvoiceValue, prevInv.avgInvoiceValue);
+    const revenueGrowth = calcGrowth(totalRevenue, prevTotalRevenue);
+    const clientsGrowth = calcGrowth(activeClients, prevActiveClients);
+    const completedProjectsGrowth = calcGrowth(completedProjects, prevCompletedProjects);
+    const avgProjectValueGrowth = calcGrowth(avgProjectValue, prevAvgProjectValue);
+    const winRateGrowth = winRate - prevWinRate;
+    const collectionRateGrowth = collectionRate - prevCollectionRate;
+    const avgInvoiceValueGrowth = calcGrowth(avgInvoiceValue, prevAvgInvoiceValue);
 
-    // Business Insights generation
     const insights: string[] = [];
-    if (currInv.totalInvoices === 0 && currProj.totalProjects === 0 && currProp.totalProposals === 0) {
+    if (currInvoices.length === 0 && currProjects.length === 0 && currProposals.length === 0) {
       insights.push("Welcome! Your workspace is currently empty. Use the 'Generate Demo Workspace' action to preview the analytics engine with simulated data.");
     } else {
-      // Revenue & Billing insight
       if (collectionRate < 75 && outstandingRevenue > 1000) {
         insights.push(`Your collection rate is currently ${collectionRate.toFixed(1)}%. Consider setting up automated reminders for your $${outstandingRevenue.toLocaleString()} outstanding payments.`);
       } else if (collectionRate >= 90) {
         insights.push("Excellent collection efficiency! You are recovering over 90% of billed revenue within the period.");
       }
 
-      // Concentration/Revenue growth insight
       if (revenueGrowth > 15) {
         insights.push(`Strong financial performance! Revenue increased by ${revenueGrowth.toFixed(1)}% compared to the previous period.`);
       } else if (revenueGrowth < -10) {
         insights.push(`Revenue has decreased by ${Math.abs(revenueGrowth).toFixed(1)}% compared to the prior period. Try pitching new proposals or checking outstanding invoices.`);
       }
 
-      // Proposal conversions
       if (winRate > 60) {
         insights.push(`Outstanding proposal win rate of ${winRate.toFixed(0)}%! Your value proposition is hitting the mark with prospective clients.`);
       } else if (winRate > 0 && winRate < 35) {
         insights.push(`Proposal win rate is at ${winRate.toFixed(0)}%. Consider reviewing client briefs or utilizing AI Boost to optimize your next proposal pitch.`);
       }
 
-      // Average payment time
       if (avgPaymentTimeDays > 14) {
         insights.push(`Your average payment time is ${avgPaymentTimeDays.toFixed(1)} days. Requesting upfront milestone deposits (e.g., 30-50%) can help improve your cash flow.`);
       } else if (avgPaymentTimeDays > 0 && avgPaymentTimeDays <= 5) {
@@ -243,7 +175,7 @@ export async function GET(req: NextRequest) {
       endDate,
       kpis: {
         totalRevenue: { value: totalRevenue, growth: revenueGrowth },
-        outstandingRevenue: { value: outstandingRevenue, growth: null }, // no logical direct growth comparison
+        outstandingRevenue: { value: outstandingRevenue, growth: null },
         activeClients: { value: activeClients, growth: clientsGrowth },
         completedProjects: { value: completedProjects, growth: completedProjectsGrowth },
         avgProjectValue: { value: avgProjectValue, growth: avgProjectValueGrowth },

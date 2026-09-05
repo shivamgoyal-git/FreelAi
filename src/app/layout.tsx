@@ -31,6 +31,11 @@ export const metadata: Metadata = {
   description:
     "FreelAi is the AI-powered freelancer platform built for creative professionals. Find clients, manage projects, and get paid — all in one place.",
   keywords: ["freelancer", "AI", "creative", "designer", "video editor", "illustrator", "platform"],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
     title: "FreelAi — Work Smarter. Earn Bigger.",
     description: "The AI-powered platform for creative freelancers.",

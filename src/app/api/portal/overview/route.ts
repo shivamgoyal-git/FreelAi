@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Deliverable from "@/models/Deliverable";
-import Invoice from "@/models/Invoice";
-import Activity from "@/models/Activity";
-import Message from "@/models/Message";
+import { prisma } from "@/lib/prisma";
 import type { ClientPortalOverview } from "@/types/portal";
 
 export async function GET(req: NextRequest) {
@@ -19,37 +14,51 @@ export async function GET(req: NextRequest) {
     }
 
     const { client, clientId, freelancerUser } = authCtx;
-    await connectDB();
 
-    // 1. Fetch Client's Projects (strictly scoped to this client)
-    const projectQueryConditions: any[] = [
-      { clientId: clientId },
-    ];
-    if (client.name) {
-      const escapedName = client.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      projectQueryConditions.push({ clientName: new RegExp(`^${escapedName}$`, "i") });
-    }
+    // 1. Fetch Client's Projects
+    const projectWhere: any = {
+      OR: [
+        { clientId: clientId },
+        ...(client.name ? [{ clientName: { equals: client.name, mode: "insensitive" } }] : []),
+      ],
+    };
 
-    const projects = await Project.find({ $or: projectQueryConditions }).sort({ updatedAt: -1 }).lean();
-
-    // 2. Fetch Deliverables requiring approval
-    const pendingDeliverables = await Deliverable.find({
-      clientId,
-      status: "pending_review",
-    }).lean();
-
-    // 3. Fetch Invoices for this client
-    const invoices = await Invoice.find({
-      clientId,
-      status: { $in: ["sent", "partially_paid", "overdue"] },
-    }).lean();
+    const [projects, pendingDeliverables, invoices, activities, unreadMessages] = await Promise.all([
+      prisma.project.findMany({
+        where: projectWhere,
+        include: { milestones: true },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.deliverable.findMany({
+        where: { clientId, status: "pending_review" },
+      }),
+      prisma.invoice.findMany({
+        where: {
+          clientId,
+          status: { in: ["sent", "partially_paid", "overdue"] },
+        },
+      }),
+      prisma.activity.findMany({
+        where: { clientId },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      }),
+      prisma.message.findMany({
+        where: {
+          clientId,
+          senderRole: "freelancer",
+          readByClient: false,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      }),
+    ]);
 
     const outstandingAmount = invoices.reduce(
       (sum, inv) => sum + (inv.remainingAmount ?? (inv.total - (inv.amountPaid || 0))),
       0
     );
 
-    // 4. Calculate upcoming deadlines
     const now = new Date();
     const activeProjects = projects.filter((p) => p.status === "active" || p.status === "in_review");
     const upcomingDeadlines = activeProjects.filter((p) => {
@@ -59,29 +68,12 @@ export async function GET(req: NextRequest) {
       return diffDays >= 0 && diffDays <= 14;
     }).length;
 
-    // 5. Fetch Recent Activity strictly for this client
-    const activities = await Activity.find({ clientId })
-      .sort({ createdAt: -1 })
-      .limit(8)
-      .lean();
-
-    // 6. Fetch Unread Messages
-    const unreadMessages = await Message.find({
-      clientId,
-      senderRole: "freelancer",
-      readByClient: false,
-    })
-      .sort({ createdAt: -1 })
-      .limit(3)
-      .lean();
-
-    // 7. Assemble Attention Items
     const attentionItems: ClientPortalOverview["attentionItems"] = [];
 
     if (pendingDeliverables.length > 0) {
       const topDeliverable = pendingDeliverables[0];
       attentionItems.push({
-        id: topDeliverable._id.toString(),
+        id: topDeliverable.id,
         type: "deliverable",
         title: `${pendingDeliverables.length} deliverable${
           pendingDeliverables.length > 1 ? "s" : ""
@@ -96,12 +88,12 @@ export async function GET(req: NextRequest) {
     if (invoices.length > 0) {
       const topInvoice = invoices[0];
       attentionItems.push({
-        id: topInvoice._id.toString(),
+        id: topInvoice.id,
         type: "invoice",
         title: `Invoice #${topInvoice.invoiceNumber} is pending payment`,
         subtitle: `Amount: ${topInvoice.currency || "INR"} ${(topInvoice.remainingAmount || topInvoice.total).toLocaleString()}`,
         actionLabel: "View Invoice",
-        actionLink: `/portal/invoices/${topInvoice._id}`,
+        actionLink: `/portal/invoices/${topInvoice.id}`,
         urgency: topInvoice.status === "overdue" ? "high" : "medium",
       });
     }
@@ -109,7 +101,7 @@ export async function GET(req: NextRequest) {
     if (unreadMessages.length > 0) {
       const msg = unreadMessages[0];
       attentionItems.push({
-        id: msg._id.toString(),
+        id: msg.id,
         type: "message",
         title: "New message from your freelancer",
         subtitle: msg.content.length > 60 ? `${msg.content.slice(0, 60)}...` : msg.content,
@@ -121,7 +113,7 @@ export async function GET(req: NextRequest) {
 
     const payload: ClientPortalOverview = {
       client: {
-        _id: client._id.toString(),
+        _id: client.id,
         name: client.name,
         email: client.email,
         company: client.company || "",
@@ -143,30 +135,30 @@ export async function GET(req: NextRequest) {
       attentionItems,
       projects: projects.map((p) => {
         const pPending = pendingDeliverables.filter(
-          (d) => d.projectId.toString() === p._id.toString()
+          (d) => d.projectId === p.id
         ).length;
         const currentMilestone =
-          p.milestones?.find((m: any) => !m.completed)?.title ||
+          p.milestones?.find((m) => !m.completed)?.title ||
           (p.milestones?.length ? "Final Delivery" : "In Progress");
 
         return {
-          _id: p._id.toString(),
+          _id: p.id,
           title: p.title,
-          category: p.category,
-          status: p.status,
+          category: p.category as string,
+          status: p.status as string,
           progress: p.progress || 0,
           budget: p.budget || 0,
           currency: p.currency || "INR",
-          dueDate: p.dueDate,
+          dueDate: p.dueDate || undefined,
           currentMilestone,
           pendingDeliverableCount: pPending,
         };
       }),
       recentActivity: activities.map((a) => ({
-        _id: a._id.toString(),
-        type: a.type,
+        _id: a.id,
+        type: a.type as string,
         title: a.title,
-        description: a.description,
+        description: a.description || "",
         createdAt: a.createdAt.toISOString(),
       })),
     };

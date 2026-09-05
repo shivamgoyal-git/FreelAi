@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Client from "@/models/Client";
+import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 
 // ── GET /api/projects — list with search/filter/sort ──────────
@@ -10,8 +8,6 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  await connectDB();
 
   const { searchParams } = new URL(req.url);
   const q       = searchParams.get("q")      || "";
@@ -22,37 +18,44 @@ export async function GET(req: NextRequest) {
   const limit   = parseInt(searchParams.get("limit") || "50", 10);
   const skip    = (page - 1) * limit;
 
-  const filter: Record<string, unknown> = { userId: session.user.id };
-  if (status)   filter.status   = status;
-  if (priority) filter.priority = priority;
-  if (category) filter.category = category;
+  const where: any = { userId: session.user.id };
+  if (status && status !== "all")   where.status   = status;
+  if (priority && priority !== "all") where.priority = priority;
+  if (category && category !== "all") where.category = category;
   if (q) {
-    filter.$or = [
-      { title:      { $regex: q, $options: "i" } },
-      { clientName: { $regex: q, $options: "i" } },
-      { description:{ $regex: q, $options: "i" } },
+    where.OR = [
+      { title:      { contains: q, mode: "insensitive" } },
+      { clientName: { contains: q, mode: "insensitive" } },
+      { description:{ contains: q, mode: "insensitive" } },
     ];
   }
 
   const [projects, total] = await Promise.all([
-    Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    Project.countDocuments(filter),
+    prisma.project.findMany({
+      where,
+      include: {
+        client: { select: { id: true, name: true, company: true } },
+        milestones: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.project.count({ where }),
   ]);
 
-  const clientIds = [...new Set(projects.map((p) => p.clientId).filter(Boolean))] as string[];
-  const clients = clientIds.length
-    ? await Client.find({ userId: session.user.id, _id: { $in: clientIds } }).select("name company").lean()
-    : [];
-  const clientMap = new Map(clients.map((c) => [c._id.toString(), c]));
-
-  const populatedProjects = projects.map((p) => {
-    const client = p.clientId ? clientMap.get(p.clientId.toString()) : null;
-    return {
-      ...p,
-      clientName: client ? client.name : p.clientName || "",
-      clientCompany: client ? client.company || "" : "",
-    };
-  });
+  const populatedProjects = projects.map((p) => ({
+    ...p,
+    _id: p.id,
+    clientName: p.client?.name || p.clientName || "",
+    clientCompany: p.client?.company || "",
+    milestones: p.milestones.map((m) => ({
+      id: m.id,
+      title: m.title,
+      dueDate: m.dueDate,
+      completed: m.completed,
+    })),
+  }));
 
   return NextResponse.json({ projects: populatedProjects, total, page, limit });
 }
@@ -63,11 +66,48 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await connectDB();
-
   try {
     const body = await req.json();
-    const project = await Project.create({ ...body, userId: session.user.id });
+    const ws = await prisma.workspace.findFirst({ where: { ownerId: session.user.id } });
+
+    let clientName = body.clientName || "";
+    if (body.clientId && !clientName) {
+      const client = await prisma.client.findUnique({ where: { id: body.clientId } });
+      if (client) clientName = client.name;
+    }
+
+    const project = await prisma.project.create({
+      data: {
+        userId: session.user.id,
+        workspaceId: ws?.id,
+        title: body.title,
+        description: body.description || "",
+        clientId: body.clientId || null,
+        clientName,
+        category: body.category || "design",
+        status: body.status || "draft",
+        priority: body.priority || "medium",
+        budget: Number(body.budget) || 0,
+        currency: body.currency || "USD",
+        paid: Number(body.paid) || 0,
+        progress: Number(body.progress) || 0,
+        startDate: body.startDate || "",
+        dueDate: body.dueDate || "",
+        tags: Array.isArray(body.tags) ? body.tags : [],
+        notes: body.notes || "",
+        milestones: {
+          create: (body.milestones || []).map((m: any, idx: number) => ({
+            id: m.id || `m-${Date.now()}-${idx}`,
+            title: m.title,
+            dueDate: m.dueDate || "",
+            completed: !!m.completed,
+          })),
+        },
+      },
+      include: {
+        milestones: true,
+      },
+    });
     
     // Log Proposal Generated activity
     await logActivity(
@@ -87,7 +127,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ project }, { status: 201 });
+    return NextResponse.json(
+      {
+        project: {
+          ...project,
+          _id: project.id,
+          milestones: project.milestones.map((m) => ({
+            id: m.id,
+            title: m.title,
+            dueDate: m.dueDate,
+            completed: m.completed,
+          })),
+        },
+      },
+      { status: 201 }
+    );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to create project";
     return NextResponse.json({ error: msg }, { status: 400 });

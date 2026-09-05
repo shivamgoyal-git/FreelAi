@@ -10,7 +10,6 @@ import { DailyBriefing } from "@/components/dashboard/DailyBriefing";
 import { KpiCardsRow } from "@/components/dashboard/KpiCardsRow";
 import { RevenueOverviewCard } from "@/components/dashboard/RevenueOverviewCard";
 import { RecentActivityCard } from "@/components/dashboard/RecentActivityCard";
-import { AiCopilotWidget } from "@/components/dashboard/AiCopilotWidget";
 import { TodaysTasksCard } from "@/components/dashboard/TodaysTasksCard";
 import { ProjectTimelineCard } from "@/components/dashboard/ProjectTimelineCard";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
@@ -18,7 +17,6 @@ import { UpcomingDeadlinesCard } from "@/components/dashboard/UpcomingDeadlinesC
 import { StreakCard } from "@/components/dashboard/StreakCard";
 import { ActiveProjectsTable } from "@/components/dashboard/ActiveProjectsTable";
 import { EarningsByCategoryCard } from "@/components/dashboard/EarningsByCategoryCard";
-import { DashboardFooter } from "@/components/dashboard/DashboardFooter";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -108,7 +106,7 @@ export default function DashboardPage() {
             <KpiCardsRow kpi={dashboardData.kpiSummary} currencySymbol={currencySymbol} />
           )}
 
-          {/* ── ROW 1: REVENUE OVERVIEW | RECENT ACTIVITY | AI COPILOT ── */}
+          {/* ── ROW 1: REVENUE OVERVIEW & RECENT ACTIVITY ── */}
           <div
             style={{
               display: "grid",
@@ -118,22 +116,17 @@ export default function DashboardPage() {
             }}
             className="dashboard-row-1"
           >
-            {/* Revenue Overview Chart (Span 5) */}
-            <div style={{ gridColumn: "span 5" }} className="dash-col-revenue">
+            {/* Revenue Overview Chart (Span 7) */}
+            <div style={{ gridColumn: "span 7" }} className="dash-col-revenue">
               <RevenueOverviewCard
                 data={dashboardData?.chartData}
                 currencySymbol={currencySymbol}
               />
             </div>
 
-            {/* Recent Activity Feed (Span 4) */}
-            <div style={{ gridColumn: "span 4" }} className="dash-col-activity">
+            {/* Recent Activity Feed (Span 5) */}
+            <div style={{ gridColumn: "span 5" }} className="dash-col-activity">
               <RecentActivityCard activities={dashboardData?.activities || []} />
-            </div>
-
-            {/* AI Copilot Widget (Span 3) */}
-            <div id="ai-copilot" style={{ gridColumn: "span 3" }} className="dash-col-copilot">
-              <AiCopilotWidget />
             </div>
           </div>
 
@@ -188,9 +181,6 @@ export default function DashboardPage() {
               />
             </div>
           </div>
-
-          {/* ── FOOTER ── */}
-          <DashboardFooter />
         </motion.div>
       )}
 

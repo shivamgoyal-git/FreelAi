@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 import { getDateRange } from "@/utils/analyticsHelper";
 
 export async function GET(req: NextRequest) {
@@ -11,7 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -21,23 +19,13 @@ export async function GET(req: NextRequest) {
 
     const { startDate, endDate } = getDateRange(range, start, end);
 
-    const breakdown = await Proposal.aggregate([
-      {
-        $match: {
-          userId,
-          createdAt: { $gte: startDate, $lte: endDate },
-        },
+    const proposals = await prisma.proposal.findMany({
+      where: {
+        userId,
+        createdAt: { gte: startDate, lte: endDate },
       },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-          totalValue: { $sum: "$value" },
-        },
-      },
-    ]);
+    });
 
-    // Parse counts
     const statusMap = {
       draft: 0,
       sent: 0,
@@ -51,11 +39,11 @@ export async function GET(req: NextRequest) {
       lost: 0,
     };
 
-    breakdown.forEach((b) => {
-      const status = b._id as keyof typeof statusMap;
-      if (status in statusMap) {
-        statusMap[status] = b.count;
-        valueMap[status] = b.totalValue;
+    proposals.forEach((p) => {
+      const s = p.status as keyof typeof statusMap;
+      if (s in statusMap) {
+        statusMap[s] += 1;
+        valueMap[s] += p.value;
       }
     });
 
@@ -64,7 +52,6 @@ export async function GET(req: NextRequest) {
     const won = statusMap.won;
     const lost = statusMap.lost;
 
-    // Conversion rates
     const winRate = sent > 0 ? (won / sent) * 100 : 0;
     const sendRate = generated > 0 ? (sent / generated) * 100 : 0;
 

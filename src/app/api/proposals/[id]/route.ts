@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 
 // ── GET /api/proposals/[id] ──────────────────────────────────────────
 export async function GET(
@@ -15,15 +14,23 @@ export async function GET(
 
   const userId = session.user.id;
   const { id } = await params;
-  await connectDB();
 
   try {
-    const proposal = await Proposal.findOne({ _id: id, userId }).lean();
+    const proposal = await prisma.proposal.findFirst({
+      where: { id, userId },
+      include: { client: true },
+    });
     if (!proposal) {
       return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ proposal });
+    return NextResponse.json({
+      proposal: {
+        ...proposal,
+        _id: proposal.id,
+        clientId: proposal.client ? { ...proposal.client, _id: proposal.client.id } : proposal.clientId,
+      },
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to retrieve proposal";
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -42,30 +49,38 @@ export async function PUT(
 
   const userId = session.user.id;
   const { id } = await params;
-  await connectDB();
 
   try {
     const body = await req.json();
-    const proposal = await Proposal.findOne({ _id: id, userId });
+    const proposal = await prisma.proposal.findFirst({ where: { id, userId } });
     
     if (!proposal) {
       return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
     }
 
-    // Editable general fields
-    if (body.title !== undefined) proposal.title = body.title;
-    if (body.status !== undefined) proposal.status = body.status;
-    if (body.isFavorite !== undefined) proposal.isFavorite = body.isFavorite;
+    const versions = Array.isArray(proposal.versions) ? (proposal.versions as any[]) : [];
+    let newValue = proposal.value;
+
     if (body.activeVersionIndex !== undefined) {
-      if (body.activeVersionIndex >= 0 && body.activeVersionIndex < proposal.versions.length) {
-        proposal.activeVersionIndex = body.activeVersionIndex;
-        // Keep compat root value updated
-        proposal.value = proposal.versions[body.activeVersionIndex].pricingBreakdown.standard.price || proposal.value;
+      if (body.activeVersionIndex >= 0 && body.activeVersionIndex < versions.length) {
+        newValue = versions[body.activeVersionIndex]?.pricingBreakdown?.standard?.price || proposal.value;
       }
     }
 
-    await proposal.save();
-    return NextResponse.json({ success: true, proposal });
+    const updated = await prisma.proposal.update({
+      where: { id },
+      data: {
+        ...(body.title !== undefined && { title: body.title }),
+        ...(body.status !== undefined && { status: body.status }),
+        ...(body.isFavorite !== undefined && { isFavorite: body.isFavorite }),
+        ...(body.activeVersionIndex !== undefined && { activeVersionIndex: body.activeVersionIndex, value: newValue }),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      proposal: { ...updated, _id: updated.id },
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update proposal";
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -84,11 +99,12 @@ export async function DELETE(
 
   const userId = session.user.id;
   const { id } = await params;
-  await connectDB();
 
   try {
-    const result = await Proposal.deleteOne({ _id: id, userId });
-    if (result.deletedCount === 0) {
+    const result = await prisma.proposal.deleteMany({
+      where: { id, userId },
+    });
+    if (result.count === 0) {
       return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
     }
 

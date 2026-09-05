@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Client from "@/models/Client";
-import Project from "@/models/Project";
-import Invoice from "@/models/Invoice";
-import Proposal from "@/models/Proposal";
-import Activity from "@/models/Activity";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -14,16 +9,21 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
-    // 1. Clean existing records for this user to ensure clean state
+    // 1. Clean existing records for this user
     await Promise.all([
-      Client.deleteMany({ userId }),
-      Project.deleteMany({ userId }),
-      Invoice.deleteMany({ userId }),
-      Proposal.deleteMany({ userId }),
-      Activity.deleteMany({ userId }),
+      prisma.deliverableVersion.deleteMany({ where: { deliverable: { userId } } }),
+      prisma.deliverable.deleteMany({ where: { userId } }),
+      prisma.projectFile.deleteMany({ where: { userId } }),
+      prisma.invoiceItem.deleteMany({ where: { invoice: { userId } } }),
+      prisma.invoice.deleteMany({ where: { userId } }),
+      prisma.milestone.deleteMany({ where: { project: { userId } } }),
+      prisma.project.deleteMany({ where: { userId } }),
+      prisma.clientInvitation.deleteMany({ where: { freelancerId: userId } }),
+      prisma.client.deleteMany({ where: { userId } }),
+      prisma.proposal.deleteMany({ where: { userId } }),
+      prisma.activity.deleteMany({ where: { userId } }),
     ]);
 
     const now = new Date();
@@ -33,10 +33,13 @@ export async function POST(req: NextRequest) {
       return d;
     };
 
-    // 2. Seed Clients (Normalized, status: active, inactive, prospect, archived)
-    const seedClients = [
-      {
+    const ws = await prisma.workspace.findFirst({ where: { ownerId: userId } });
+
+    // 2. Seed Clients
+    const client1 = await prisma.client.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         name: "Acme Corporation",
         email: "billing@acme.com",
         company: "Acme Corp",
@@ -45,8 +48,12 @@ export async function POST(req: NextRequest) {
         totalProjects: 3,
         totalEarned: 24000,
       },
-      {
+    });
+
+    const client2 = await prisma.client.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         name: "Stark Industries",
         email: "contracts@stark.com",
         company: "Stark Ind.",
@@ -55,8 +62,12 @@ export async function POST(req: NextRequest) {
         totalProjects: 2,
         totalEarned: 45000,
       },
-      {
+    });
+
+    const client3 = await prisma.client.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         name: "Wayne Enterprises",
         email: "accounts@wayne.com",
         company: "Wayne Ent.",
@@ -65,8 +76,12 @@ export async function POST(req: NextRequest) {
         totalProjects: 2,
         totalEarned: 18000,
       },
-      {
+    });
+
+    const client4 = await prisma.client.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         name: "Pied Piper",
         email: "richard@piedpiper.com",
         company: "Pied Piper",
@@ -75,8 +90,12 @@ export async function POST(req: NextRequest) {
         totalProjects: 1,
         totalEarned: 8500,
       },
-      {
+    });
+
+    const client5 = await prisma.client.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         name: "Tyrell Corporation",
         email: "replicant@tyrell.co",
         company: "Tyrell Corp",
@@ -85,123 +104,133 @@ export async function POST(req: NextRequest) {
         totalProjects: 1,
         totalEarned: 12000,
       },
-    ];
+    });
 
-    const insertedClients = await Client.insertMany(seedClients);
+    // 3. Seed Proposals
+    await prisma.proposal.createMany({
+      data: [
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Enterprise Brand Redesign",
+          clientId: client1.id,
+          clientName: client1.name,
+          status: "won",
+          value: 15000,
+          currency: "USD",
+          createdAt: subMonths(8),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "AI Interface Prototyping",
+          clientId: client2.id,
+          clientName: client2.name,
+          status: "won",
+          value: 30000,
+          currency: "USD",
+          createdAt: subMonths(6),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Financial Dashboard Design System",
+          clientId: client3.id,
+          clientName: client3.name,
+          status: "won",
+          value: 20000,
+          currency: "USD",
+          createdAt: subMonths(4),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Decentralized Video Platform UI",
+          clientId: client4.id,
+          clientName: client4.name,
+          status: "won",
+          value: 12000,
+          currency: "USD",
+          createdAt: subMonths(2),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Replicant UI Simulation System",
+          clientId: client5.id,
+          clientName: client5.name,
+          status: "won",
+          value: 12000,
+          currency: "USD",
+          createdAt: subMonths(5),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "SaaS Marketing Website Design",
+          clientId: client1.id,
+          clientName: client1.name,
+          status: "sent",
+          value: 8000,
+          currency: "USD",
+          createdAt: subMonths(1),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Smart Armor Diagnostics Dashboard",
+          clientId: client2.id,
+          clientName: client2.name,
+          status: "sent",
+          value: 50000,
+          currency: "USD",
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Batcomputer Analytics Interface",
+          clientId: client3.id,
+          clientName: client3.name,
+          status: "lost",
+          value: 45000,
+          currency: "USD",
+          createdAt: subMonths(3),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Middle-Out Protocol Integration Consultancy",
+          clientId: client4.id,
+          clientName: client4.name,
+          status: "lost",
+          value: 18000,
+          currency: "USD",
+          createdAt: subMonths(3),
+        },
+        {
+          userId,
+          workspaceId: ws?.id,
+          title: "Nexus-9 Lifecycle Monitor",
+          clientId: client5.id,
+          clientName: client5.name,
+          status: "draft",
+          value: 25000,
+          currency: "USD",
+          createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        },
+      ],
+    });
 
-    const clientMap = {
-      acme: insertedClients[0]._id,
-      stark: insertedClients[1]._id,
-      wayne: insertedClients[2]._id,
-      pied: insertedClients[3]._id,
-      tyrell: insertedClients[4]._id,
-    };
-
-    // 3. Seed Proposals (Normalized, reference client id, no clientName duplicates)
-    const seedProposals = [
-      {
+    // 4. Seed Projects
+    const proj1 = await prisma.project.create({
+      data: {
         userId,
-        title: "Enterprise Brand Redesign",
-        clientId: clientMap.acme,
-        status: "won",
-        value: 15000,
-        currency: "USD",
-        createdAt: subMonths(8),
-      },
-      {
-        userId,
-        title: "AI Interface Prototyping",
-        clientId: clientMap.stark,
-        status: "won",
-        value: 30000,
-        currency: "USD",
-        createdAt: subMonths(6),
-      },
-      {
-        userId,
-        title: "Financial Dashboard Design System",
-        clientId: clientMap.wayne,
-        status: "won",
-        value: 20000,
-        currency: "USD",
-        createdAt: subMonths(4),
-      },
-      {
-        userId,
-        title: "Decentralized Video Platform UI",
-        clientId: clientMap.pied,
-        status: "won",
-        value: 12000,
-        currency: "USD",
-        createdAt: subMonths(2),
-      },
-      {
-        userId,
-        title: "Replicant UI Simulation System",
-        clientId: clientMap.tyrell,
-        status: "won",
-        value: 12000,
-        currency: "USD",
-        createdAt: subMonths(5),
-      },
-      // Sent & Lost & Draft Proposals
-      {
-        userId,
-        title: "SaaS Marketing Website Design",
-        clientId: clientMap.acme,
-        status: "sent",
-        value: 8000,
-        currency: "USD",
-        createdAt: subMonths(1),
-      },
-      {
-        userId,
-        title: "Smart Armor Diagnostics Dashboard",
-        clientId: clientMap.stark,
-        status: "sent",
-        value: 50000,
-        currency: "USD",
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-      },
-      {
-        userId,
-        title: "Batcomputer Analytics Interface",
-        clientId: clientMap.wayne,
-        status: "lost",
-        value: 45000,
-        currency: "USD",
-        createdAt: subMonths(3),
-      },
-      {
-        userId,
-        title: "Middle-Out Protocol Integration Consultancy",
-        clientId: clientMap.pied,
-        status: "lost",
-        value: 18000,
-        currency: "USD",
-        createdAt: subMonths(3),
-      },
-      {
-        userId,
-        title: "Nexus-9 Lifecycle Monitor",
-        clientId: clientMap.tyrell,
-        status: "draft",
-        value: 25000,
-        currency: "USD",
-        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-      },
-    ];
-
-    await Proposal.insertMany(seedProposals);
-
-    // 4. Seed Projects (budget, paid, status: draft, active, in_review, completed, on_hold, cancelled)
-    const seedProjects = [
-      {
-        userId,
+        workspaceId: ws?.id,
         title: "Acme Web Portal Development",
         description: "Rebuilding the core customer portal with Next.js.",
-        clientId: clientMap.acme.toString(),
-        clientName: insertedClients[0].name, // Keep existing field compatibility
+        clientId: client1.id,
+        clientName: client1.name,
         category: "development",
         status: "completed",
         priority: "high",
@@ -213,12 +242,16 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(6).toISOString().split("T")[0],
         createdAt: subMonths(8),
       },
-      {
+    });
+
+    const proj2 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Acme Brand Strategy Design",
         description: "Modernizing Acme branding guidelines.",
-        clientId: clientMap.acme.toString(),
-        clientName: insertedClients[0].name,
+        clientId: client1.id,
+        clientName: client1.name,
         category: "design",
         status: "active",
         priority: "medium",
@@ -227,15 +260,19 @@ export async function POST(req: NextRequest) {
         paid: 6000,
         progress: 65,
         startDate: subMonths(2).toISOString().split("T")[0],
-        dueDate: subMonths(-1).toISOString().split("T")[0], // Future due date
+        dueDate: subMonths(-1).toISOString().split("T")[0],
         createdAt: subMonths(2),
       },
-      {
+    });
+
+    const proj3 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Stark AI Interface R&D",
         description: "Creating prototypes for next-generation holographic HUDs.",
-        clientId: clientMap.stark.toString(),
-        clientName: insertedClients[1].name,
+        clientId: client2.id,
+        clientName: client2.name,
         category: "development",
         status: "completed",
         priority: "urgent",
@@ -247,12 +284,16 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(4).toISOString().split("T")[0],
         createdAt: subMonths(6),
       },
-      {
+    });
+
+    const proj4 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Stark Diagnostics Tool",
         description: "Analytical app for armor subsystem monitoring.",
-        clientId: clientMap.stark.toString(),
-        clientName: insertedClients[1].name,
+        clientId: client2.id,
+        clientName: client2.name,
         category: "development",
         status: "active",
         priority: "high",
@@ -264,12 +305,16 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(-2).toISOString().split("T")[0],
         createdAt: subMonths(1),
       },
-      {
+    });
+
+    const proj5 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Wayne Corporate Dashboard UI",
         description: "Redesigning Wayne Enterprises internal investment analytics interface.",
-        clientId: clientMap.wayne.toString(),
-        clientName: insertedClients[2].name,
+        clientId: client3.id,
+        clientName: client3.name,
         category: "design",
         status: "completed",
         priority: "high",
@@ -281,12 +326,16 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(2).toISOString().split("T")[0],
         createdAt: subMonths(4),
       },
-      {
+    });
+
+    const proj6 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Wayne Crypto Platform Advisory",
         description: "Security assessment and UI design patterns for Wayne FinTech.",
-        clientId: clientMap.wayne.toString(),
-        clientName: insertedClients[2].name,
+        clientId: client3.id,
+        clientName: client3.name,
         category: "consulting",
         status: "on_hold",
         priority: "medium",
@@ -298,12 +347,16 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(1).toISOString().split("T")[0],
         createdAt: subMonths(3),
       },
-      {
+    });
+
+    const proj7 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Pied Piper Platform Revamp",
         description: "Modernizing the Web UI of the decentralized cloud client.",
-        clientId: clientMap.pied.toString(),
-        clientName: insertedClients[3].name,
+        clientId: client4.id,
+        clientName: client4.name,
         category: "design",
         status: "active",
         priority: "medium",
@@ -315,12 +368,16 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(-1).toISOString().split("T")[0],
         createdAt: subMonths(2),
       },
-      {
+    });
+
+    const proj8 = await prisma.project.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         title: "Tyrell Replicant Simulator",
         description: "Consulting on the UI for biometric responses.",
-        clientId: clientMap.tyrell.toString(),
-        clientName: insertedClients[4].name,
+        clientId: client5.id,
+        clientName: client5.name,
         category: "consulting",
         status: "completed",
         priority: "medium",
@@ -332,33 +389,19 @@ export async function POST(req: NextRequest) {
         dueDate: subMonths(3).toISOString().split("T")[0],
         createdAt: subMonths(5),
       },
-    ];
+    });
 
-    const insertedProjects = await Project.insertMany(seedProjects);
-
-    const projectMap = {
-      acmeWeb: insertedProjects[0]._id,
-      acmeBrand: insertedProjects[1]._id,
-      starkAI: insertedProjects[2]._id,
-      starkDiag: insertedProjects[3]._id,
-      wayneDash: insertedProjects[4]._id,
-      wayneCrypto: insertedProjects[5]._id,
-      piedPiper: insertedProjects[6]._id,
-      tyrellSim: insertedProjects[7]._id,
-    };
-
-    // 5. Seed Invoices (status: draft, sent, partially_paid, paid, overdue, cancelled)
-    const seedInvoices = [
-      // Acme Web Portal Invoices (Fully Paid)
-      {
+    // 5. Seed Invoices
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-001",
-        clientId: clientMap.acme,
-        projectId: projectMap.acmeWeb,
+        clientId: client1.id,
+        projectId: proj1.id,
         status: "paid",
         issueDate: subMonths(8),
         dueDate: subMonths(7),
-        items: [{ description: "Initial Portal Setup & Design Handoff", quantity: 1, rate: 5000, amount: 5000 }],
         subtotal: 5000,
         discount: 0,
         discountAmount: 0,
@@ -370,17 +413,20 @@ export async function POST(req: NextRequest) {
         remainingAmount: 0,
         currency: "USD",
         createdAt: subMonths(8),
-        updatedAt: subMonths(7.5), // Paid 15 days later
+        updatedAt: subMonths(7.5),
       },
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-002",
-        clientId: clientMap.acme,
-        projectId: projectMap.acmeWeb,
+        clientId: client1.id,
+        projectId: proj1.id,
         status: "paid",
         issueDate: subMonths(7),
         dueDate: subMonths(6),
-        items: [{ description: "Next.js Integration and CMS setup", quantity: 1, rate: 10000, amount: 10000 }],
         subtotal: 10000,
         discount: 0,
         discountAmount: 0,
@@ -392,18 +438,20 @@ export async function POST(req: NextRequest) {
         remainingAmount: 0,
         currency: "USD",
         createdAt: subMonths(7),
-        updatedAt: subMonths(6.8), // Paid 6 days later
+        updatedAt: subMonths(6.8),
       },
-      // Acme Brand Strategy (Partially Paid)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-003",
-        clientId: clientMap.acme,
-        projectId: projectMap.acmeBrand,
+        clientId: client1.id,
+        projectId: proj2.id,
         status: "partially_paid",
         issueDate: subMonths(2),
         dueDate: subMonths(1),
-        items: [{ description: "Brand Strategy Deliverable Phase 1", quantity: 1, rate: 9000, amount: 9000 }],
         subtotal: 9000,
         discount: 0,
         discountAmount: 0,
@@ -417,16 +465,18 @@ export async function POST(req: NextRequest) {
         createdAt: subMonths(2),
         updatedAt: subMonths(1.5),
       },
-      // Stark AI Interface (Fully Paid)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-004",
-        clientId: clientMap.stark,
-        projectId: projectMap.starkAI,
+        clientId: client2.id,
+        projectId: proj3.id,
         status: "paid",
         issueDate: subMonths(6),
         dueDate: subMonths(5),
-        items: [{ description: "Holographic UX Consulting Fee", quantity: 1, rate: 30000, amount: 30000 }],
         subtotal: 30000,
         discount: 0,
         discountAmount: 0,
@@ -438,18 +488,20 @@ export async function POST(req: NextRequest) {
         remainingAmount: 0,
         currency: "USD",
         createdAt: subMonths(6),
-        updatedAt: subMonths(5.9), // Paid 3 days later
+        updatedAt: subMonths(5.9),
       },
-      // Stark Diagnostics Tool (Sent - Unpaid, Future Due)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-005",
-        clientId: clientMap.stark,
-        projectId: projectMap.starkDiag,
+        clientId: client2.id,
+        projectId: proj4.id,
         status: "sent",
         issueDate: subMonths(1),
-        dueDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000), // Due in 15 days
-        items: [{ description: "Milestone 1 Core Development", quantity: 1, rate: 5000, amount: 5000 }],
+        dueDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
         subtotal: 5000,
         discount: 0,
         discountAmount: 0,
@@ -463,16 +515,18 @@ export async function POST(req: NextRequest) {
         createdAt: subMonths(1),
         updatedAt: subMonths(1),
       },
-      // Wayne Corporate Dashboard (Fully Paid)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-006",
-        clientId: clientMap.wayne,
-        projectId: projectMap.wayneDash,
+        clientId: client3.id,
+        projectId: proj5.id,
         status: "paid",
         issueDate: subMonths(4),
         dueDate: subMonths(3),
-        items: [{ description: "Wayne Investment UI Mockups & Assets", quantity: 1, rate: 18000, amount: 18000 }],
         subtotal: 18000,
         discount: 0,
         discountAmount: 0,
@@ -484,18 +538,20 @@ export async function POST(req: NextRequest) {
         remainingAmount: 0,
         currency: "USD",
         createdAt: subMonths(4),
-        updatedAt: subMonths(3.9), // Paid 3 days later
+        updatedAt: subMonths(3.9),
       },
-      // Wayne Crypto Platform Advisory (Overdue Invoice)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-007",
-        clientId: clientMap.wayne,
-        projectId: projectMap.wayneCrypto,
+        clientId: client3.id,
+        projectId: proj6.id,
         status: "overdue",
         issueDate: subMonths(3),
-        dueDate: subMonths(2), // 2 months ago, overdue!
-        items: [{ description: "FinTech Security Architecture Advisory", quantity: 1, rate: 10000, amount: 10000 }],
+        dueDate: subMonths(2),
         subtotal: 10000,
         discount: 0,
         discountAmount: 0,
@@ -509,16 +565,18 @@ export async function POST(req: NextRequest) {
         createdAt: subMonths(3),
         updatedAt: subMonths(2.5),
       },
-      // Pied Piper Revamp (Sent - Due soon)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-008",
-        clientId: clientMap.pied,
-        projectId: projectMap.piedPiper,
+        clientId: client4.id,
+        projectId: proj7.id,
         status: "sent",
         issueDate: subMonths(1),
-        dueDate: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000), // Due in 4 days
-        items: [{ description: "Phase 1 UX Research and Wireframing", quantity: 1, rate: 4000, amount: 4000 }],
+        dueDate: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000),
         subtotal: 4000,
         discount: 0,
         discountAmount: 0,
@@ -532,16 +590,18 @@ export async function POST(req: NextRequest) {
         createdAt: subMonths(1),
         updatedAt: subMonths(1),
       },
-      // Tyrell Replicant Simulator (Fully Paid)
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-009",
-        clientId: clientMap.tyrell,
-        projectId: projectMap.tyrellSim,
+        clientId: client5.id,
+        projectId: proj8.id,
         status: "paid",
         issueDate: subMonths(5),
         dueDate: subMonths(4),
-        items: [{ description: "Simulation HUD UX Consulting & Setup", quantity: 1, rate: 12000, amount: 12000 }],
         subtotal: 12000,
         discount: 0,
         discountAmount: 0,
@@ -553,17 +613,19 @@ export async function POST(req: NextRequest) {
         remainingAmount: 0,
         currency: "USD",
         createdAt: subMonths(5),
-        updatedAt: subMonths(4.7), // Paid 9 days later
+        updatedAt: subMonths(4.7),
       },
-      // Draft Invoice
-      {
+    });
+
+    await prisma.invoice.create({
+      data: {
         userId,
+        workspaceId: ws?.id,
         invoiceNumber: "INV-2026-010",
-        clientId: clientMap.acme,
+        clientId: client1.id,
         status: "draft",
         issueDate: new Date(),
         dueDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-        items: [{ description: "Monthly maintenance retainer", quantity: 1, rate: 2500, amount: 2500 }],
         subtotal: 2500,
         discount: 0,
         discountAmount: 0,
@@ -577,74 +639,50 @@ export async function POST(req: NextRequest) {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      // Cancelled Invoice
-      {
-        userId,
-        invoiceNumber: "INV-2026-011",
-        clientId: clientMap.pied,
-        status: "cancelled",
-        issueDate: subMonths(3),
-        dueDate: subMonths(2),
-        items: [{ description: "Draft scoping exploration fee", quantity: 1, rate: 3000, amount: 3000 }],
-        subtotal: 3000,
-        discount: 0,
-        discountAmount: 0,
-        taxableAmount: 3000,
-        taxRate: 10,
-        taxAmount: 300,
-        total: 3300,
-        amountPaid: 0,
-        remainingAmount: 3300,
-        currency: "USD",
-        createdAt: subMonths(3),
-        updatedAt: subMonths(2.9),
-      },
-    ];
-
-    await Invoice.insertMany(seedInvoices);
+    });
 
     // 6. Seed Activities
-    const seedActivities = [
-      {
-        userId,
-        type: "invoice_paid",
-        title: "Invoice INV-2026-009 Paid",
-        description: "Received payment of $13,200 from Tyrell Corporation for Replicant Simulator UI.",
-        createdAt: subMonths(4.7),
-      },
-      {
-        userId,
-        type: "client_added",
-        title: "New Client Added",
-        description: "Pied Piper has been onboarded.",
-        createdAt: subMonths(2),
-      },
-      {
-        userId,
-        type: "proposal_generated",
-        title: "Proposal generated",
-        description: "AI-powered proposal generated for ' Batcomputer Analytics Interface '.",
-        createdAt: subMonths(3),
-      },
-      {
-        userId,
-        type: "invoice_sent",
-        title: "Invoice INV-2026-008 Sent",
-        description: "Scoping proposal invoice sent to Pied Piper ($4,400).",
-        createdAt: subMonths(1),
-      },
-      {
-        userId,
-        type: "invoice_paid",
-        title: "Invoice INV-2026-003 Partially Paid",
-        description: "Received partial payment of $6,600 from Acme Corporation.",
-        createdAt: subMonths(1.5),
-      },
-    ];
+    await prisma.activity.createMany({
+      data: [
+        {
+          userId,
+          type: "invoice_paid",
+          title: "Invoice INV-2026-009 Paid",
+          description: "Received payment of $13,200 from Tyrell Corporation for Replicant Simulator UI.",
+          createdAt: subMonths(4.7),
+        },
+        {
+          userId,
+          type: "client_added",
+          title: "New Client Added",
+          description: "Pied Piper has been onboarded.",
+          createdAt: subMonths(2),
+        },
+        {
+          userId,
+          type: "proposal_generated",
+          title: "Proposal generated",
+          description: "AI-powered proposal generated for 'Batcomputer Analytics Interface'.",
+          createdAt: subMonths(3),
+        },
+        {
+          userId,
+          type: "invoice_sent",
+          title: "Invoice INV-2026-008 Sent",
+          description: "Scoping proposal invoice sent to Pied Piper ($4,400).",
+          createdAt: subMonths(1),
+        },
+        {
+          userId,
+          type: "invoice_paid",
+          title: "Invoice INV-2026-003 Partially Paid",
+          description: "Received partial payment of $6,600 from Acme Corporation.",
+          createdAt: subMonths(1.5),
+        },
+      ],
+    });
 
-    await Activity.insertMany(seedActivities);
-
-    return NextResponse.json({ success: true, message: "Demo workspace generated successfully!" });
+    return NextResponse.json({ success: true, message: "Demo workspace generated successfully in PostgreSQL!" });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to seed demo data";
     return NextResponse.json({ error: msg }, { status: 500 });

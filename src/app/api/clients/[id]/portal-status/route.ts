@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Client from "@/models/Client";
-import ClientInvitation from "@/models/ClientInvitation";
-import User from "@/models/User";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
@@ -17,25 +13,33 @@ export async function GET(
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id) {
       return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
     }
-    await connectDB();
 
-    const client = await Client.findOne({ _id: id, userId: session.user.id });
+    const client = await prisma.client.findFirst({
+      where: { id, userId: session.user.id },
+    });
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
     // Check if client User account already exists or an invitation has been accepted
-    const clientUser = await User.findOne({
-      $or: [{ clientId: client._id }, { email: client.email.toLowerCase().trim() }],
-      role: "client",
+    const clientUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { clientId: client.id },
+          { email: client.email.toLowerCase().trim() },
+        ],
+        role: "client",
+      },
     });
 
-    const acceptedInvitation = await ClientInvitation.findOne({
-      clientId: client._id,
-      status: "accepted",
+    const acceptedInvitation = await prisma.clientInvitation.findFirst({
+      where: {
+        clientId: client.id,
+        status: "accepted",
+      },
     });
 
     if (clientUser || acceptedInvitation) {
@@ -44,7 +48,7 @@ export async function GET(
         clientEmail: client.email,
         user: clientUser
           ? {
-              id: clientUser._id.toString(),
+              id: clientUser.id,
               name: clientUser.name,
               email: clientUser.email,
             }
@@ -53,9 +57,10 @@ export async function GET(
     }
 
     // Find the latest invitation for this client
-    const latestInvitation = await ClientInvitation.findOne({
-      clientId: client._id,
-    }).sort({ createdAt: -1 });
+    const latestInvitation = await prisma.clientInvitation.findFirst({
+      where: { clientId: client.id },
+      orderBy: { createdAt: "desc" },
+    });
 
     if (latestInvitation) {
       const origin = req.nextUrl.origin || process.env.NEXTAUTH_URL || "http://localhost:3000";
@@ -75,8 +80,10 @@ export async function GET(
           });
         } else {
           // Token has expired
-          latestInvitation.status = "expired";
-          await latestInvitation.save();
+          await prisma.clientInvitation.update({
+            where: { id: latestInvitation.id },
+            data: { status: "expired" },
+          });
           return NextResponse.json({
             status: "invitation_expired",
             clientEmail: client.email,
@@ -123,16 +130,14 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id) {
       return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
     }
 
-    await connectDB();
-
-    await ClientInvitation.updateMany(
-      { clientId: id, freelancerId: session.user.id, status: "pending" },
-      { $set: { status: "revoked" } }
-    );
+    await prisma.clientInvitation.updateMany({
+      where: { clientId: id, freelancerId: session.user.id, status: "pending" },
+      data: { status: "revoked" },
+    });
 
     return NextResponse.json({
       success: true,

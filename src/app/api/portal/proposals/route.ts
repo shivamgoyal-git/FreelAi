@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,20 +13,23 @@ export async function GET(req: NextRequest) {
     }
 
     const { client } = authCtx;
-    await connectDB();
 
-    // Client can see proposals where clientEmail matches or client matches
-    const proposals = await Proposal.find({
-      $or: [
-        { clientEmail: client.email.toLowerCase().trim() },
-        { clientName: { $regex: new RegExp(client.name, "i") } },
+    const where: any = {
+      OR: [
+        { clientId: client.id },
+        ...(client.name ? [{ clientName: { contains: client.name, mode: "insensitive" } }] : []),
       ],
-      status: { $ne: "draft" }, // Clients only see sent, won, or lost proposals
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+      status: { not: "draft" },
+    };
 
-    return NextResponse.json({ proposals });
+    const proposals = await prisma.proposal.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({
+      proposals: proposals.map((p) => ({ ...p, _id: p.id })),
+    });
   } catch (error: any) {
     console.error("[GET /api/portal/proposals] Error:", error);
     return NextResponse.json(

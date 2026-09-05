@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 import { checkAndUpdateOverdueInvoices } from "@/utils/overdueCheck";
 
 export async function GET(req: NextRequest) {
@@ -13,12 +12,10 @@ export async function GET(req: NextRequest) {
   const userId = session.user.id;
 
   try {
-    await connectDB();
-
-    // 1. Run dynamic overdue detection to ensure correct status counts
+    // 1. Run dynamic overdue detection
     await checkAndUpdateOverdueInvoices(userId);
 
-    // 2. Aggregate count and financial figures using optimized queries
+    // 2. Aggregate count and financial figures
     const filter = { userId };
     const [
       totalInvoices,
@@ -26,27 +23,26 @@ export async function GET(req: NextRequest) {
       pendingInvoices,
       overdueInvoices,
       partiallyPaidInvoices,
-      financials,
+      allInvoices,
     ] = await Promise.all([
-      Invoice.countDocuments(filter),
-      Invoice.countDocuments({ ...filter, status: "paid" }),
-      Invoice.countDocuments({ ...filter, status: "sent" }),
-      Invoice.countDocuments({ ...filter, status: "overdue" }),
-      Invoice.countDocuments({ ...filter, status: "partially_paid" }),
-      Invoice.aggregate([
-        { $match: { userId, status: { $ne: "cancelled" } } },
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: "$amountPaid" },
-            outstandingRevenue: { $sum: "$remainingAmount" },
-          },
-        },
-      ]),
+      prisma.invoice.count({ where: filter }),
+      prisma.invoice.count({ where: { ...filter, status: "paid" } }),
+      prisma.invoice.count({ where: { ...filter, status: "sent" } }),
+      prisma.invoice.count({ where: { ...filter, status: "overdue" } }),
+      prisma.invoice.count({ where: { ...filter, status: "partially_paid" } }),
+      prisma.invoice.findMany({
+        where: { userId, status: { not: "cancelled" } },
+        select: { amountPaid: true, remainingAmount: true },
+      }),
     ]);
 
-    const totalRevenue = financials[0]?.totalRevenue || 0;
-    const outstandingRevenue = financials[0]?.outstandingRevenue || 0;
+    let totalRevenue = 0;
+    let outstandingRevenue = 0;
+
+    for (const inv of allInvoices) {
+      totalRevenue += inv.amountPaid;
+      outstandingRevenue += inv.remainingAmount;
+    }
 
     return NextResponse.json({
       totalInvoices,

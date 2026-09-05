@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
     const { name, email, password } = await req.json();
 
-    // Basic validation
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Name, email and password are required" },
@@ -22,10 +21,13 @@ export async function POST(req: Request) {
       );
     }
 
-    await connectDB();
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check for existing user
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
     if (existing) {
       return NextResponse.json(
         { error: "An account with this email already exists" },
@@ -36,18 +38,29 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
-    const user = await User.create({
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password: hashedPassword,
+    // Create user & default workspace in a transaction
+    const user = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: UserRole.freelancer,
+      },
+    });
+
+    await prisma.workspace.create({
+      data: {
+        name: `${user.name}'s Workspace`,
+        slug: `ws-${user.id.slice(-8)}`,
+        ownerId: user.id,
+      },
     });
 
     return NextResponse.json(
       {
         success: true,
         user: {
-          id: user._id.toString(),
+          id: user.id,
           name: user.name,
           email: user.email,
         },

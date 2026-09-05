@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 
 // GET /api/auth/onboarding
 export async function GET(req: NextRequest) {
@@ -11,8 +10,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    await connectDB();
-    const user = await User.findById(session.user.id);
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -31,15 +31,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await connectDB();
-    const user = await User.findByIdAndUpdate(
-      session.user.id,
-      { onboardingCompleted: true },
-      { new: true }
-    );
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const user = await prisma.user.update({
+      where: { id: session.user.id },
+      data: { onboardingCompleted: true },
+    });
+
     return NextResponse.json({ success: true, onboardingCompleted: user.onboardingCompleted });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update onboarding status";

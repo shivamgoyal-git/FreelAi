@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 import { getDateRange } from "@/utils/analyticsHelper";
 
 export async function GET(req: NextRequest) {
@@ -11,7 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -21,48 +19,47 @@ export async function GET(req: NextRequest) {
 
     const { startDate, endDate } = getDateRange(range, start, end);
 
-    const topClients = await Invoice.aggregate([
-      {
-        $match: {
-          userId,
-          status: { $ne: "cancelled" },
-          issueDate: { $gte: startDate, $lte: endDate },
-        },
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        userId,
+        status: { not: "cancelled" },
+        issueDate: { gte: startDate, lte: endDate },
       },
-      {
-        $group: {
-          _id: "$clientId",
-          revenue: { $sum: "$amountPaid" },
-          outstanding: { $sum: "$remainingAmount" },
-          billed: { $sum: "$total" },
-        },
-      },
-      {
-        $lookup: {
-          from: "clients",
-          localField: "_id",
-          foreignField: "_id",
-          as: "clientInfo",
-        },
-      },
-      {
-        $unwind: {
-          path: "$clientInfo",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $project: {
-          name: { $ifNull: ["$clientInfo.name", "Unknown Client"] },
-          company: { $ifNull: ["$clientInfo.company", "N/A"] },
-          revenue: { $round: ["$revenue", 2] },
-          outstanding: { $round: ["$outstanding", 2] },
-          billed: { $round: ["$billed", 2] },
-        },
-      },
-      { $sort: { revenue: -1 } },
-      { $limit: 10 },
-    ]);
+      include: { client: true },
+    });
+
+    const clientMap = new Map<string, { name: string; company: string; revenue: number; outstanding: number; billed: number }>();
+
+    invoices.forEach((inv) => {
+      const clientId = inv.clientId;
+      const clientName = inv.client?.name || "Unknown Client";
+      const clientCompany = inv.client?.company || "N/A";
+
+      if (!clientMap.has(clientId)) {
+        clientMap.set(clientId, {
+          name: clientName,
+          company: clientCompany,
+          revenue: 0,
+          outstanding: 0,
+          billed: 0,
+        });
+      }
+
+      const entry = clientMap.get(clientId)!;
+      entry.revenue += inv.amountPaid;
+      entry.outstanding += inv.remainingAmount;
+      entry.billed += inv.total;
+    });
+
+    const topClients = Array.from(clientMap.values())
+      .map((c) => ({
+        ...c,
+        revenue: Number(c.revenue.toFixed(2)),
+        outstanding: Number(c.outstanding.toFixed(2)),
+        billed: Number(c.billed.toFixed(2)),
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
 
     return NextResponse.json({ topClients });
   } catch (err: unknown) {

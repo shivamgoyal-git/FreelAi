@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Notification from "@/models/Notification";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,19 +13,22 @@ export async function GET(req: NextRequest) {
     }
 
     const { clientId, userId } = authCtx;
-    await connectDB();
 
-    const notifications = await Notification.find({
-      $or: [{ recipientId: clientId }, { recipientId: userId }],
-      recipientRole: "client",
-    })
-      .sort({ createdAt: -1 })
-      .limit(30)
-      .lean();
+    const notifications = await prisma.notification.findMany({
+      where: {
+        OR: [{ recipientId: clientId }, { recipientId: userId }],
+        recipientRole: "client",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
-    return NextResponse.json({ notifications, unreadCount });
+    return NextResponse.json({
+      notifications: notifications.map((n) => ({ ...n, _id: n.id })),
+      unreadCount,
+    });
   } catch (error: any) {
     console.error("[GET /api/portal/notifications] Error:", error);
     return NextResponse.json(
@@ -47,28 +49,27 @@ export async function PATCH(req: NextRequest) {
     }
 
     const { clientId, userId } = authCtx;
-    await connectDB();
 
     if (markAll) {
-      await Notification.updateMany(
-        {
-          $or: [{ recipientId: clientId }, { recipientId: userId }],
+      await prisma.notification.updateMany({
+        where: {
+          OR: [{ recipientId: clientId }, { recipientId: userId }],
           recipientRole: "client",
           read: false,
         },
-        { $set: { read: true } }
-      );
+        data: { read: true },
+      });
       return NextResponse.json({ success: true, message: "All marked as read" });
     }
 
     if (notificationId) {
-      await Notification.updateOne(
-        {
-          _id: notificationId,
-          $or: [{ recipientId: clientId }, { recipientId: userId }],
+      await prisma.notification.updateMany({
+        where: {
+          id: notificationId,
+          OR: [{ recipientId: clientId }, { recipientId: userId }],
         },
-        { $set: { read: true } }
-      );
+        data: { read: true },
+      });
       return NextResponse.json({ success: true, message: "Notification marked as read" });
     }
 

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Message from "@/models/Message";
-import Client from "@/models/Client";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
 type Params = { params: Promise<{ id: string }> };
@@ -17,32 +13,32 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid project ID" }, { status: 400 });
-    }
-
-    await connectDB();
-
-    const project = await Project.findOne({
-      _id: id,
-      userId: session.user.id,
+    const project = await prisma.project.findFirst({
+      where: { id, userId: session.user.id },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const messages = await Message.find({ projectId: id })
-      .sort({ createdAt: 1 })
-      .lean();
+    const messages = await prisma.message.findMany({
+      where: { projectId: id },
+      orderBy: { createdAt: "asc" },
+    });
 
     // Mark client messages as read by freelancer
-    await Message.updateMany(
-      { projectId: id, senderRole: "client", readByFreelancer: false },
-      { $set: { readByFreelancer: true } }
-    );
+    await prisma.message.updateMany({
+      where: { projectId: id, senderRole: "client", readByFreelancer: false },
+      data: { readByFreelancer: true },
+    });
 
-    return NextResponse.json({ messages });
+    return NextResponse.json({
+      messages: messages.map((m) => ({
+        ...m,
+        _id: m.id,
+        attachments: Array.isArray(m.attachments) ? m.attachments : [],
+      })),
+    });
   } catch (error: any) {
     console.error("[GET /api/projects/[id]/messages] Error:", error);
     return NextResponse.json(
@@ -60,10 +56,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid project ID" }, { status: 400 });
-    }
-
     const body = await req.json();
     const { content, attachments = [] } = body;
 
@@ -74,70 +66,85 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
-    await connectDB();
-
-    const project = await Project.findOne({
-      _id: id,
-      userId: session.user.id,
+    const project = await prisma.project.findFirst({
+      where: { id, userId: session.user.id },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    let clientId: any = project.clientId;
+    let clientId = project.clientId;
     if (!clientId && project.clientName) {
-      const matchedClient = await Client.findOne({
-        userId: session.user.id,
-        name: project.clientName,
+      const matchedClient = await prisma.client.findFirst({
+        where: {
+          userId: session.user.id,
+          name: project.clientName,
+        },
       });
-      if (matchedClient) clientId = matchedClient._id;
+      if (matchedClient) clientId = matchedClient.id;
     }
 
     if (!clientId) {
-      // Find any client for this user as fallback or require client
-      const fallbackClient = await Client.findOne({ userId: session.user.id });
-      if (fallbackClient) clientId = fallbackClient._id;
+      const fallbackClient = await prisma.client.findFirst({ where: { userId: session.user.id } });
+      if (fallbackClient) clientId = fallbackClient.id;
     }
 
-    const message = await Message.create({
-      projectId: new mongoose.Types.ObjectId(id),
-      clientId: clientId ? new mongoose.Types.ObjectId(clientId.toString()) : undefined,
-      userId: session.user.id,
-      senderRole: "freelancer",
-      senderId: session.user.id,
-      senderName: session.user.name || "Freelancer",
-      senderAvatar: session.user.image || "",
-      content: content.trim(),
-      attachments,
-      readByFreelancer: true,
-      readByClient: false,
+    if (!clientId) {
+      return NextResponse.json(
+        { error: "Project must have a client to send messages" },
+        { status: 400 }
+      );
+    }
+
+    const message = await prisma.message.create({
+      data: {
+        projectId: id,
+        clientId,
+        userId: session.user.id,
+        senderRole: "freelancer",
+        senderId: session.user.id,
+        senderName: session.user.name || "Freelancer",
+        senderAvatar: session.user.image || "",
+        content: content.trim(),
+        attachments,
+        readByFreelancer: true,
+        readByClient: false,
+      },
     });
 
-    if (clientId) {
-      await sendNotification({
-        recipientId: clientId.toString(),
-        recipientRole: "client",
-        title: "New Message from Freelancer",
-        message: `${session.user.name || "Freelancer"}: "${content.trim().slice(0, 80)}${content.length > 80 ? "..." : ""}"`,
-        type: "new_message",
-        link: `/portal/projects/${id}?tab=messages`,
-        projectId: id,
-        clientId: clientId.toString(),
-      });
+    await sendNotification({
+      recipientId: clientId,
+      recipientRole: "client",
+      title: "New Message from Freelancer",
+      message: `${session.user.name || "Freelancer"}: "${content.trim().slice(0, 80)}${content.length > 80 ? "..." : ""}"`,
+      type: "new_message",
+      link: `/portal/projects/${id}?tab=messages`,
+      projectId: id,
+      clientId,
+    });
 
-      await recordActivity({
-        userId: session.user.id,
-        type: "message_sent",
-        title: "Freelancer Sent Message",
-        description: `Sent message to client for project "${project.title}".`,
-        projectId: id,
-        clientId: clientId.toString(),
-        actorRole: "freelancer",
-      });
-    }
+    await recordActivity({
+      userId: session.user.id,
+      type: "message_sent",
+      title: "Freelancer Sent Message",
+      description: `Sent message to client for project "${project.title}".`,
+      projectId: id,
+      clientId,
+      actorRole: "freelancer",
+    });
 
-    return NextResponse.json({ success: true, message }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        message: {
+          ...message,
+          _id: message.id,
+          attachments: Array.isArray(message.attachments) ? message.attachments : [],
+        },
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error("[POST /api/projects/[id]/messages] Error:", error);
     return NextResponse.json(

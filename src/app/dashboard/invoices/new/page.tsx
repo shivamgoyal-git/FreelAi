@@ -346,8 +346,9 @@ export default function NewInvoicePage() {
                       placeholder="Qty"
                       min={1}
                       required
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                      value={item.quantity === 0 ? "" : item.quantity}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => handleItemChange(idx, "quantity", e.target.value === "" ? 0 : Number(e.target.value))}
                       className="input-redesign"
                       style={{ textAlign: "center", fontSize: "13px" }}
                     />
@@ -356,8 +357,9 @@ export default function NewInvoicePage() {
                       placeholder="Rate"
                       min={0}
                       required
-                      value={item.rate}
-                      onChange={(e) => handleItemChange(idx, "rate", e.target.value)}
+                      value={item.rate === 0 ? "" : item.rate}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => handleItemChange(idx, "rate", e.target.value === "" ? 0 : Number(e.target.value))}
                       className="input-redesign"
                       style={{ textAlign: "right", fontSize: "13px" }}
                     />
@@ -387,8 +389,10 @@ export default function NewInvoicePage() {
                     id="discount"
                     type="number"
                     min={0}
-                    value={form.discount}
-                    onChange={(e) => setField("discount", Number(e.target.value))}
+                    placeholder="0"
+                    value={form.discount === 0 ? "" : form.discount}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setField("discount", e.target.value === "" ? 0 : Number(e.target.value))}
                     className="input-redesign"
                   />
                 </div>
@@ -399,8 +403,10 @@ export default function NewInvoicePage() {
                     id="tax-rate"
                     type="number"
                     min={0}
-                    value={form.taxRate}
-                    onChange={(e) => setField("taxRate", Number(e.target.value))}
+                    placeholder="0"
+                    value={form.taxRate === 0 ? "" : form.taxRate}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setField("taxRate", e.target.value === "" ? 0 : Number(e.target.value))}
                     className="input-redesign"
                   />
                 </div>

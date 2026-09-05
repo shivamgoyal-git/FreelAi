@@ -1,21 +1,13 @@
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Client, { IClient } from "@/models/Client";
-import Project, { IProject } from "@/models/Project";
-import Deliverable, { IDeliverable } from "@/models/Deliverable";
-import Invoice, { IInvoice } from "@/models/Invoice";
-import Proposal, { IProposal } from "@/models/Proposal";
-import ProjectFile, { IProjectFile } from "@/models/ProjectFile";
-import User, { IUser } from "@/models/User";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 
 export interface ClientAuthContext {
   userId: string;
   role: "client" | "freelancer";
-  client: IClient;
+  client: any;
   clientId: string;
   isPreview: boolean;
-  freelancerUser?: IUser | null;
+  freelancerUser?: any | null;
 }
 
 /**
@@ -30,72 +22,100 @@ export async function getClientSession(
     return null;
   }
 
-  await connectDB();
-
-  const user = await User.findById(session.user.id);
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  });
   if (!user) {
     return null;
   }
 
   // 1. Genuine Client Account
   if (user.role === "client") {
-    let client: IClient | null = null;
+    let client = null;
     if (user.clientId) {
-      client = await Client.findById(user.clientId);
+      client = await prisma.client.findUnique({ where: { id: user.clientId } });
     }
     if (!client && user.email) {
-      client = await Client.findOne({ email: user.email.toLowerCase().trim() });
+      client = await prisma.client.findFirst({
+        where: { email: user.email.toLowerCase().trim() },
+      });
     }
 
     if (!client) {
       return null;
     }
 
-    const freelancerUser = await User.findById(client.userId);
+    const freelancerUser = await prisma.user.findUnique({
+      where: { id: client.userId },
+    });
 
     return {
-      userId: user._id.toString(),
+      userId: user.id,
       role: "client",
-      client,
-      clientId: client._id.toString(),
+      client: {
+        ...client,
+        _id: client.id,
+      },
+      clientId: client.id,
       isPreview: false,
-      freelancerUser,
+      freelancerUser: freelancerUser
+        ? {
+            ...freelancerUser,
+            _id: freelancerUser.id,
+          }
+        : null,
     };
   }
 
   // 2. Freelancer viewing Client Portal (Preview mode)
   if (user.role === "freelancer" || !user.role) {
-    let client: IClient | null = null;
+    let client = null;
 
-    if (previewClientId && mongoose.Types.ObjectId.isValid(previewClientId)) {
-      client = await Client.findOne({
-        _id: previewClientId,
-        userId: user._id.toString(),
+    if (previewClientId) {
+      client = await prisma.client.findFirst({
+        where: {
+          id: previewClientId,
+          userId: user.id,
+        },
       });
     }
 
     // If no previewClientId or not found, fallback to the freelancer's most recent client
     if (!client) {
-      client = await Client.findOne({ userId: user._id.toString() }).sort({ createdAt: -1 });
+      client = await prisma.client.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+      });
     }
 
     if (!client) {
-      client = await Client.create({
-        userId: user._id.toString(),
-        name: `${user.name || "Client"} (Preview)`,
-        email: user.email || "client-preview@freeai.app",
-        company: "Preview Organization",
-        status: "active",
+      // Auto-create preview client if none exists
+      const ws = await prisma.workspace.findFirst({ where: { ownerId: user.id } });
+      client = await prisma.client.create({
+        data: {
+          userId: user.id,
+          workspaceId: ws?.id,
+          name: `${user.name || "Client"} (Preview)`,
+          email: user.email || "client-preview@freeai.app",
+          company: "Preview Organization",
+          status: "active",
+        },
       });
     }
 
     return {
-      userId: user._id.toString(),
+      userId: user.id,
       role: "freelancer",
-      client,
-      clientId: client._id.toString(),
+      client: {
+        ...client,
+        _id: client.id,
+      },
+      clientId: client.id,
       isPreview: true,
-      freelancerUser: user,
+      freelancerUser: {
+        ...user,
+        _id: user.id,
+      },
     };
   }
 
@@ -122,31 +142,23 @@ export async function requireClientProject(
   clientId: string,
   projectId: string,
   authCtx?: ClientAuthContext
-): Promise<IProject> {
-  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+): Promise<any> {
+  if (!projectId) {
     const error: any = new Error("Invalid project ID");
     error.status = 400;
     throw error;
   }
 
-  await connectDB();
-
-  const queryConditions: any[] = [
-    { clientId: clientId },
-  ];
-
-  if (mongoose.Types.ObjectId.isValid(clientId)) {
-    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
-  }
-
-  if (authCtx?.client?.name) {
-    const escapedName = authCtx.client.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    queryConditions.push({ clientName: new RegExp(`^${escapedName}$`, "i") });
-  }
-
-  const project = await Project.findOne({
-    _id: projectId,
-    $or: queryConditions,
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      OR: [
+        { clientId: clientId },
+        ...(authCtx?.client?.name
+          ? [{ clientName: { equals: authCtx.client.name, mode: "insensitive" as const } }]
+          : []),
+      ],
+    },
   });
 
   if (!project) {
@@ -155,7 +167,10 @@ export async function requireClientProject(
     throw error;
   }
 
-  return project;
+  return {
+    ...project,
+    _id: project.id,
+  };
 }
 
 /**
@@ -164,23 +179,18 @@ export async function requireClientProject(
 export async function requireClientDeliverable(
   clientId: string,
   deliverableId: string
-): Promise<IDeliverable> {
-  if (!mongoose.Types.ObjectId.isValid(deliverableId)) {
+): Promise<any> {
+  if (!deliverableId) {
     const error: any = new Error("Invalid deliverable ID");
     error.status = 400;
     throw error;
   }
 
-  await connectDB();
-
-  const queryConditions: any[] = [{ clientId: clientId }];
-  if (mongoose.Types.ObjectId.isValid(clientId)) {
-    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
-  }
-
-  const deliverable = await Deliverable.findOne({
-    _id: deliverableId,
-    $or: queryConditions,
+  const deliverable = await prisma.deliverable.findFirst({
+    where: {
+      id: deliverableId,
+      clientId: clientId,
+    },
   });
 
   if (!deliverable) {
@@ -189,7 +199,10 @@ export async function requireClientDeliverable(
     throw error;
   }
 
-  return deliverable;
+  return {
+    ...deliverable,
+    _id: deliverable.id,
+  };
 }
 
 /**
@@ -199,30 +212,18 @@ export async function requireClientInvoice(
   clientId: string,
   invoiceId: string,
   authCtx?: ClientAuthContext
-): Promise<IInvoice> {
-  if (!mongoose.Types.ObjectId.isValid(invoiceId)) {
+): Promise<any> {
+  if (!invoiceId) {
     const error: any = new Error("Invalid invoice ID");
     error.status = 400;
     throw error;
   }
 
-  await connectDB();
-
-  const queryConditions: any[] = [
-    { clientId: clientId },
-  ];
-
-  if (mongoose.Types.ObjectId.isValid(clientId)) {
-    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
-  }
-
-  if (authCtx?.client?.email) {
-    queryConditions.push({ clientEmail: authCtx.client.email.toLowerCase().trim() });
-  }
-
-  const invoice = await Invoice.findOne({
-    _id: invoiceId,
-    $or: queryConditions,
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      clientId: clientId,
+    },
   });
 
   if (!invoice) {
@@ -231,7 +232,10 @@ export async function requireClientInvoice(
     throw error;
   }
 
-  return invoice;
+  return {
+    ...invoice,
+    _id: invoice.id,
+  };
 }
 
 /**
@@ -241,27 +245,18 @@ export async function requireClientProposal(
   clientEmail: string,
   clientId: string,
   proposalId: string
-): Promise<IProposal> {
-  if (!mongoose.Types.ObjectId.isValid(proposalId)) {
+): Promise<any> {
+  if (!proposalId) {
     const error: any = new Error("Invalid proposal ID");
     error.status = 400;
     throw error;
   }
 
-  await connectDB();
-
-  const queryConditions: any[] = [
-    { clientEmail: clientEmail.toLowerCase().trim() },
-    { clientId: clientId },
-  ];
-
-  if (mongoose.Types.ObjectId.isValid(clientId)) {
-    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
-  }
-
-  const proposal = await Proposal.findOne({
-    _id: proposalId,
-    $or: queryConditions,
+  const proposal = await prisma.proposal.findFirst({
+    where: {
+      id: proposalId,
+      clientId: clientId,
+    },
   });
 
   if (!proposal) {
@@ -270,7 +265,10 @@ export async function requireClientProposal(
     throw error;
   }
 
-  return proposal;
+  return {
+    ...proposal,
+    _id: proposal.id,
+  };
 }
 
 /**
@@ -279,24 +277,19 @@ export async function requireClientProposal(
 export async function requireClientFile(
   clientId: string,
   fileId: string
-): Promise<IProjectFile> {
-  if (!mongoose.Types.ObjectId.isValid(fileId)) {
+): Promise<any> {
+  if (!fileId) {
     const error: any = new Error("Invalid file ID");
     error.status = 400;
     throw error;
   }
 
-  await connectDB();
-
-  const queryConditions: any[] = [{ clientId: clientId }];
-  if (mongoose.Types.ObjectId.isValid(clientId)) {
-    queryConditions.push({ clientId: new mongoose.Types.ObjectId(clientId) });
-  }
-
-  const file = await ProjectFile.findOne({
-    _id: fileId,
-    $or: queryConditions,
-    isClientVisible: true,
+  const file = await prisma.projectFile.findFirst({
+    where: {
+      id: fileId,
+      clientId: clientId,
+      isClientVisible: true,
+    },
   });
 
   if (!file) {
@@ -305,5 +298,8 @@ export async function requireClientFile(
     throw error;
   }
 
-  return file;
+  return {
+    ...file,
+    _id: file.id,
+  };
 }

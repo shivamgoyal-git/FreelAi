@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Client from "@/models/Client";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,22 +13,22 @@ export async function GET(_req: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id) {
       return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
     }
 
-    await connectDB();
-
-    const client = await Client.findOne({
-      _id: id,
-      userId: session.user.id,
-    }).lean();
+    const client = await prisma.client.findFirst({
+      where: {
+        id,
+        userId: session.user.id,
+      },
+    });
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ client });
+    return NextResponse.json({ client: { ...client, _id: client.id } });
   } catch (err: unknown) {
     console.error("[GET /api/clients/[id]] Error:", err);
     const msg = err instanceof Error ? err.message : "Failed to load client";
@@ -47,28 +45,41 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id) {
       return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
     }
 
-    await connectDB();
-
     const body = await req.json();
-    // Strip fields that must not be overwritten
     delete body.userId;
     delete body._id;
+    delete body.id;
 
-    const client = await Client.findOneAndUpdate(
-      { _id: id, userId: session.user.id },
-      { $set: body },
-      { new: true, runValidators: true }
-    ).lean();
+    const updated = await prisma.client.updateMany({
+      where: { id, userId: session.user.id },
+      data: {
+        ...(body.name && { name: body.name }),
+        ...(body.email && { email: body.email.toLowerCase().trim() }),
+        ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.company !== undefined && { company: body.company }),
+        ...(body.website !== undefined && { website: body.website }),
+        ...(body.location !== undefined && { location: body.location }),
+        ...(body.avatar !== undefined && { avatar: body.avatar }),
+        ...(body.status && { status: body.status }),
+        ...(body.tags && { tags: body.tags }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+        ...(body.totalProjects !== undefined && { totalProjects: Number(body.totalProjects) }),
+        ...(body.totalEarned !== undefined && { totalEarned: Number(body.totalEarned) }),
+        ...(body.rating !== undefined && { rating: body.rating }),
+      },
+    });
 
-    if (!client) {
+    if (updated.count === 0) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ client });
+    const client = await prisma.client.findUnique({ where: { id } });
+
+    return NextResponse.json({ client: { ...client, _id: client?.id } });
   } catch (err: unknown) {
     console.error("[PATCH /api/clients/[id]] Error:", err);
     const msg = err instanceof Error ? err.message : "Failed to update client";
@@ -85,18 +96,18 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id) {
       return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
     }
 
-    await connectDB();
-
-    const deleted = await Client.findOneAndDelete({
-      _id: id,
-      userId: session.user.id,
+    const deleted = await prisma.client.deleteMany({
+      where: {
+        id,
+        userId: session.user.id,
+      },
     });
 
-    if (!deleted) {
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 

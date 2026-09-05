@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import ClientInvitation from "@/models/ClientInvitation";
-import Client from "@/models/Client";
-import Project from "@/models/Project";
-import FreelancerProfile from "@/models/FreelancerProfile";
+import { prisma } from "@/lib/prisma";
 import { generateClientInvitationHtml } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
-    // Allow in dev or when user is authenticated
     if (process.env.NODE_ENV !== "development" && !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -18,24 +13,31 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token");
 
-    await connectDB();
-
     if (token) {
-      const invitation = await ClientInvitation.findOne({ token });
+      const invitation = await prisma.clientInvitation.findUnique({
+        where: { token },
+      });
+
       if (invitation) {
-        const client = await Client.findById(invitation.clientId);
-        const projects = await Project.find({
-          clientId: invitation.clientId.toString(),
+        const client = await prisma.client.findUnique({
+          where: { id: invitation.clientId },
+        });
+        const projects = await prisma.project.findMany({
+          where: { clientId: invitation.clientId },
+          include: { milestones: true },
         });
 
-        const profile = await FreelancerProfile.findOne({
-          userId: invitation.freelancerId,
+        const profile = await prisma.freelancerProfile.findUnique({
+          where: { userId: invitation.freelancerId },
         });
+
+        const personal = (profile?.personal as any) || {};
+        const business = (profile?.business as any) || {};
 
         const html = generateClientInvitationHtml({
-          freelancerName: (profile as any)?.personalInfo?.fullName || "Shivam Goyal",
+          freelancerName: personal.fullName || "Shivam Goyal",
           freelancerEmail: "shivam@freelai.com",
-          freelancerCompany: (profile as any)?.businessInfo?.companyName || "FreeAI Studio",
+          freelancerCompany: business.companyName || "FreeAI Studio",
           clientName: client?.name || "Rahul Sharma",
           clientEmail: invitation.email,
           clientCompany: client?.company || "Acme Corp",
@@ -45,26 +47,26 @@ export async function GET(req: NextRequest) {
             projects.length === 1
               ? {
                   title: projects[0].title,
-                  description: projects[0].description,
+                  description: projects[0].description || "",
                   status: projects[0].status,
                   budget: projects[0].budget,
-                  currency: projects[0].currency,
+                  currency: projects[0].currency || "USD",
                   progress: projects[0].progress,
-                  dueDate: projects[0].dueDate,
-                  milestones: (projects[0].milestones || []).map((m: any) => ({
+                  dueDate: projects[0].dueDate || "",
+                  milestones: (projects[0].milestones || []).map((m) => ({
                     title: m.title,
-                    dueDate: m.dueDate,
+                    dueDate: m.dueDate || undefined,
                     completed: !!m.completed,
                   })),
                 }
               : undefined,
           projects:
             projects.length > 1
-              ? projects.map((p: any) => ({
+              ? projects.map((p) => ({
                   title: p.title,
                   status: p.status,
                   progress: p.progress,
-                  dueDate: p.dueDate,
+                  dueDate: p.dueDate || "",
                 }))
               : undefined,
         });

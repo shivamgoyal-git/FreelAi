@@ -24,10 +24,18 @@ import {
 import type { Invoice, InvoiceStatus } from "@/types/invoice";
 import type { Client } from "@/types/client";
 import type { Project } from "@/types/project";
-import type { IActivity } from "@/models/Activity";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import useBodyScrollLock from "@/hooks/useBodyScrollLock";
+
+interface IActivity {
+  _id?: string;
+  id?: string;
+  type: string;
+  title: string;
+  description?: string;
+  createdAt: Date | string;
+}
 
 // Helper for status badge styling
 const getBadgeVariant = (status: InvoiceStatus): "active" | "pending" | "inactive" => {

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Client from "@/models/Client";
-import Project from "@/models/Project";
-import Message from "@/models/Message";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
 export const dynamic = "force-dynamic";
@@ -21,65 +17,60 @@ export async function GET(req: NextRequest) {
     const clientId = searchParams.get("clientId");
     const projectId = searchParams.get("projectId");
 
-    await connectDB();
-
     // ── CASE A: Fetch conversation messages with a specific client ──
     if (clientId) {
-      if (!mongoose.Types.ObjectId.isValid(clientId)) {
-        return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
-      }
-
-      const client = await Client.findOne({
-        _id: clientId,
-        userId: session.user.id,
-      }).lean();
+      const client = await prisma.client.findFirst({
+        where: { id: clientId, userId: session.user.id },
+      });
 
       if (!client) {
         return NextResponse.json({ error: "Client not found" }, { status: 404 });
       }
 
-      // Find projects for this client
-      const projects = await Project.find({
-        userId: session.user.id,
-        $or: [
-          { clientId: client._id.toString() },
-          { clientName: client.name },
-        ],
-      }).lean();
+      const projects = await prisma.project.findMany({
+        where: {
+          userId: session.user.id,
+          OR: [
+            { clientId: client.id },
+            { clientName: client.name },
+          ],
+        },
+      });
 
-      const projectIds = projects.map((p) => p._id);
+      const projectIds = projects.map((p) => p.id);
 
-      const messageFilter: any = {
-        $or: [
-          { clientId: client._id },
-          { projectId: { $in: projectIds } },
+      const where: any = {
+        OR: [
+          { clientId: client.id },
+          { projectId: { in: projectIds } },
         ],
       };
 
-      if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-        messageFilter.projectId = projectId;
+      if (projectId) {
+        where.projectId = projectId;
       }
 
-      const messages = await Message.find(messageFilter)
-        .sort({ createdAt: 1 })
-        .lean();
+      const messages = await prisma.message.findMany({
+        where,
+        orderBy: { createdAt: "asc" },
+      });
 
       // Mark unread client messages as read
-      await Message.updateMany(
-        {
-          $or: [
-            { clientId: client._id },
-            { projectId: { $in: projectIds } },
+      await prisma.message.updateMany({
+        where: {
+          OR: [
+            { clientId: client.id },
+            { projectId: { in: projectIds } },
           ],
           senderRole: "client",
           readByFreelancer: false,
         },
-        { $set: { readByFreelancer: true } }
-      );
+        data: { readByFreelancer: true },
+      });
 
       return NextResponse.json({
         client: {
-          _id: client._id.toString(),
+          _id: client.id,
           name: client.name,
           email: client.email,
           company: client.company || "",
@@ -87,37 +78,44 @@ export async function GET(req: NextRequest) {
           status: client.status,
         },
         projects: projects.map((p) => ({
-          _id: p._id.toString(),
+          _id: p.id,
           title: p.title,
           status: p.status,
         })),
-        messages,
+        messages: messages.map((m) => ({
+          ...m,
+          _id: m.id,
+          attachments: Array.isArray(m.attachments) ? m.attachments : [],
+        })),
       });
     }
 
-    // ── CASE B: Fetch list of all client conversations (WhatsApp sidebar list) ──
-    const clients = await Client.find({ userId: session.user.id })
-      .sort({ updatedAt: -1 })
-      .lean();
-
-    const projects = await Project.find({ userId: session.user.id }).lean();
-    const allMessages = await Message.find({ userId: session.user.id })
-      .sort({ createdAt: -1 })
-      .lean();
+    // ── CASE B: Fetch list of all client conversations (sidebar list) ──
+    const [clients, projects, allMessages] = await Promise.all([
+      prisma.client.findMany({
+        where: { userId: session.user.id },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.project.findMany({ where: { userId: session.user.id } }),
+      prisma.message.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     const conversations = clients.map((client) => {
       const clientProjectIds = projects
         .filter(
           (p) =>
-            p.clientId?.toString() === client._id.toString() ||
+            p.clientId === client.id ||
             p.clientName?.toLowerCase().trim() === client.name.toLowerCase().trim()
         )
-        .map((p) => p._id.toString());
+        .map((p) => p.id);
 
       const clientMessages = allMessages.filter(
         (m) =>
-          m.clientId?.toString() === client._id.toString() ||
-          (m.projectId && clientProjectIds.includes(m.projectId.toString()))
+          m.clientId === client.id ||
+          (m.projectId && clientProjectIds.includes(m.projectId))
       );
 
       const lastMessage = clientMessages[0] || null;
@@ -127,21 +125,26 @@ export async function GET(req: NextRequest) {
 
       return {
         client: {
-          _id: client._id.toString(),
+          _id: client.id,
           name: client.name,
           email: client.email,
           company: client.company || "",
           avatar: client.avatar || "",
           status: client.status,
         },
-        lastMessage,
+        lastMessage: lastMessage
+          ? {
+              ...lastMessage,
+              _id: lastMessage.id,
+              attachments: Array.isArray(lastMessage.attachments) ? lastMessage.attachments : [],
+            }
+          : null,
         unreadCount,
         projectCount: clientProjectIds.length,
         lastActivity: lastMessage?.createdAt || client.updatedAt || client.createdAt,
       };
     });
 
-    // Sort conversations: clients with recent messages first, then newest clients
     conversations.sort((a, b) => {
       const timeA = new Date(a.lastActivity).getTime();
       const timeB = new Date(b.lastActivity).getTime();
@@ -175,15 +178,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!mongoose.Types.ObjectId.isValid(clientId)) {
-      return NextResponse.json({ error: "Invalid client ID" }, { status: 400 });
-    }
-
-    await connectDB();
-
-    const client = await Client.findOne({
-      _id: clientId,
-      userId: session.user.id,
+    const client = await prisma.client.findFirst({
+      where: { id: clientId, userId: session.user.id },
     });
 
     if (!client) {
@@ -192,39 +188,42 @@ export async function POST(req: NextRequest) {
 
     let finalProjectId = projectId;
     if (!finalProjectId) {
-      // Find the first active project for this client if exists
-      const proj = await Project.findOne({
-        userId: session.user.id,
-        $or: [{ clientId: client._id.toString() }, { clientName: client.name }],
-      }).sort({ updatedAt: -1 });
+      const proj = await prisma.project.findFirst({
+        where: {
+          userId: session.user.id,
+          OR: [{ clientId: client.id }, { clientName: client.name }],
+        },
+        orderBy: { updatedAt: "desc" },
+      });
 
-      if (proj) finalProjectId = proj._id;
+      if (proj) finalProjectId = proj.id;
     }
 
-    const message = await Message.create({
-      projectId: finalProjectId || null,
-      clientId: client._id,
-      userId: session.user.id,
-      senderRole: "freelancer",
-      senderId: session.user.id,
-      senderName: session.user.name || "Freelancer",
-      senderAvatar: session.user.image || "",
-      content: content.trim(),
-      attachments,
-      readByFreelancer: true,
-      readByClient: false,
+    const message = await prisma.message.create({
+      data: {
+        projectId: finalProjectId || null,
+        clientId: client.id,
+        userId: session.user.id,
+        senderRole: "freelancer",
+        senderId: session.user.id,
+        senderName: session.user.name || "Freelancer",
+        senderAvatar: session.user.image || "",
+        content: content.trim(),
+        attachments,
+        readByFreelancer: true,
+        readByClient: false,
+      },
     });
 
-    // Notify the client in client portal
     await sendNotification({
-      recipientId: client._id.toString(),
+      recipientId: client.id,
       recipientRole: "client",
       title: "New Message from Freelancer",
       message: `${session.user.name || "Freelancer"}: "${content.trim().slice(0, 80)}${content.length > 80 ? "..." : ""}"`,
       type: "new_message",
       link: finalProjectId ? `/portal/projects/${finalProjectId}?tab=messages` : `/portal/messages`,
-      projectId: finalProjectId ? finalProjectId.toString() : undefined,
-      clientId: client._id.toString(),
+      projectId: finalProjectId || undefined,
+      clientId: client.id,
     });
 
     await recordActivity({
@@ -232,11 +231,18 @@ export async function POST(req: NextRequest) {
       type: "message_sent",
       title: "Sent Message to Client",
       description: `Sent direct message to ${client.name}.`,
-      clientId: client._id,
+      clientId: client.id,
       actorRole: "freelancer",
     });
 
-    return NextResponse.json({ success: true, message }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      message: {
+        ...message,
+        _id: message.id,
+        attachments: Array.isArray(message.attachments) ? message.attachments : [],
+      },
+    }, { status: 201 });
   } catch (error: any) {
     console.error("[POST /api/dashboard/messages] Error:", error);
     return NextResponse.json(

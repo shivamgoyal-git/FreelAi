@@ -1,72 +1,102 @@
-import connectDB from "./mongodb";
-import FreelancerProfile, { IFreelancerProfile } from "@/models/FreelancerProfile";
+import { prisma } from "@/lib/prisma";
 
 export class AiContextService {
   /**
    * Fetch freelancer profile directly from Database
    */
-  static async getProfile(userId: string): Promise<IFreelancerProfile | null> {
-    await connectDB();
-    return await FreelancerProfile.findOne({ userId });
+  static async getProfile(userId: string): Promise<any | null> {
+    const profile = await prisma.freelancerProfile.findUnique({
+      where: { userId },
+    });
+    return profile;
   }
 
   /**
    * Delete freelancer profile
    */
   static async deleteProfile(userId: string): Promise<boolean> {
-    await connectDB();
-    const result = await FreelancerProfile.deleteOne({ userId });
-    return result.deletedCount > 0;
+    try {
+      await prisma.freelancerProfile.delete({
+        where: { userId },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
    * Update or create freelancer profile, and calculate completeness
    */
-  static async saveProfile(userId: string, data: Partial<IFreelancerProfile>): Promise<IFreelancerProfile> {
-    await connectDB();
-
-    // Compute completeness
+  static async saveProfile(userId: string, data: any): Promise<any> {
     const completeness = this.calculateCompleteness(data);
     data.profileCompleteness = completeness;
 
-    const existing = await FreelancerProfile.findOne({ userId });
-    if (existing) {
-      Object.assign(existing, data);
-      return await existing.save();
-    } else {
-      const newProfile = new FreelancerProfile({
+    const profile = await prisma.freelancerProfile.upsert({
+      where: { userId },
+      update: {
+        personal: data.personal || data.personalInfo || {},
+        business: data.business || data.businessInfo || {},
+        professional: data.professional || data.professionalInfo || {},
+        pricing: data.pricing || data.pricingInfo || {},
+        workPreferences: data.workPreferences || {},
+        aiPreferences: data.aiPreferences || {},
+        brandVoice: data.brandVoice || {},
+        aiNotes: data.aiNotes || "",
+        availability: data.availability || "Available",
+        socialLinks: data.socialLinks || {},
+        preferences: data.preferences || {},
+        profileCompleteness: completeness,
+      },
+      create: {
         userId,
-        ...data,
-      });
-      return await newProfile.save();
-    }
+        personal: data.personal || data.personalInfo || {},
+        business: data.business || data.businessInfo || {},
+        professional: data.professional || data.professionalInfo || {},
+        pricing: data.pricing || data.pricingInfo || {},
+        workPreferences: data.workPreferences || {},
+        aiPreferences: data.aiPreferences || {},
+        brandVoice: data.brandVoice || {},
+        aiNotes: data.aiNotes || "",
+        availability: data.availability || "Available",
+        socialLinks: data.socialLinks || {},
+        preferences: data.preferences || {},
+        profileCompleteness: completeness,
+      },
+    });
+
+    return profile;
   }
 
   /**
    * Calculate profile completeness score (0-100) based on weighted field checks
    */
-  static calculateCompleteness(data: Partial<IFreelancerProfile>): number {
+  static calculateCompleteness(data: any): number {
     let score = 0;
 
+    const personal = data.personal || data.personalInfo;
+    const professional = data.professional || data.professionalInfo;
+    const pricing = data.pricing || data.pricingInfo;
+    const socialLinks = data.socialLinks || {};
+
     // 1. Basic Info (20%): Name & Professional Title
-    if (data.personal?.fullName && data.personal?.professionalTitle) {
+    if (personal?.fullName && personal?.professionalTitle) {
       score += 20;
     }
     // 2. Skills (20%): At least one skill
-    if (data.professional?.skills && data.professional.skills.length > 0) {
+    if (professional?.skills && professional.skills.length > 0) {
       score += 20;
     }
     // 3. Services (20%): At least one service
-    if (data.professional?.services && data.professional.services.length > 0) {
+    if (professional?.services && professional.services.length > 0) {
       score += 20;
     }
     // 4. Portfolio (20%): At least one portfolio/social link
-    const s = data.socialLinks || {};
-    if (s.website || s.github || s.linkedin || s.behance || s.dribbble) {
+    if (socialLinks.website || socialLinks.github || socialLinks.linkedin || socialLinks.behance || socialLinks.dribbble) {
       score += 20;
     }
     // 5. Pricing (20%): Hourly rate greater than 0 and pricing model
-    if (data.pricing?.hourlyRate && data.pricing.hourlyRate > 0 && data.pricing?.pricingModel) {
+    if (pricing?.hourlyRate && pricing.hourlyRate > 0 && pricing?.pricingModel) {
       score += 20;
     }
 
@@ -82,15 +112,23 @@ export class AiContextService {
       return "No freelancer identity context is available. Direct the generation based on the inputs provided.";
     }
 
-    const { personal, business, professional, pricing, brandVoice, aiNotes, socialLinks } = profile;
+    const personal = profile.personal as any || {};
+    const business = profile.business as any || {};
+    const professional = profile.professional as any || {};
+    const pricing = profile.pricing as any || {};
+    const brandVoice = profile.brandVoice as any || {};
+    const aiNotes = profile.aiNotes || "";
+    const socialLinks = profile.socialLinks as any || {};
 
     // Build skills text
-    const skillsText = professional.skills.join(", ");
+    const skillsText = Array.isArray(professional.skills) ? professional.skills.join(", ") : "N/A";
 
     // Build services text
-    const servicesText = professional.services
-      .map((svc) => `- **${svc.name}** (${svc.category}): Starting at $${svc.startingPrice}. ${svc.description}. Details: ${svc.features?.join(", ") || "N/A"}`)
-      .join("\n");
+    const servicesText = Array.isArray(professional.services)
+      ? professional.services
+          .map((svc: any) => `- **${svc.name}** (${svc.category}): Starting at $${svc.startingPrice}. ${svc.description}. Details: ${svc.features?.join(", ") || "N/A"}`)
+          .join("\n")
+      : "N/A";
 
     // Build brand voice descriptors
     const voiceText = brandVoice.voiceDescriptors && brandVoice.voiceDescriptors.length > 0
@@ -108,7 +146,7 @@ export class AiContextService {
     const context = `
 === FREELANCER IDENTITY LAYER CONTEXT ===
 You are writing on behalf of:
-- **Full Name**: ${personal.fullName}
+- **Full Name**: ${personal.fullName || "Freelancer"}
 - **Professional Title**: ${personal.professionalTitle || "Freelancer"}
 - **Years of Experience**: ${professional.yearsOfExperience || 0} years
 - **Bio**: "${professional.bio || "N/A"}"

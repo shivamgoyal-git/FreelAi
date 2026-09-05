@@ -770,6 +770,7 @@ ${editingSections.callToAction}
                         <input
                           type="number"
                           value={budget}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => setBudget(e.target.value)}
                           placeholder="e.g. 5000"
                           style={{ fontSize: "12px", height: "34px", background: "var(--bg-base)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-inputs)", color: "var(--text-primary)" }}

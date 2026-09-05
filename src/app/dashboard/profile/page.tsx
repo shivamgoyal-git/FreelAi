@@ -24,6 +24,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import ProfileCompletion from "@/components/ProfileCompletion";
 import ProfileImageUploader from "@/components/shared/ProfileImageUploader";
+import CountrySelect from "@/components/ui/CountrySelect";
+import LanguageSelect from "@/components/ui/LanguageSelect";
 
 interface IServiceItem {
   name: string;
@@ -587,78 +589,60 @@ export default function ProfilePage() {
                 
                 {/* Personal Section */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid var(--border)", paddingBottom: "8px", marginBottom: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
                     <User size={16} color="var(--color-brand)" />
                     <h3 className="font-heading" style={{ fontSize: "14px", margin: 0 }}>Personal Details</h3>
                   </div>
-                  
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                    <div className="input-group">
-                      <label className="input-label">Full Name *</label>
-                      <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-field" style={{ fontSize: "12.5px", borderColor: errors.fullName ? "var(--color-danger)" : "var(--border)" }} />
-                      {errors.fullName && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>{errors.fullName}</span>}
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">Professional Title *</label>
-                      <input type="text" value={professionalTitle} onChange={(e) => setProfessionalTitle(e.target.value)} className="input-field" style={{ fontSize: "12.5px", borderColor: errors.professionalTitle ? "var(--color-danger)" : "var(--border)" }} />
-                      {errors.professionalTitle && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>{errors.professionalTitle}</span>}
-                    </div>
-                  </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                    <div className="input-group">
-                      <label className="input-label">Country</label>
-                      <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} className="input-field" style={{ fontSize: "12.5px" }} />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">Timezone</label>
-                      <input type="text" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="input-field" style={{ fontSize: "12.5px" }} />
-                    </div>
-                  </div>
-
-                  {/* Profile Photo Uploader */}
-                  <div>
-                    <label className="input-label" style={{ marginBottom: "8px", display: "block" }}>Profile Photo</label>
-                    <ProfileImageUploader
-                      currentUrl={profilePhoto}
-                      onUploadComplete={(url) => setProfilePhoto(url)}
-                      onRemove={() => setProfilePhoto("")}
-                    />
-                  </div>
-
-                  {/* Languages Tag manager */}
-                  <div className="input-group">
-                    <label className="input-label">Languages</label>
-                    <div className="tag-input-group">
-                      <input
-                        type="text"
-                        value={newLanguage}
-                        onChange={(e) => setNewLanguage(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(languages, setLanguages, newLanguage, setNewLanguage); } }}
-                        placeholder="e.g. English, French"
-                        className="tag-input-field"
+                  {/* Left: Avatar | Right: Basic Details Grid */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "flex-start", marginTop: "4px" }}>
+                    
+                    {/* Left: Circular Avatar with hover edit pencil */}
+                    <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: "2px" }}>
+                      <ProfileImageUploader
+                        currentUrl={profilePhoto}
+                        onUploadComplete={(url) => setProfilePhoto(url)}
+                        onRemove={() => setProfilePhoto("")}
+                        size={115}
                       />
-                      <button 
-                        type="button"
-                        onClick={() => handleAddTag(languages, setLanguages, newLanguage, setNewLanguage)} 
-                        className="btn-redesign btn-redesign-sm"
-                        style={{ height: "32px", border: "none", background: "var(--surface-3)", borderRadius: "var(--radius-md)", fontSize: "12px", padding: "0 10px", margin: "2px" }}
-                      >
-                        Add
-                      </button>
                     </div>
-                    {languages.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
-                        {languages.map((l) => (
-                          <span key={l} className="tag-badge">
-                            {l}
-                            <button onClick={() => handleRemoveTag(languages, setLanguages, l)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
-                              <X size={11} />
-                            </button>
-                          </span>
-                        ))}
+
+                    {/* Right: 2x2 Form Fields */}
+                    <div style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                      {/* Name + Title row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+                        <div className="input-group">
+                          <label className="input-label">Full Name *</label>
+                          <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-field" style={{ fontSize: "12.5px", borderColor: errors.fullName ? "var(--color-danger)" : "var(--border)" }} />
+                          {errors.fullName && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>{errors.fullName}</span>}
+                        </div>
+                        <div className="input-group">
+                          <label className="input-label">Professional Title *</label>
+                          <input type="text" value={professionalTitle} onChange={(e) => setProfessionalTitle(e.target.value)} className="input-field" style={{ fontSize: "12.5px", borderColor: errors.professionalTitle ? "var(--color-danger)" : "var(--border)" }} />
+                          {errors.professionalTitle && <span style={{ color: "var(--color-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>{errors.professionalTitle}</span>}
+                        </div>
                       </div>
-                    )}
+
+                      {/* Country + Languages row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+                        <div className="input-group">
+                          <label className="input-label">Country</label>
+                          <CountrySelect
+                            value={country}
+                            onChange={(c) => setCountry(c)}
+                            placeholder="Select Country..."
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label className="input-label">Languages</label>
+                          <LanguageSelect
+                            value={languages}
+                            onChange={(langs) => setLanguages(langs)}
+                            placeholder="Select Languages..."
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -746,7 +730,16 @@ export default function ProfilePage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div className="input-group">
                       <label className="input-label">Years of Experience</label>
-                      <input type="number" value={yearsOfExperience} onChange={(e) => setYearsOfExperience(Number(e.target.value))} className="input-field" style={{ fontSize: "12.5px" }} />
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={yearsOfExperience === 0 ? "" : yearsOfExperience}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setYearsOfExperience(e.target.value === "" ? 0 : Number(e.target.value))}
+                        className="input-field"
+                        style={{ fontSize: "12.5px" }}
+                      />
                     </div>
                   </div>
 
@@ -963,7 +956,16 @@ export default function ProfilePage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div className="input-group">
                       <label className="input-label">Hourly Rate ($ USD)</label>
-                      <input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(Number(e.target.value))} className="input-field" style={{ fontSize: "12.5px" }} />
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={hourlyRate === 0 ? "" : hourlyRate}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setHourlyRate(e.target.value === "" ? 0 : Number(e.target.value))}
+                        className="input-field"
+                        style={{ fontSize: "12.5px" }}
+                      />
                     </div>
                     <div className="input-group">
                       <label className="input-label">Default Currency</label>
@@ -1021,11 +1023,29 @@ export default function ProfilePage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div className="input-group">
                       <label className="input-label">Weekly Capacity (Hours)</label>
-                      <input type="number" value={weeklyCapacity} onChange={(e) => setWeeklyCapacity(Number(e.target.value))} className="input-field" style={{ fontSize: "12.5px" }} />
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={weeklyCapacity === 0 ? "" : weeklyCapacity}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setWeeklyCapacity(e.target.value === "" ? 0 : Number(e.target.value))}
+                        className="input-field"
+                        style={{ fontSize: "12.5px" }}
+                      />
                     </div>
                     <div className="input-group">
                       <label className="input-label">Maximum Concurrent Projects</label>
-                      <input type="number" value={maxProjects} onChange={(e) => setMaxProjects(Number(e.target.value))} className="input-field" style={{ fontSize: "12.5px" }} />
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={maxProjects === 0 ? "" : maxProjects}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setMaxProjects(e.target.value === "" ? 0 : Number(e.target.value))}
+                        className="input-field"
+                        style={{ fontSize: "12.5px" }}
+                      />
                     </div>
                   </div>
 

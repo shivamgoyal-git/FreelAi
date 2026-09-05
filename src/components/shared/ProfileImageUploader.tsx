@@ -7,17 +7,14 @@ import React, {
   useEffect,
   DragEvent,
   ChangeEvent,
-  KeyboardEvent,
 } from "react";
-import { Camera, Upload, Trash2, RefreshCw, Loader2, AlertCircle, ImageOff } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Pencil, Loader2, AlertCircle, User } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────────
    Constants
 ───────────────────────────────────────────────────────────────── */
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_LABEL = "PNG, JPG or WEBP • Max 5MB";
 
 /* ─────────────────────────────────────────────────────────────────
    Props
@@ -28,21 +25,17 @@ interface ProfileImageUploaderProps {
   /** Called with the new publicly accessible URL after a successful upload. */
   onUploadComplete: (url: string) => void;
   /** Called when the user removes the photo. */
-  onRemove: () => void;
+  onRemove?: () => void;
+  size?: number;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   Upload state machine
-───────────────────────────────────────────────────────────────── */
 type UploadStatus = "idle" | "uploading" | "success" | "error";
 
-/* ─────────────────────────────────────────────────────────────────
-   Component
-───────────────────────────────────────────────────────────────── */
 export default function ProfileImageUploader({
   currentUrl,
   onUploadComplete,
   onRemove,
+  size = 110,
 }: ProfileImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,9 +43,10 @@ export default function ProfileImageUploader({
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [validationError, setValidationError] = useState<string>("");
+  const [isHovered, setIsHovered] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  // Sync preview when parent passes a new URL (e.g. after profile load)
+  // Sync preview when parent passes a new URL
   useEffect(() => {
     if (currentUrl !== undefined) {
       setPreviewSrc(currentUrl);
@@ -62,11 +56,11 @@ export default function ProfileImageUploader({
   /* ── Validation ───────────────────────────────────────────── */
   function validateFile(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return `Invalid file type "${file.type.split("/")[1].toUpperCase()}". Please upload a PNG, JPG, or WEBP image.`;
+      return `Please upload a PNG, JPG, or WEBP image.`;
     }
     if (file.size > MAX_SIZE_BYTES) {
       const mb = (file.size / (1024 * 1024)).toFixed(1);
-      return `File is too large (${mb} MB). Maximum allowed size is 5 MB.`;
+      return `File is too large (${mb} MB). Max allowed size is 5 MB.`;
     }
     return null;
   }
@@ -82,13 +76,11 @@ export default function ProfileImageUploader({
       return;
     }
 
-    // Instant local preview
     const objectUrl = URL.createObjectURL(file);
     setPreviewSrc(objectUrl);
     setUploadStatus("uploading");
     setUploadProgress(0);
 
-    // Simulate progress ticks while uploading
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => Math.min(prev + 12, 85));
     }, 100);
@@ -113,7 +105,6 @@ export default function ProfileImageUploader({
       setUploadProgress(100);
       setUploadStatus("success");
 
-      // Revoke local object URL — we now have a real URL
       URL.revokeObjectURL(objectUrl);
       setPreviewSrc(data.url);
       onUploadComplete(data.url);
@@ -122,20 +113,17 @@ export default function ProfileImageUploader({
       URL.revokeObjectURL(objectUrl);
       setPreviewSrc(currentUrl || "");
       setUploadStatus("error");
-      setValidationError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      setValidationError(err instanceof Error ? err.message : "Upload failed.");
       setUploadProgress(0);
     }
   }
 
-  /* ── Input change ─────────────────────────────────────────── */
   function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // Reset input so the same file can be re-selected after removal
     e.target.value = "";
   }
 
-  /* ── Drag & Drop ──────────────────────────────────────────── */
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -160,358 +148,164 @@ export default function ProfileImageUploader({
     [currentUrl]
   );
 
-  /* ── Keyboard accessibility on drop zone ─────────────────── */
-  function handleDropZoneKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      fileInputRef.current?.click();
-    }
-  }
-
-  /* ── Remove ───────────────────────────────────────────────── */
-  function handleRemove() {
-    setPreviewSrc("");
-    setUploadStatus("idle");
-    setValidationError("");
-    setUploadProgress(0);
-    onRemove();
-  }
-
-  /* ── Derived state ────────────────────────────────────────── */
   const hasImage = !!previewSrc && uploadStatus !== "error";
   const isUploading = uploadStatus === "uploading";
-  const isError = uploadStatus === "error";
 
-  /* ────────────────────────────────────────────────────────────
-     Render
-  ──────────────────────────────────────────────────────────── */
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
-      {/* ── Label ───────────────────────────────────────────── */}
-      <label
-        style={{
-          fontSize: "11.5px",
-          fontWeight: 600,
-          color: "var(--text-secondary)",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}
-      >
-        Profile Photo
-      </label>
-
-      {/* ── Main uploader card ──────────────────────────────── */}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+      {/* ── Circular Profile Photo with Hover Pencil Overlay ── */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Change profile picture"
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: "50%",
+          position: "relative",
+          cursor: isUploading ? "wait" : "pointer",
+          overflow: "hidden",
+          border: isDragging
+            ? "2.5px dashed var(--color-brand, #22c55e)"
+            : hasImage
+            ? "2.5px solid var(--border-strong, #3f3f46)"
+            : "2px dashed var(--border-strong, #3f3f46)",
+          background: "var(--surface-2, #18181b)",
+          boxShadow: hasImage ? "0 4px 20px rgba(0, 0, 0, 0.35)" : "none",
+          transition: "all 0.2s ease",
           display: "flex",
           alignItems: "center",
-          gap: "20px",
-          flexWrap: "wrap",
+          justifyContent: "center",
+          flexShrink: 0,
         }}
       >
-        {/* ── Avatar circle ─────────────────────────────────── */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
+        {/* Photo preview */}
+        {hasImage ? (
+          <img
+            src={previewSrc}
+            alt="Profile photo"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+            onError={() => setPreviewSrc("")}
+          />
+        ) : (
           <div
             style={{
-              width: "108px",
-              height: "108px",
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: hasImage
-                ? "2px solid var(--color-brand)"
-                : "2px dashed var(--border-strong)",
-              background: "var(--surface-2)",
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              position: "relative",
-              transition: "border-color 180ms ease",
-              boxShadow: hasImage
-                ? "0 0 0 4px var(--color-brand-subtle)"
-                : "none",
+              color: "var(--text-muted, #71717a)",
+              gap: "4px",
             }}
           >
-            {/* Preview image */}
-            {hasImage && (
-              <img
-                src={previewSrc}
-                alt="Profile photo preview"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-                onError={() => {
-                  setPreviewSrc("");
-                }}
-              />
-            )}
-
-            {/* Empty state icon */}
-            {!hasImage && !isUploading && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "var(--text-muted)",
-                }}
-              >
-                <ImageOff size={24} strokeWidth={1.5} />
-              </div>
-            )}
-
-            {/* Upload spinner overlay */}
-            {isUploading && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.55)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  borderRadius: "50%",
-                }}
-              >
-                <Loader2
-                  size={22}
-                  color="var(--color-brand)"
-                  style={{ animation: "spin 0.85s linear infinite" }}
-                />
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    color: "var(--color-brand)",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {uploadProgress}%
-                </span>
-              </div>
-            )}
+            <User size={size * 0.4} strokeWidth={1.5} />
           </div>
+        )}
 
-          {/* Camera badge — quick upload trigger */}
-          {!isUploading && (
-            <button
-              type="button"
-              aria-label="Upload profile photo"
-              onClick={() => fileInputRef.current?.click()}
+        {/* Hover Pencil Overlay */}
+        {!isUploading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background: "rgba(0, 0, 0, 0.55)",
+              backdropFilter: "blur(2px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: isHovered || isDragging ? 1 : 0,
+              transition: "opacity 0.2s ease",
+            }}
+          >
+            <div
               style={{
-                position: "absolute",
-                bottom: "2px",
-                right: "2px",
-                width: "28px",
-                height: "28px",
+                width: "36px",
+                height: "36px",
                 borderRadius: "50%",
-                background: "var(--surface-1)",
-                border: "1.5px solid var(--border-strong)",
-                cursor: "pointer",
+                background: "rgba(255, 255, 255, 0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--text-secondary)",
-                transition: "background 150ms ease, color 150ms ease, border-color 150ms ease",
-                boxShadow: "var(--shadow-sm)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--color-brand)";
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--color-on-brand)";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-brand)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-1)";
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-strong)";
+                color: "#ffffff",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.4)",
               }}
             >
-              <Camera size={13} />
-            </button>
-          )}
-        </div>
+              <Pencil size={18} strokeWidth={2.2} />
+            </div>
+          </div>
+        )}
 
-        {/* ── Right panel: Drop zone + actions ──────────────── */}
-        <div style={{ flex: 1, minWidth: "200px", display: "flex", flexDirection: "column", gap: "10px" }}>
-
-          {/* Drop zone */}
+        {/* Uploading progress spinner overlay */}
+        {isUploading && (
           <div
-            role="button"
-            tabIndex={0}
-            aria-label="Drag and drop an image here, or press Enter to browse files"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onKeyDown={handleDropZoneKeyDown}
-            onClick={() => !isUploading && fileInputRef.current?.click()}
             style={{
-              border: `1.5px dashed ${isDragging ? "var(--color-brand)" : isError ? "var(--color-coral-red)" : "var(--border-strong)"}`,
-              borderRadius: "var(--radius-lg)",
-              padding: "16px 20px",
-              background: isDragging
-                ? "var(--color-brand-subtle)"
-                : isError
-                ? "rgba(235, 87, 87, 0.04)"
-                : "var(--surface-2)",
-              cursor: isUploading ? "not-allowed" : "pointer",
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background: "rgba(0, 0, 0, 0.75)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               gap: "6px",
-              textAlign: "center",
-              transition: "border-color 150ms ease, background 150ms ease",
-              outline: "none",
             }}
           >
-            {isError ? (
-              <AlertCircle size={18} color="var(--color-coral-red)" />
-            ) : isUploading ? (
-              <Loader2
-                size={18}
-                color="var(--color-brand)"
-                style={{ animation: "spin 0.85s linear infinite" }}
-              />
-            ) : (
-              <Upload
-                size={18}
-                color={isDragging ? "var(--color-brand)" : "var(--text-muted)"}
-                strokeWidth={1.5}
-              />
-            )}
-
+            <Loader2
+              size={24}
+              color="var(--color-brand, #22c55e)"
+              style={{ animation: "spin 0.85s linear infinite" }}
+            />
             <span
               style={{
-                fontSize: "12px",
-                fontWeight: 600,
-                color: isError
-                  ? "var(--color-coral-red)"
-                  : isDragging
-                  ? "var(--color-brand)"
-                  : isUploading
-                  ? "var(--text-secondary)"
-                  : "var(--text-secondary)",
+                fontSize: "10px",
+                fontWeight: 700,
+                color: "var(--color-brand, #22c55e)",
+                letterSpacing: "0.05em",
               }}
             >
-              {isUploading
-                ? "Uploading..."
-                : isDragging
-                ? "Drop to upload"
-                : hasImage
-                ? "Drop a new image to replace"
-                : "Drag & drop or click to upload"}
-            </span>
-
-            <span
-              style={{
-                fontSize: "11px",
-                color: "var(--text-muted)",
-              }}
-            >
-              {ALLOWED_LABEL}
+              {uploadProgress}%
             </span>
           </div>
-
-          {/* Progress bar */}
-          {isUploading && (
-            <div
-              style={{
-                height: "3px",
-                background: "var(--border)",
-                borderRadius: "99px",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  height: "100%",
-                  width: `${uploadProgress}%`,
-                  background: "var(--color-brand)",
-                  borderRadius: "99px",
-                  transition: "width 150ms ease",
-                }}
-              />
-            </div>
-          )}
-
-          {/* Validation / error message */}
-          {validationError && (
-            <div
-              role="alert"
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "6px",
-                background: "rgba(235, 87, 87, 0.08)",
-                border: "1px solid rgba(235, 87, 87, 0.25)",
-                borderRadius: "var(--radius)",
-                padding: "8px 10px",
-              }}
-            >
-              <AlertCircle
-                size={13}
-                color="var(--color-coral-red)"
-                style={{ flexShrink: 0, marginTop: "1px" }}
-              />
-              <span
-                style={{
-                  fontSize: "11.5px",
-                  color: "var(--color-coral-red)",
-                  lineHeight: "1.5",
-                }}
-              >
-                {validationError}
-              </span>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {!hasImage ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-                leftIcon={<Upload size={12} />}
-              >
-                Upload Photo
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={isUploading}
-                  onClick={() => fileInputRef.current?.click()}
-                  leftIcon={<RefreshCw size={12} />}
-                >
-                  Replace Photo
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={isUploading}
-                  onClick={handleRemove}
-                  leftIcon={<Trash2 size={12} />}
-                  style={{ color: "var(--color-coral-red)" }}
-                >
-                  Remove
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Validation / error message */}
+      {validationError && (
+        <div
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            color: "var(--color-danger, #ef4444)",
+            fontSize: "11px",
+            maxWidth: "160px",
+            textAlign: "center",
+          }}
+        >
+          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+          <span>{validationError}</span>
+        </div>
+      )}
 
       {/* Hidden file input */}
       <input

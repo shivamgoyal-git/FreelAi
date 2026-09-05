@@ -1,9 +1,8 @@
 "use client";
 
 import React from "react";
-import { Search, Bell, Sun, Moon, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import AccountDropdown from "@/components/AccountDropdown";
-import { useTheme } from "@/hooks/useTheme";
 import { NotificationCenter } from "@/components/portal/NotificationCenter";
 
 interface TopNavProps {
@@ -23,8 +22,6 @@ export default function TopNav({
   onMenuClick,
   onSearchClick,
 }: TopNavProps) {
-  const { theme, toggle } = useTheme();
-
   return (
     <header
       style={{
@@ -62,51 +59,44 @@ export default function TopNav({
           </button>
         )}
 
-        {/* Search Bar - Center/Left integrated like the reference image */}
+        {/* Global Quick Search Button */}
         <button
           type="button"
           onClick={onSearchClick}
-          aria-label="Search projects, clients, invoices... (Ctrl+K)"
+          aria-label="Search dashboard"
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
-            padding: "7px 14px",
-            borderRadius: "8px",
+            gap: "8px",
+            padding: "6px 12px",
             background: "var(--surface-2)",
             border: "0.5px solid var(--border-strong)",
-            cursor: "pointer",
+            borderRadius: "var(--radius)",
             color: "var(--text-muted)",
-            fontSize: "12px",
-            width: "100%",
-            maxWidth: "380px",
+            fontSize: "12.5px",
+            cursor: "pointer",
+            width: "220px",
             transition: "all 0.15s ease",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-brand)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-strong)")}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--color-brand)";
+            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)";
+            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+          }}
         >
-          <Search size={13} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-          <span
-            style={{
-              flex: 1,
-              textAlign: "left",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              color: "var(--text-muted)",
-            }}
-          >
-            Search projects, clients, invoices...
-          </span>
+          <Search size={13} />
+          <span style={{ flex: 1, textAlign: "left" }}>Quick Search...</span>
           <kbd
             style={{
               fontSize: "10px",
-              padding: "1px 5px",
+              padding: "1px 4px",
               background: "var(--surface-3)",
-              borderRadius: "4px",
-              color: "var(--text-muted)",
+              borderRadius: "3px",
               border: "0.5px solid var(--border)",
-              flexShrink: 0,
+              fontFamily: "var(--font-mono, monospace)",
             }}
           >
             ⌘K
@@ -114,37 +104,8 @@ export default function TopNav({
         </button>
       </div>
 
-      {/* Right: theme toggle + notifications + profile */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-        {/* Theme toggle */}
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          style={{
-            background: "var(--surface-2)",
-            border: "0.5px solid var(--border-strong)",
-            borderRadius: "8px",
-            padding: "7px",
-            cursor: "pointer",
-            color: "var(--text-muted)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--color-brand)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)";
-          }}
-        >
-          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
-
+      {/* Right: Notification Center & Profile Dropdown */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         {/* Interactive Notification Center */}
         <NotificationCenter />
 

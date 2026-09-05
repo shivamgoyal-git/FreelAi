@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 import { getDateRange } from "@/utils/analyticsHelper";
 
 export async function GET(req: NextRequest) {
@@ -11,7 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -23,38 +21,44 @@ export async function GET(req: NextRequest) {
 
     const daysDiff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     const groupByDay = daysDiff <= 45;
-    const formatStr = groupByDay ? "%Y-%m-%d" : "%Y-%m";
 
-    // Run aggregation
-    const results = await Invoice.aggregate([
-      {
-        $match: {
-          userId,
-          status: { $ne: "cancelled" },
-          issueDate: { $gte: startDate, $lte: endDate },
-        },
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        userId,
+        status: { not: "cancelled" },
+        issueDate: { gte: startDate, lte: endDate },
       },
-      {
-        $group: {
-          _id: { $dateToString: { format: formatStr, date: "$issueDate" } },
-          revenue: { $sum: "$amountPaid" },
-          billed: { $sum: "$total" },
-          outstanding: { $sum: "$remainingAmount" },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
+    });
 
-    // Construct full time-series timeline to fill in zeros for missing intervals
+    const aggregates: Record<string, { revenue: number; billed: number; outstanding: number }> = {};
+
+    invoices.forEach((inv) => {
+      const d = new Date(inv.issueDate);
+      let key: string;
+      if (groupByDay) {
+        key = d.toISOString().split("T")[0]; // YYYY-MM-DD
+      } else {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        key = `${year}-${month}`; // YYYY-MM
+      }
+
+      if (!aggregates[key]) {
+        aggregates[key] = { revenue: 0, billed: 0, outstanding: 0 };
+      }
+
+      aggregates[key].revenue += inv.amountPaid;
+      aggregates[key].billed += inv.total;
+      aggregates[key].outstanding += inv.remainingAmount;
+    });
+
     const chartData: Array<{ label: string; revenue: number; billed: number; outstanding: number }> = [];
     const tempDate = new Date(startDate);
 
     if (groupByDay) {
-      // Loop daily
       while (tempDate <= endDate) {
-        const dateStr = tempDate.toISOString().split("T")[0]; // YYYY-MM-DD
-        const match = results.find((r) => r._id === dateStr);
-        
+        const dateStr = tempDate.toISOString().split("T")[0];
+        const match = aggregates[dateStr];
         const label = tempDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         chartData.push({
           label,
@@ -62,17 +66,14 @@ export async function GET(req: NextRequest) {
           billed: match ? match.billed : 0,
           outstanding: match ? match.outstanding : 0,
         });
-        
         tempDate.setDate(tempDate.getDate() + 1);
       }
     } else {
-      // Loop monthly
       while (tempDate <= endDate) {
         const year = tempDate.getFullYear();
         const month = String(tempDate.getMonth() + 1).padStart(2, "0");
-        const monthStr = `${year}-${month}`; // YYYY-MM
-        const match = results.find((r) => r._id === monthStr);
-        
+        const monthStr = `${year}-${month}`;
+        const match = aggregates[monthStr];
         const label = tempDate.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
         chartData.push({
           label,
@@ -80,7 +81,6 @@ export async function GET(req: NextRequest) {
           billed: match ? match.billed : 0,
           outstanding: match ? match.outstanding : 0,
         });
-        
         tempDate.setMonth(tempDate.getMonth() + 1);
       }
     }

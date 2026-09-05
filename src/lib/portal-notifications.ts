@@ -1,8 +1,5 @@
-import connectDB from "@/lib/mongodb";
-import Notification from "@/models/Notification";
-import Activity, { ActivityType } from "@/models/Activity";
-import type { NotificationType } from "@/types/portal";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
+import type { NotificationType, ActivityType } from "@prisma/client";
 
 export async function sendNotification({
   recipientId,
@@ -18,25 +15,29 @@ export async function sendNotification({
   recipientRole: "freelancer" | "client";
   title: string;
   message: string;
-  type: NotificationType;
+  type: string;
   link?: string;
-  projectId?: string | mongoose.Types.ObjectId;
-  invoiceId?: string | mongoose.Types.ObjectId;
-  clientId?: string | mongoose.Types.ObjectId;
+  projectId?: string;
+  invoiceId?: string;
+  clientId?: string;
 }) {
   try {
-    await connectDB();
-    const notification = await Notification.create({
-      recipientId,
-      recipientRole,
-      title,
-      message,
-      type,
-      link,
-      projectId: projectId ? new mongoose.Types.ObjectId(projectId.toString()) : undefined,
-      invoiceId: invoiceId ? new mongoose.Types.ObjectId(invoiceId.toString()) : undefined,
+    const notification = await prisma.notification.create({
+      data: {
+        recipientId,
+        recipientRole,
+        title,
+        message,
+        type: type as NotificationType,
+        link,
+        projectId: projectId ? projectId.toString() : null,
+        invoiceId: invoiceId ? invoiceId.toString() : null,
+      },
     });
-    return notification;
+    return {
+      ...notification,
+      _id: notification.id,
+    };
   } catch (error) {
     console.error("[sendNotification] Error creating notification:", error);
     return null;
@@ -47,34 +48,38 @@ export async function recordActivity({
   userId,
   type,
   title,
-  description,
+  description = "",
   projectId,
   clientId,
   invoiceId,
   actorRole = "client",
 }: {
   userId: string;
-  type: ActivityType;
+  type: string;
   title: string;
-  description: string;
-  projectId?: string | mongoose.Types.ObjectId;
-  clientId?: string | mongoose.Types.ObjectId;
-  invoiceId?: string | mongoose.Types.ObjectId;
+  description?: string;
+  projectId?: string;
+  clientId?: string;
+  invoiceId?: string;
   actorRole?: "freelancer" | "client";
 }) {
   try {
-    await connectDB();
-    const activity = await Activity.create({
-      userId,
-      type,
-      title,
-      description,
-      projectId: projectId ? new mongoose.Types.ObjectId(projectId.toString()) : undefined,
-      clientId: clientId ? new mongoose.Types.ObjectId(clientId.toString()) : undefined,
-      invoiceId: invoiceId ? new mongoose.Types.ObjectId(invoiceId.toString()) : undefined,
-      actorRole,
+    const activity = await prisma.activity.create({
+      data: {
+        userId,
+        type: type as ActivityType,
+        title,
+        description,
+        projectId: projectId ? projectId.toString() : null,
+        clientId: clientId ? clientId.toString() : null,
+        invoiceId: invoiceId ? invoiceId.toString() : null,
+        actorRole,
+      },
     });
-    return activity;
+    return {
+      ...activity,
+      _id: activity.id,
+    };
   } catch (error) {
     console.error("[recordActivity] Error recording activity:", error);
     return null;

@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 
-/**
- * GET /api/proposals/analysis/[id]
- *
- * Returns stored intelligence + intelligenceHistory for a proposal.
- * Always a cache-hit (data from DB, no Gemini call).
- */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,13 +12,17 @@ export async function GET(
   }
 
   const { id } = await params;
-  await connectDB();
 
   try {
-    const doc = await Proposal.findOne(
-      { _id: id, userId: session.user.id },
-      { intelligence: 1, intelligenceHistory: 1, clientName: 1, title: 1 }
-    ).lean();
+    const doc = await prisma.proposal.findFirst({
+      where: { id, userId: session.user.id },
+      select: {
+        intelligence: true,
+        intelligenceHistory: true,
+        clientName: true,
+        title: true,
+      },
+    });
 
     if (!doc) {
       return NextResponse.json({ error: "Proposal not found" }, { status: 404 });

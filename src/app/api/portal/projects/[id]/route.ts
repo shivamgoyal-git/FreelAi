@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession, requireClientProject } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Deliverable from "@/models/Deliverable";
-import ProjectFile from "@/models/ProjectFile";
-import Message from "@/models/Message";
-import Invoice from "@/models/Invoice";
-import Activity from "@/models/Activity";
-import mongoose from "mongoose";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
@@ -23,39 +17,57 @@ export async function GET(
     }
 
     const { clientId, client, freelancerUser } = authCtx;
-    await connectDB();
 
     // IDOR Protection: Verifies project belongs to clientId or authorized preview
     const project = await requireClientProject(clientId, id, authCtx);
 
-    // Parallel fetch related resources for this project
-    const projectQueryId = mongoose.Types.ObjectId.isValid(id)
-      ? { $in: [id, new mongoose.Types.ObjectId(id)] }
-      : id;
-
-    const [deliverables, files, messages, invoices, activities] =
-      await Promise.all([
-        Deliverable.find({ projectId: projectQueryId }).sort({ createdAt: -1 }).lean(),
-        ProjectFile.find({ projectId: projectQueryId, isClientVisible: true })
-          .sort({ createdAt: -1 })
-          .lean(),
-        Message.find({ projectId: projectQueryId }).sort({ createdAt: 1 }).lean(),
-        Invoice.find({ projectId: projectQueryId }).sort({ createdAt: -1 }).lean(),
-        Activity.find({ projectId: projectQueryId }).sort({ createdAt: -1 }).limit(20).lean(),
-      ]);
+    const [deliverables, files, messages, invoices, activities] = await Promise.all([
+      prisma.deliverable.findMany({
+        where: { projectId: id },
+        include: { versions: { orderBy: { createdAt: "desc" } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.projectFile.findMany({
+        where: { projectId: id, isClientVisible: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.message.findMany({
+        where: { projectId: id },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.invoice.findMany({
+        where: { projectId: id },
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.activity.findMany({
+        where: { projectId: id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+    ]);
 
     // Mark messages as read by client if user is client
     if (authCtx.role === "client") {
-      await Message.updateMany(
-        { projectId: id, senderRole: "freelancer", readByClient: false },
-        { $set: { readByClient: true } }
-      );
+      await prisma.message.updateMany({
+        where: { projectId: id, senderRole: "freelancer", readByClient: false },
+        data: { readByClient: true },
+      });
     }
 
     return NextResponse.json({
-      project,
+      project: {
+        ...project,
+        _id: project.id,
+        milestones: project.milestones?.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          dueDate: m.dueDate,
+          completed: m.completed,
+        })),
+      },
       client: {
-        _id: client._id.toString(),
+        _id: client.id,
         name: client.name,
         email: client.email,
         company: client.company || "",
@@ -66,11 +78,19 @@ export async function GET(
         email: freelancerUser?.email || "",
         avatar: freelancerUser?.image || "",
       },
-      deliverables,
-      files,
-      messages,
-      invoices,
-      activities,
+      deliverables: deliverables.map((d) => ({
+        ...d,
+        _id: d.id,
+        versions: d.versions.map((v) => ({ ...v, _id: v.id })),
+      })),
+      files: files.map((f) => ({ ...f, _id: f.id })),
+      messages: messages.map((m) => ({
+        ...m,
+        _id: m.id,
+        attachments: Array.isArray(m.attachments) ? m.attachments : [],
+      })),
+      invoices: invoices.map((inv) => ({ ...inv, _id: inv.id })),
+      activities: activities.map((a) => ({ ...a, _id: a.id })),
     });
   } catch (error: any) {
     console.error("[GET /api/portal/projects/[id]] Error:", error);

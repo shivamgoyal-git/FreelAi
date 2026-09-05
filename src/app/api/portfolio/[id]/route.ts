@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import PortfolioProject from "@/models/PortfolioProject";
+import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   req: NextRequest,
@@ -12,12 +11,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await connectDB();
-
   try {
     const { id } = await params;
-    const project = await PortfolioProject.findOneAndDelete({ _id: id, userId: session.user.id });
-    if (!project) {
+    const deleted = await prisma.portfolioProject.deleteMany({
+      where: { id, userId: session.user.id },
+    });
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Portfolio project not found" }, { status: 404 });
     }
     return NextResponse.json({ success: true, message: "Project deleted successfully" });

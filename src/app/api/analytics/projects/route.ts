@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
+import { prisma } from "@/lib/prisma";
 import { getDateRange } from "@/utils/analyticsHelper";
 
 export async function GET(req: NextRequest) {
@@ -11,7 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -21,39 +19,39 @@ export async function GET(req: NextRequest) {
 
     const { startDate, endDate } = getDateRange(range, start, end);
 
-    const [statusBreakdown, categoryBreakdown] = await Promise.all([
-      Project.aggregate([
-        {
-          $match: {
-            userId,
-            createdAt: { $gte: startDate, $lte: endDate },
-          },
-        },
-        {
-          $group: {
-            _id: "$status",
-            count: { $sum: 1 },
-            totalBudget: { $sum: "$budget" },
-          },
-        },
-      ]),
+    const projects = await prisma.project.findMany({
+      where: {
+        userId,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+    });
 
-      Project.aggregate([
-        {
-          $match: {
-            userId,
-            createdAt: { $gte: startDate, $lte: endDate },
-          },
-        },
-        {
-          $group: {
-            _id: "$category",
-            count: { $sum: 1 },
-            totalBudget: { $sum: "$budget" },
-          },
-        },
-      ]),
-    ]);
+    const statusMap: Record<string, { count: number; totalBudget: number }> = {};
+    const categoryMap: Record<string, { count: number; totalBudget: number }> = {};
+
+    projects.forEach((p) => {
+      const s = p.status;
+      if (!statusMap[s]) statusMap[s] = { count: 0, totalBudget: 0 };
+      statusMap[s].count += 1;
+      statusMap[s].totalBudget += p.budget;
+
+      const c = p.category;
+      if (!categoryMap[c]) categoryMap[c] = { count: 0, totalBudget: 0 };
+      categoryMap[c].count += 1;
+      categoryMap[c].totalBudget += p.budget;
+    });
+
+    const statusBreakdown = Object.entries(statusMap).map(([k, v]) => ({
+      _id: k,
+      count: v.count,
+      totalBudget: v.totalBudget,
+    }));
+
+    const categoryBreakdown = Object.entries(categoryMap).map(([k, v]) => ({
+      _id: k,
+      count: v.count,
+      totalBudget: v.totalBudget,
+    }));
 
     return NextResponse.json({
       statusBreakdown,

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import ProfileImageUploader from "@/components/shared/ProfileImageUploader";
+import CountrySelect from "@/components/ui/CountrySelect";
 
 /* ─────────────────────────────────────────────────────────────────
    Types
@@ -658,34 +659,15 @@ function OnboardingSetupWizard() {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                  <div style={ig}>
-                    <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                      <Globe size={11} style={{ flexShrink: 0 }} /> Country
-                    </label>
-                    <input
-                      type="text"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      placeholder="e.g. United States"
-                      className="input-field"
-                      style={{ fontSize: "13px" }}
-                    />
-                  </div>
-                  <div style={ig}>
-                    <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                      <Clock size={11} style={{ flexShrink: 0 }} /> Timezone
-                    </label>
-                    <input
-                      type="text"
-                      value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
-                      placeholder="e.g. EST, GMT+5:30"
-                      className="input-field"
-                      style={{ fontSize: "13px" }}
-                    />
-                    <span style={helperText}>Used to coordinate with clients</span>
-                  </div>
+                <div style={ig}>
+                  <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                    <Globe size={11} style={{ flexShrink: 0 }} /> Country
+                  </label>
+                  <CountrySelect
+                    value={country}
+                    onChange={(c) => setCountry(c)}
+                    placeholder="Select Country..."
+                  />
                 </div>
               </div>
 

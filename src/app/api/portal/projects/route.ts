@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
-import Deliverable from "@/models/Deliverable";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,64 +15,58 @@ export async function GET(req: NextRequest) {
     }
 
     const { clientId, client } = authCtx;
-    await connectDB();
 
-    const clientQueryConditions: any[] = [
-      { clientId: clientId },
-    ];
-    if (client.name) {
-      const escapedName = client.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      clientQueryConditions.push({ clientName: new RegExp(`^${escapedName}$`, "i") });
-    }
-
-    const filter: Record<string, unknown> = {
-      $and: [
-        { $or: clientQueryConditions }
-      ]
+    const where: any = {
+      AND: [
+        {
+          OR: [
+            { clientId: clientId },
+            ...(client.name ? [{ clientName: { equals: client.name, mode: "insensitive" } }] : []),
+          ],
+        },
+      ],
     };
 
     if (status && status !== "all") {
-      (filter.$and as any[]).push({ status });
+      where.AND.push({ status });
     }
     if (q) {
-      (filter.$and as any[]).push({
-        $or: [
-          { title: { $regex: q, $options: "i" } },
-          { description: { $regex: q, $options: "i" } },
+      where.AND.push({
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
         ],
       });
     }
 
-    const projects = await Project.find(filter).sort({ createdAt: -1 }).lean();
+    const projects = await prisma.project.findMany({
+      where,
+      include: { milestones: true },
+      orderBy: { createdAt: "desc" },
+    });
 
-    // Attach pending deliverables & active invoice status
-    const projectIds = projects.map((p) => p._id);
+    const projectIds = projects.map((p) => p.id);
     const [deliverables, invoices] = await Promise.all([
-      Deliverable.find({ projectId: { $in: projectIds } }).lean(),
-      Invoice.find({ projectId: { $in: projectIds } }).lean(),
+      prisma.deliverable.findMany({ where: { projectId: { in: projectIds } } }),
+      prisma.invoice.findMany({ where: { projectId: { in: projectIds } } }),
     ]);
 
     const enrichedProjects = projects.map((p) => {
-      const pDeliverables = deliverables.filter(
-        (d) => d.projectId.toString() === p._id.toString()
-      );
-      const pInvoices = invoices.filter(
-        (i) => i.projectId?.toString() === p._id.toString()
-      );
+      const pDeliverables = deliverables.filter((d) => d.projectId === p.id);
+      const pInvoices = invoices.filter((i) => i.projectId === p.id);
 
-      const pendingDeliverables = pDeliverables.filter(
-        (d) => d.status === "pending_review"
-      );
+      const pendingDeliverables = pDeliverables.filter((d) => d.status === "pending_review");
       const outstandingInvoice = pInvoices.find(
         (i) => i.status === "sent" || i.status === "partially_paid" || i.status === "overdue"
       );
 
       const currentMilestone =
-        p.milestones?.find((m: any) => !m.completed)?.title ||
+        p.milestones?.find((m) => !m.completed)?.title ||
         (p.milestones?.length ? "Final Delivery" : "In Progress");
 
       return {
         ...p,
+        _id: p.id,
         currentMilestone,
         pendingDeliverablesCount: pendingDeliverables.length,
         hasOutstandingInvoice: !!outstandingInvoice,

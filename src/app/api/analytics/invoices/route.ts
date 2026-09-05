@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 import { getDateRange } from "@/utils/analyticsHelper";
 
 export async function GET(req: NextRequest) {
@@ -11,7 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  await connectDB();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -21,86 +19,67 @@ export async function GET(req: NextRequest) {
 
     const { startDate, endDate } = getDateRange(range, start, end);
 
-    const [statusDistribution, recentActivity, upcomingPayments] = await Promise.all([
-      Invoice.aggregate([
-        {
-          $match: {
-            userId,
-            issueDate: { $gte: startDate, $lte: endDate },
-          },
+    const [invoicesInPeriod, recentInvoices, upcomingInvoices] = await Promise.all([
+      prisma.invoice.findMany({
+        where: {
+          userId,
+          issueDate: { gte: startDate, lte: endDate },
         },
-        {
-          $group: {
-            _id: "$status",
-            count: { $sum: 1 },
-            totalValue: { $sum: "$total" },
-          },
+      }),
+      prisma.invoice.findMany({
+        where: {
+          userId,
+          status: { in: ["paid", "sent", "partially_paid"] },
         },
-      ]),
-
-      Invoice.aggregate([
-        {
-          $match: {
-            userId,
-            status: { $in: ["paid", "sent", "partially_paid"] },
-          },
+        include: { client: { select: { name: true } } },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+      }),
+      prisma.invoice.findMany({
+        where: {
+          userId,
+          status: { in: ["sent", "partially_paid", "overdue"] },
+          dueDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
         },
-        { $sort: { updatedAt: -1 } },
-        { $limit: 5 },
-        {
-          $lookup: {
-            from: "clients",
-            localField: "clientId",
-            foreignField: "_id",
-            as: "client",
-          },
-        },
-        { $unwind: { path: "$client", preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            invoiceNumber: 1,
-            status: 1,
-            total: 1,
-            amountPaid: 1,
-            currency: 1,
-            date: "$updatedAt",
-            clientName: { $ifNull: ["$client.name", "Unknown Client"] },
-          },
-        },
-      ]),
-
-      Invoice.aggregate([
-        {
-          $match: {
-            userId,
-            status: { $in: ["sent", "partially_paid", "overdue"] },
-            dueDate: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-          },
-        },
-        { $sort: { dueDate: 1 } },
-        { $limit: 5 },
-        {
-          $lookup: {
-            from: "clients",
-            localField: "clientId",
-            foreignField: "_id",
-            as: "client",
-          },
-        },
-        { $unwind: { path: "$client", preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            invoiceNumber: 1,
-            status: 1,
-            total: 1,
-            remainingAmount: 1,
-            currency: 1,
-            dueDate: 1,
-            clientName: { $ifNull: ["$client.name", "Unknown Client"] },
-          },
-        },
-      ]),
+        include: { client: { select: { name: true } } },
+        orderBy: { dueDate: "asc" },
+        take: 5,
+      }),
     ]);
+
+    const statusMap: Record<string, { count: number; totalValue: number }> = {};
+    invoicesInPeriod.forEach((inv) => {
+      const s = inv.status;
+      if (!statusMap[s]) statusMap[s] = { count: 0, totalValue: 0 };
+      statusMap[s].count += 1;
+      statusMap[s].totalValue += inv.total;
+    });
+
+    const statusDistribution = Object.entries(statusMap).map(([k, v]) => ({
+      _id: k,
+      count: v.count,
+      totalValue: v.totalValue,
+    }));
+
+    const recentActivity = recentInvoices.map((inv) => ({
+      invoiceNumber: inv.invoiceNumber,
+      status: inv.status,
+      total: inv.total,
+      amountPaid: inv.amountPaid,
+      currency: inv.currency,
+      date: inv.updatedAt,
+      clientName: inv.client?.name || "Unknown Client",
+    }));
+
+    const upcomingPayments = upcomingInvoices.map((inv) => ({
+      invoiceNumber: inv.invoiceNumber,
+      status: inv.status,
+      total: inv.total,
+      remainingAmount: inv.remainingAmount,
+      currency: inv.currency,
+      dueDate: inv.dueDate,
+      clientName: inv.client?.name || "Unknown Client",
+    }));
 
     return NextResponse.json({
       statusDistribution,

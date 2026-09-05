@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
+
 import { AiContextService } from "@/lib/ai-context-service";
 import { ProposalIntelligenceEngine } from "@/lib/proposal-intelligence";
 import { AiCore } from "@/lib/ai-core";
@@ -22,8 +22,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  await connectDB();
 
   try {
     const { proposalText, jobPost, focus, feedback = "" } = await req.json();

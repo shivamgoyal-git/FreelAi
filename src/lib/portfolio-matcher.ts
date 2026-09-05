@@ -1,7 +1,6 @@
-import connectDB from "./mongodb";
-import PortfolioProject, { IPortfolioProject } from "@/models/PortfolioProject";
+import { prisma } from "./prisma";
 import type { JobAnalysis } from "./job-analyzer";
-// Also accepts JobIntelligence from the new pipeline (duck-typed: same required fields)
+
 type JobLike = Pick<JobAnalysis, "requiredSkills" | "technologies" | "importantKeywords" | "clientTone" | "communicationStyle" | "deliverables">;
 
 export interface IMatchedPortfolioProject {
@@ -29,9 +28,10 @@ export class PortfolioMatcher {
     jobAnalysis: JobLike,
     limit: number = 3
   ): Promise<IMatchedPortfolioProject[]> {
-    await connectDB();
+    const projects = await prisma.portfolioProject.findMany({
+      where: { userId },
+    });
 
-    const projects = await PortfolioProject.find({ userId });
     if (projects.length === 0) {
       return [];
     }
@@ -58,7 +58,6 @@ export class PortfolioMatcher {
 
       // CRITICAL PORTFOLIO FILTER: Reject portfolio project if it has zero skill and keyword overlap
       if (!hasSkillOverlap && !hasKeywordOverlap) {
-        console.log(`[PortfolioMatcher] Rejecting project "${proj.title}" due to zero skill or keyword overlap.`);
         continue;
       }
 
@@ -66,14 +65,12 @@ export class PortfolioMatcher {
       
       // Reject if matchScore is below threshold (45%)
       if (score < 45) {
-        console.log(`[PortfolioMatcher] Rejecting project "${proj.title}" due to low match score (${Math.round(score)}%).`);
         continue;
       }
 
       const reason = this.generateMatchReason(proj, jobAnalysis, score);
 
       // Compute matched skills and technologies for blueprint builder
-      const projSkillsLower = proj.skills.map((s) => s.toLowerCase());
       const jobSkillsLower = jobAnalysis.requiredSkills.map((s) => s.toLowerCase());
       const jobTechLower = jobAnalysis.technologies.map((t) => t.toLowerCase());
 
@@ -86,7 +83,7 @@ export class PortfolioMatcher {
 
       matched.push({
         project: {
-          _id: String(proj._id),
+          _id: proj.id,
           title: proj.title,
           description: proj.description,
           skills: proj.skills,
@@ -111,14 +108,14 @@ export class PortfolioMatcher {
    *  - Deliverable Match: 15%
    *  - Featured Portfolio Bonus: 5%
    */
-  private static calculateWeightedScore(proj: IPortfolioProject, job: JobLike): number {
+  private static calculateWeightedScore(proj: any, job: JobLike): number {
     let skillScore = 0;
     let industryScore = 0;
     let techScore = 0;
     let deliverableScore = 0;
     let featuredBonus = 0;
 
-    const projSkills = proj.skills.map((s) => s.toLowerCase());
+    const projSkills = proj.skills.map((s: string) => s.toLowerCase());
     const jobSkills = job.requiredSkills.map((s) => s.toLowerCase());
     const jobTech = job.technologies.map((t) => t.toLowerCase());
     const projDesc = proj.description.toLowerCase();
@@ -126,7 +123,7 @@ export class PortfolioMatcher {
 
     // 1. Skill Match (35%)
     if (jobSkills.length > 0) {
-      const matchCount = projSkills.filter((ps) => jobSkills.some((js) => js.includes(ps) || ps.includes(js))).length;
+      const matchCount = projSkills.filter((ps: string) => jobSkills.some((js) => js.includes(ps) || ps.includes(js))).length;
       skillScore = (matchCount / jobSkills.length) * 100;
     } else {
       skillScore = 50; // Neutral default
@@ -143,7 +140,7 @@ export class PortfolioMatcher {
 
     // 3. Technology Match (20%)
     if (jobTech.length > 0) {
-      const matchCount = projSkills.filter((ps) => jobTech.some((jt) => jt.includes(ps) || ps.includes(jt))).length;
+      const matchCount = projSkills.filter((ps: string) => jobTech.some((jt) => jt.includes(ps) || ps.includes(jt))).length;
       techScore = (matchCount / jobTech.length) * 100;
     } else {
       techScore = 50;
@@ -172,13 +169,13 @@ export class PortfolioMatcher {
     return Math.min(100, Math.max(0, finalScore));
   }
 
-  private static generateMatchReason(proj: IPortfolioProject, job: JobLike, score: number): string {
-    const projSkills = proj.skills.map((s) => s.toLowerCase());
+  private static generateMatchReason(proj: any, job: JobLike, score: number): string {
+    const projSkills = proj.skills.map((s: string) => s.toLowerCase());
     const jobSkills = job.requiredSkills.map((s) => s.toLowerCase());
-    const matches = projSkills.filter((ps) => jobSkills.some((js) => js.includes(ps) || ps.includes(js)));
+    const matches = projSkills.filter((ps: string) => jobSkills.some((js) => js.includes(ps) || ps.includes(js)));
 
     if (matches.length > 0) {
-      const displaySkills = matches.slice(0, 3).map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
+      const displaySkills = matches.slice(0, 3).map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
       return `Matches your skills in ${displaySkills}.`;
     }
 

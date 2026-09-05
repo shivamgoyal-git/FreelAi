@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 import type { IProposalIntelligence } from "@/lib/proposal-intelligence";
 
-/**
- * POST /api/proposals/predict
- *
- * Returns success prediction for a proposal.
- * Uses stored intelligence if available (no Gemini call needed —
- * probability is computed locally from scores already in intelligence).
- *
- * Body: { proposalId } OR { intelligence: IProposalIntelligence }
- * Returns: { probability, explanation, factors, metadata }
- */
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  await connectDB();
 
   try {
     const body = await req.json();
@@ -31,11 +18,13 @@ export async function POST(req: NextRequest) {
     if (inlineIntelligence) {
       intelligence = inlineIntelligence as IProposalIntelligence;
     } else if (proposalId) {
-      const doc = await Proposal.findOne({ _id: proposalId, userId: session.user.id }).lean();
+      const doc = await prisma.proposal.findFirst({
+        where: { id: proposalId, userId: session.user.id },
+      });
       if (!doc) {
         return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
       }
-      intelligence = (doc.intelligence as IProposalIntelligence) ?? null;
+      intelligence = (doc.intelligence as unknown as IProposalIntelligence) ?? null;
     }
 
     if (!intelligence) {
@@ -48,7 +37,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Prediction is already in intelligence (computed locally during analysis)
     const { successPrediction, requestMetadata } = intelligence;
 
     return NextResponse.json({
@@ -57,7 +45,7 @@ export async function POST(req: NextRequest) {
       factors: successPrediction.factors,
       metadata: {
         ...requestMetadata,
-        cacheHit: true, // prediction comes from stored intelligence
+        cacheHit: true,
       },
     });
   } catch (err: unknown) {

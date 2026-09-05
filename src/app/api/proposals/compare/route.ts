@@ -1,27 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Proposal from "@/models/Proposal";
+import { prisma } from "@/lib/prisma";
 import { ProposalIntelligenceEngine, IProposalIntelligence } from "@/lib/proposal-intelligence";
 import { AiContextService } from "@/lib/ai-context-service";
 import { ProposalLocalAnalyzer } from "@/lib/proposal-local-analyzer";
 
-/**
- * POST /api/proposals/compare
- *
- * Compares 2–3 proposals by their intelligence scores.
- * Uses cached intelligence if available; runs analysis for uncached proposals.
- *
- * Body: { proposalIds: string[] }
- * Returns: ComparisonMatrix
- */
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  await connectDB();
 
   try {
     const { proposalIds } = await req.json();
@@ -35,11 +23,12 @@ export async function POST(req: NextRequest) {
 
     const freelancerContext = await AiContextService.getAiSystemContext(session.user.id);
 
-    // Load all proposal documents
-    const docs = await Proposal.find({
-      _id: { $in: proposalIds },
-      userId: session.user.id,
-    }).lean();
+    const docs = await prisma.proposal.findMany({
+      where: {
+        id: { in: proposalIds },
+        userId: session.user.id,
+      },
+    });
 
     if (docs.length !== proposalIds.length) {
       return NextResponse.json(
@@ -48,11 +37,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // For each proposal, get or compute intelligence
     const intelligences: Array<IProposalIntelligence & { id: string; label: string }> = [];
 
     for (const doc of docs) {
-      const activeVer = doc.versions[doc.activeVersionIndex];
+      const versions = Array.isArray(doc.versions) ? (doc.versions as any[]) : [];
+      const activeVer = versions[doc.activeVersionIndex || 0];
       const sections = activeVer?.sections;
       const proposalText = sections
         ? [sections.executiveSummary, sections.scopeOfWork, sections.timelineAndMilestones, sections.callToAction]
@@ -61,17 +50,15 @@ export async function POST(req: NextRequest) {
         : "";
 
       const jobPost = doc.jobPost;
-      const cachedIntelligence = (doc.intelligence as IProposalIntelligence) ?? null;
+      const cachedIntelligence = (doc.intelligence as unknown as IProposalIntelligence) ?? null;
 
       let intel: IProposalIntelligence;
 
       if (cachedIntelligence) {
         const hash = ProposalLocalAnalyzer.computeHash(proposalText, jobPost);
         if (cachedIntelligence.contentHash === hash) {
-          // Cache hit — use stored
           intel = { ...cachedIntelligence, requestMetadata: { ...cachedIntelligence.requestMetadata, cacheHit: true } };
         } else {
-          // Content changed — re-analyze
           intel = await ProposalIntelligenceEngine.analyzeProposal({
             proposalText,
             jobPost,
@@ -92,7 +79,7 @@ export async function POST(req: NextRequest) {
 
       intelligences.push({
         ...intel,
-        id: String(doc._id),
+        id: doc.id,
         label: doc.clientName || doc.title,
       });
     }

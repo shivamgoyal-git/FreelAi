@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import ClientInvitation from "@/models/ClientInvitation";
-import Client from "@/models/Client";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
@@ -25,9 +22,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectDB();
-
-    const invitation = await ClientInvitation.findOne({ token });
+    const invitation = await prisma.clientInvitation.findUnique({
+      where: { token },
+      include: { client: true },
+    });
 
     if (!invitation) {
       return NextResponse.json(
@@ -52,8 +50,10 @@ export async function POST(req: NextRequest) {
 
     if (invitation.status === "expired" || new Date(invitation.expiresAt) < new Date()) {
       if (invitation.status !== "expired") {
-        invitation.status = "expired";
-        await invitation.save();
+        await prisma.clientInvitation.update({
+          where: { id: invitation.id },
+          data: { status: "expired" },
+        });
       }
       return NextResponse.json(
         { error: "This invitation has expired. Please request a new invitation." },
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const client = await Client.findById(invitation.clientId);
+    const client = invitation.client;
     if (!client) {
       return NextResponse.json(
         { error: "Associated client not found" },
@@ -72,30 +72,39 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
     const userEmail = invitation.email.toLowerCase().trim();
 
-    let user = await User.findOne({ email: userEmail });
+    let user = await prisma.user.findUnique({ where: { email: userEmail } });
     if (user) {
-      // Update existing user with client role and clientId
-      user.role = "client";
-      user.clientId = client._id;
-      user.password = hashedPassword;
-      if (name) user.name = name.trim();
-      user.onboardingCompleted = true;
-      await user.save();
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          role: "client",
+          clientId: client.id,
+          password: hashedPassword,
+          ...(name ? { name: name.trim() } : {}),
+          onboardingCompleted: true,
+        },
+      });
     } else {
-      user = await User.create({
-        name: name?.trim() || client.name,
-        email: userEmail,
-        password: hashedPassword,
-        role: "client",
-        clientId: client._id,
-        onboardingCompleted: true,
+      user = await prisma.user.create({
+        data: {
+          name: name?.trim() || client.name,
+          email: userEmail,
+          password: hashedPassword,
+          role: "client",
+          clientId: client.id,
+          onboardingCompleted: true,
+        },
       });
     }
 
     // Mark invitation as accepted
-    invitation.status = "accepted";
-    invitation.acceptedAt = new Date();
-    await invitation.save();
+    await prisma.clientInvitation.update({
+      where: { id: invitation.id },
+      data: {
+        status: "accepted",
+        acceptedAt: new Date(),
+      },
+    });
 
     // Notify Freelancer
     await sendNotification({
@@ -104,7 +113,7 @@ export async function POST(req: NextRequest) {
       title: "Client Joined Portal",
       message: `${user.name} accepted your invitation and activated their Client Portal account.`,
       type: "client_joined",
-      link: `/dashboard/clients/${client._id}`,
+      link: `/dashboard/clients/${client.id}`,
     });
 
     // Record Activity
@@ -113,7 +122,7 @@ export async function POST(req: NextRequest) {
       type: "client_joined",
       title: "Client Joined Portal",
       description: `${user.name} (${user.email}) activated their Client Portal account.`,
-      clientId: client._id,
+      clientId: client.id,
       actorRole: "client",
     });
 
@@ -121,7 +130,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Account activated successfully",
       user: {
-        id: user._id.toString(),
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,

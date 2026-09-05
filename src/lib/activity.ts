@@ -1,5 +1,5 @@
-import connectDB from "./mongodb";
-import Activity, { ActivityType } from "@/models/Activity";
+import { prisma } from "@/lib/prisma";
+import type { ActivityType } from "@prisma/client";
 
 /**
  * Logs a new user-scoped activity to the database.
@@ -11,19 +11,21 @@ import Activity, { ActivityType } from "@/models/Activity";
  */
 export async function logActivity(
   userId: string,
-  type: ActivityType,
+  type: string,
   title: string,
   description: string = "",
   invoiceId?: string
 ) {
   try {
-    await connectDB();
-    await Activity.create({
-      userId,
-      type,
-      title,
-      description,
-      invoiceId,
+    await prisma.activity.create({
+      data: {
+        userId,
+        type: type as ActivityType,
+        title,
+        description,
+        invoiceId: invoiceId ? invoiceId.toString() : null,
+        actorRole: "freelancer",
+      },
     });
   } catch (error) {
     console.error("Failed to log activity:", error);

@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
-import Client from "@/models/Client";
-import Project from "@/models/Project";
-import Activity from "@/models/Activity";
+import { prisma } from "@/lib/prisma";
+import { InvoicesService } from "@/services/invoices.service";
 import { logActivity } from "@/lib/activity";
-import { ActivityType } from "@/models/Activity";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,37 +17,52 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const userId = session.user.id;
 
   try {
-    await connectDB();
-
-    const invoice = await Invoice.findOne({ _id: id, userId })
-      .populate("clientId", "name email company")
-      .populate("projectId", "title category");
+    const invoice = await prisma.invoice.findFirst({
+      where: { id, userId },
+      include: {
+        client: { select: { id: true, name: true, email: true, company: true } },
+        project: { select: { id: true, title: true, category: true } },
+        items: true,
+      },
+    });
 
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Dynamic overdue detection:
-    // If the invoice is past due date, unpaid/partially paid, and not marked overdue yet, save to update status
     const isOverdue = invoice.dueDate && new Date(invoice.dueDate) < new Date();
     if (isOverdue && ["sent", "partially_paid"].includes(invoice.status)) {
+      await prisma.invoice.update({
+        where: { id },
+        data: { status: "overdue" },
+      });
       invoice.status = "overdue";
-      await invoice.save();
-      
-      // Log overdue activity
+
       await logActivity(
         userId,
         "invoice_overdue",
         `Invoice ${invoice.invoiceNumber} is Overdue`,
-        `Invoice ${invoice.invoiceNumber} has passed its due date of ${invoice.dueDate.toLocaleDateString()}. Remaining balance: ${invoice.currency} ${invoice.remainingAmount}`,
-        invoice._id.toString()
+        `Invoice ${invoice.invoiceNumber} has passed its due date of ${new Date(invoice.dueDate).toLocaleDateString()}. Remaining balance: ${invoice.currency} ${invoice.remainingAmount}`,
+        invoice.id
       );
     }
 
-    // Fetch related activities for history tracking
-    const activities = await Activity.find({ userId, invoiceId: id }).sort({ createdAt: 1 }).lean();
+    const activities = await prisma.activity.findMany({
+      where: { userId, invoiceId: id },
+      orderBy: { createdAt: "asc" },
+    });
 
-    return NextResponse.json({ invoice, activities });
+    const populated = {
+      ...invoice,
+      _id: invoice.id,
+      clientId: invoice.client ? { ...invoice.client, _id: invoice.client.id } : invoice.clientId,
+      projectId: invoice.project ? { ...invoice.project, _id: invoice.project.id } : invoice.projectId,
+    };
+
+    return NextResponse.json({
+      invoice: populated,
+      activities: activities.map((a) => ({ ...a, _id: a.id })),
+    });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to fetch invoice";
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -69,73 +80,37 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const userId = session.user.id;
 
   try {
-    await connectDB();
     const body = await req.json();
 
-    // Prevent direct update of read-only calculated fields or userId via patch
-    const restrictedFields = [
-      "_id",
-      "userId",
-      "subtotal",
-      "taxAmount",
-      "total",
-      "amountPaid",
-      "remainingAmount",
-    ];
-    restrictedFields.forEach((field) => delete body[field]);
-
-    const invoice = await Invoice.findOne({ _id: id, userId });
-    if (!invoice) {
+    const existing = await prisma.invoice.findFirst({ where: { id, userId } });
+    if (!existing) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    const previousStatus = invoice.status;
+    const previousStatus = existing.status;
+    const updated = await InvoicesService.updateInvoice(id, userId, body);
 
-    // Validate and update relation IDs if they are modified
-    if (body.clientId && body.clientId !== invoice.clientId.toString()) {
-      const clientExists = await Client.findOne({ _id: body.clientId, userId });
-      if (!clientExists) {
-        return NextResponse.json({ error: "Client not found or access denied" }, { status: 404 });
-      }
-    }
-    if (body.projectId && body.projectId !== invoice.projectId?.toString()) {
-      const projectExists = await Project.findOne({ _id: body.projectId, userId });
-      if (!projectExists) {
-        return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
-      }
+    if (!updated) {
+      return NextResponse.json({ error: "Failed to update invoice" }, { status: 400 });
     }
 
-    // Apply values to Mongoose document instance
-    Object.keys(body).forEach((key) => {
-      // Handle date conversion
-      if (key === "issueDate" || key === "dueDate") {
-        invoice.set(key, new Date(body[key]));
-      } else {
-        invoice.set(key, body[key]);
-      }
-    });
-
-    // Save document to trigger pre-save hook (computes totals/resolves status)
-    await invoice.save();
-
-    // Log status transitions if status changed
-    if (invoice.status !== previousStatus) {
-      let activityType: ActivityType = "invoice_created";
+    if (updated.status !== previousStatus) {
+      let activityType = "invoice_created";
       let activityTitle = "Invoice Updated";
-      const activityDesc = `Invoice ${invoice.invoiceNumber} status changed from ${previousStatus} to ${invoice.status}.`;
+      const activityDesc = `Invoice ${updated.invoiceNumber} status changed from ${previousStatus} to ${updated.status}.`;
 
-      if (invoice.status === "sent") {
+      if (updated.status === "sent") {
         activityType = "invoice_sent";
         activityTitle = "Invoice Sent";
-      } else if (invoice.status === "cancelled") {
+      } else if (updated.status === "cancelled") {
         activityType = "invoice_cancelled";
         activityTitle = "Invoice Cancelled";
       }
 
-      await logActivity(userId, activityType, activityTitle, activityDesc, invoice._id.toString());
+      await logActivity(userId, activityType, activityTitle, activityDesc, updated.id);
     }
 
-    return NextResponse.json({ invoice });
+    return NextResponse.json({ invoice: updated });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to update invoice";
     return NextResponse.json({ error: msg }, { status: 400 });
@@ -153,30 +128,27 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const userId = session.user.id;
 
   try {
-    await connectDB();
-
-    const invoice = await Invoice.findOne({ _id: id, userId });
+    const invoice = await prisma.invoice.findFirst({ where: { id, userId } });
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Revert earnings/paid stats on related Client and Project if deleting a paid/partially paid invoice
     if (invoice.amountPaid > 0) {
       if (invoice.clientId) {
-        await Client.findOneAndUpdate(
-          { _id: invoice.clientId, userId },
-          { $inc: { totalEarned: -invoice.amountPaid } }
-        );
+        await prisma.client.update({
+          where: { id: invoice.clientId },
+          data: { totalEarned: { decrement: invoice.amountPaid } },
+        });
       }
       if (invoice.projectId) {
-        await Project.findOneAndUpdate(
-          { _id: invoice.projectId, userId },
-          { $inc: { paid: -invoice.amountPaid } }
-        );
+        await prisma.project.update({
+          where: { id: invoice.projectId },
+          data: { paid: { decrement: invoice.amountPaid } },
+        });
       }
     }
 
-    await Invoice.deleteOne({ _id: id, userId });
+    await prisma.invoice.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

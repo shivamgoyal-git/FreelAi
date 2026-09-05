@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import ClientInvitation from "@/models/ClientInvitation";
-import Client from "@/models/Client";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,9 +10,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
 
-    await connectDB();
-
-    const invitation = await ClientInvitation.findOne({ token });
+    const invitation = await prisma.clientInvitation.findUnique({
+      where: { token },
+    });
 
     if (!invitation) {
       return NextResponse.json(
@@ -40,8 +37,10 @@ export async function GET(req: NextRequest) {
 
     if (invitation.status === "expired" || new Date(invitation.expiresAt) < new Date()) {
       if (invitation.status !== "expired") {
-        invitation.status = "expired";
-        await invitation.save();
+        await prisma.clientInvitation.update({
+          where: { id: invitation.id },
+          data: { status: "expired" },
+        });
       }
       return NextResponse.json(
         { error: "This invitation has expired. Please request a new invitation.", code: "expired" },
@@ -49,8 +48,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const client = await Client.findById(invitation.clientId);
-    const freelancer = await User.findById(invitation.freelancerId);
+    const client = await prisma.client.findUnique({
+      where: { id: invitation.clientId },
+    });
+    const freelancer = await prisma.user.findUnique({
+      where: { id: invitation.freelancerId },
+    });
 
     if (!client) {
       return NextResponse.json(

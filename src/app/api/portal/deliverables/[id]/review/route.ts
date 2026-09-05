@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession, requireClientDeliverable } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Project from "@/models/Project";
+import { prisma } from "@/lib/prisma";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
 export async function PATCH(
@@ -26,16 +25,21 @@ export async function PATCH(
     }
 
     const { clientId, client } = authCtx;
-    await connectDB();
 
     // Verify deliverable belongs to this client (IDOR protection)
     const deliverable = await requireClientDeliverable(clientId, id);
-    const project = await Project.findById(deliverable.projectId);
+    const project = await prisma.project.findUnique({
+      where: { id: deliverable.projectId },
+    });
 
     if (action === "approve") {
-      deliverable.status = "approved";
-      deliverable.approvedDate = new Date();
-      await deliverable.save();
+      const updated = await prisma.deliverable.update({
+        where: { id },
+        data: {
+          status: "approved",
+          approvedDate: new Date(),
+        },
+      });
 
       // Notify Freelancer
       await sendNotification({
@@ -62,7 +66,7 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         message: "Deliverable approved successfully",
-        deliverable,
+        deliverable: { ...updated, _id: updated.id },
       });
     }
 
@@ -74,10 +78,14 @@ export async function PATCH(
         );
       }
 
-      deliverable.status = "changes_requested";
-      deliverable.clientFeedback = feedback.trim();
-      deliverable.feedbackDate = new Date();
-      await deliverable.save();
+      const updated = await prisma.deliverable.update({
+        where: { id },
+        data: {
+          status: "changes_requested",
+          clientFeedback: feedback.trim(),
+          feedbackDate: new Date(),
+        },
+      });
 
       // Notify Freelancer
       await sendNotification({
@@ -104,7 +112,7 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         message: "Changes requested successfully",
-        deliverable,
+        deliverable: { ...updated, _id: updated.id },
       });
     }
   } catch (error: any) {

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession, requireClientProject } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import ProjectFile from "@/models/ProjectFile";
+import { prisma } from "@/lib/prisma";
 import { sendNotification, recordActivity } from "@/lib/portal-notifications";
 
 export async function GET(req: NextRequest) {
@@ -18,23 +17,29 @@ export async function GET(req: NextRequest) {
     }
 
     const { clientId } = authCtx;
-    await connectDB();
 
-    const filter: Record<string, unknown> = {
+    const where: any = {
       clientId,
       isClientVisible: true,
     };
 
-    if (projectId) filter.projectId = projectId;
-    if (category && category !== "all") filter.category = category;
-    if (q) filter.name = { $regex: q, $options: "i" };
+    if (projectId) where.projectId = projectId;
+    if (category && category !== "all") where.category = category;
+    if (q) where.name = { contains: q, mode: "insensitive" };
 
-    const files = await ProjectFile.find(filter)
-      .populate("projectId", "title")
-      .sort({ createdAt: -1 })
-      .lean();
+    const files = await prisma.projectFile.findMany({
+      where,
+      include: { project: { select: { title: true } } },
+      orderBy: { createdAt: "desc" },
+    });
 
-    return NextResponse.json({ files });
+    return NextResponse.json({
+      files: files.map((f) => ({
+        ...f,
+        _id: f.id,
+        projectId: f.project ? { title: f.project.title, _id: f.projectId } : f.projectId,
+      })),
+    });
   } catch (error: any) {
     console.error("[GET /api/portal/files] Error:", error);
     return NextResponse.json(
@@ -70,26 +75,26 @@ export async function POST(req: NextRequest) {
     }
 
     const { clientId, client, role } = authCtx;
-    await connectDB();
 
     // Verify project belongs to client
     const project = await requireClientProject(clientId, projectId);
 
-    const file = await ProjectFile.create({
-      projectId,
-      clientId,
-      userId: project.userId,
-      name: name.trim(),
-      url: url.trim(),
-      size,
-      fileType,
-      category,
-      uploadedBy: role === "freelancer" ? "freelancer" : "client",
-      uploaderName: client.name,
-      isClientVisible: true,
+    const file = await prisma.projectFile.create({
+      data: {
+        projectId,
+        clientId,
+        userId: project.userId,
+        name: name.trim(),
+        url: url.trim(),
+        size,
+        fileType,
+        category,
+        uploadedBy: role === "freelancer" ? "freelancer" : "client",
+        uploaderName: client.name,
+        isClientVisible: true,
+      },
     });
 
-    // If uploaded by client, notify freelancer
     if (role === "client") {
       await sendNotification({
         recipientId: project.userId,
@@ -112,7 +117,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, file }, { status: 201 });
+    return NextResponse.json({ success: true, file: { ...file, _id: file.id } }, { status: 201 });
   } catch (error: any) {
     console.error("[POST /api/portal/files] Error:", error);
     return NextResponse.json(

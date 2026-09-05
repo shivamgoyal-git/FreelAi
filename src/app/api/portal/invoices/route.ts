@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/portal-auth";
-import connectDB from "@/lib/mongodb";
-import Invoice from "@/models/Invoice";
+import { prisma } from "@/lib/prisma";
 import { checkAndUpdateOverdueInvoices } from "@/utils/overdueCheck";
 
 export async function GET(req: NextRequest) {
@@ -17,41 +16,41 @@ export async function GET(req: NextRequest) {
     }
 
     const { clientId, client } = authCtx;
-    await connectDB();
 
-    // Check overdue status on client's invoices
-    const ownerUserId = client.userId ? client.userId.toString() : authCtx.userId;
+    // Check overdue status
+    const ownerUserId = client.userId || authCtx.userId;
     if (ownerUserId) {
       await checkAndUpdateOverdueInvoices(ownerUserId);
     }
 
-    const clientQueryConditions: any[] = [
-      { clientId: clientId },
-    ];
-    if (client.email) {
-      clientQueryConditions.push({ clientEmail: client.email.toLowerCase().trim() });
-    }
-
-    const filter: Record<string, unknown> = {
-      $and: [
-        { $or: clientQueryConditions },
-        { status: { $ne: "draft" } }, // Do not expose draft invoices to clients
-      ],
+    const where: any = {
+      clientId,
+      status: { not: "draft" },
     };
 
     if (status && status !== "all") {
-      (filter.$and as any[]).push({ status });
+      where.status = status;
     }
     if (projectId) {
-      (filter.$and as any[]).push({ projectId });
+      where.projectId = projectId;
     }
 
-    const invoices = await Invoice.find(filter)
-      .populate("projectId", "title")
-      .sort({ createdAt: -1 })
-      .lean();
+    const invoices = await prisma.invoice.findMany({
+      where,
+      include: {
+        project: { select: { title: true } },
+        items: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    return NextResponse.json({ invoices });
+    return NextResponse.json({
+      invoices: invoices.map((inv) => ({
+        ...inv,
+        _id: inv.id,
+        projectId: inv.project ? { title: inv.project.title, _id: inv.projectId } : inv.projectId,
+      })),
+    });
   } catch (error: any) {
     console.error("[GET /api/portal/invoices] Error:", error);
     return NextResponse.json(
